@@ -3,6 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useTimerStore } from '../src/stores/timerStore'
 
 beforeEach(() => {
+  localStorage.clear()
   setActivePinia(createPinia())
   vi.useFakeTimers()
 })
@@ -19,7 +20,7 @@ describe('clock mode', () => {
     const store = useTimerStore()
     store.start()
     vi.advanceTimersByTime(1000)
-    expect(store.displayTime).toBe('14:05:03')
+    expect(store.displayTime).toBe('14:05:04')
   })
 
   it('displayTime returns h:MM:SS AM/PM in 12h format', () => {
@@ -28,7 +29,7 @@ describe('clock mode', () => {
     store.clock12h = true
     store.start()
     vi.advanceTimersByTime(1000)
-    expect(store.displayTime).toBe('2:05:03 PM')
+    expect(store.displayTime).toBe('2:05:04 PM')
   })
 })
 
@@ -66,6 +67,17 @@ describe('stopwatch mode', () => {
     store.reset()
     expect(store.displayTime).toBe('00:00.00')
     expect(store.isRunning).toBe(false)
+  })
+
+  it('resume continues from paused position', () => {
+    const store = useTimerStore()
+    store.setMode('stopwatch')
+    store.start()
+    vi.advanceTimersByTime(3000)
+    store.pause()
+    store.start() // resume
+    vi.advanceTimersByTime(1000)
+    expect(store.displayTime).toBe('00:04.00')
   })
 })
 

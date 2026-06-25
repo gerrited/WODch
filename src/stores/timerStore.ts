@@ -5,6 +5,8 @@ const CUSTOM_KEY = 'wodch-custom-intervals'
 const TICK_MS = 10
 const CLOCK_TICK_MS = 1000
 
+let _intervalId: ReturnType<typeof setInterval> | null = null
+
 function formatClock(date: Date, is12h: boolean): string {
   const h = date.getHours()
   const m = date.getMinutes()
@@ -60,7 +62,6 @@ export const useTimerStore = defineStore('timer', {
     currentRound: 0,
     totalRounds: 8,
     customIntervals: [] as CustomInterval[],
-    _intervalId: null as ReturnType<typeof setInterval> | null,
   }),
 
   getters: {
@@ -87,6 +88,7 @@ export const useTimerStore = defineStore('timer', {
   actions: {
     setMode(mode: TimerMode) {
       this._stop()
+      this.isRunning = false
       this.mode = mode
       this.preset = null
       this.phase = 'idle'
@@ -103,8 +105,8 @@ export const useTimerStore = defineStore('timer', {
       this.isRunning = true
       if (this.mode === 'clock') {
         this.clockDisplay = formatClock(new Date(), this.clock12h)
-        this._intervalId = setInterval(() => {
-          this.clockDisplay = formatClock(new Date(Date.now() - CLOCK_TICK_MS), this.clock12h)
+        _intervalId = setInterval(() => {
+          this.clockDisplay = formatClock(new Date(), this.clock12h)
         }, CLOCK_TICK_MS)
         return
       }
@@ -114,7 +116,7 @@ export const useTimerStore = defineStore('timer', {
         this.elapsed = 0
         this.lastElapsed = 0
       }
-      this._intervalId = setInterval(() => this._tick(), TICK_MS)
+      _intervalId = setInterval(() => this._tick(), TICK_MS)
     },
 
     pause() {
@@ -162,7 +164,8 @@ export const useTimerStore = defineStore('timer', {
         this.restDuration = 0
         this.totalRounds = this.emomRounds
       } else if (preset.startsWith('custom-')) {
-        const slot = parseInt(preset.replace('custom-', ''))
+        const slot = parseInt(preset.replace('custom-', ''), 10)
+        if (!Number.isFinite(slot)) return
         const ci = this.customIntervals[slot]
         if (ci) {
           this.workDuration = ci.workDuration
@@ -175,7 +178,10 @@ export const useTimerStore = defineStore('timer', {
     loadCustomIntervals() {
       try {
         const raw = localStorage.getItem(CUSTOM_KEY)
-        if (raw) this.customIntervals = JSON.parse(raw)
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed)) this.customIntervals = parsed
+        }
       } catch { /* ignore corrupt data */ }
     },
 
@@ -237,9 +243,9 @@ export const useTimerStore = defineStore('timer', {
     },
 
     _stop() {
-      if (this._intervalId !== null) {
-        clearInterval(this._intervalId)
-        this._intervalId = null
+      if (_intervalId !== null) {
+        clearInterval(_intervalId)
+        _intervalId = null
       }
     },
   },
