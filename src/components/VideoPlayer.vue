@@ -34,6 +34,7 @@ const rawUrl = ref('')
 const embedUrl = computed(() => toEmbedUrl(rawUrl.value))
 
 function onPaste(e: ClipboardEvent) {
+  e.preventDefault()
   const text = e.clipboardData?.getData('text') ?? ''
   if (text) rawUrl.value = text
 }
