@@ -124,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useTimerStore } from '../stores/timerStore'
 import type { TimerMode, IntervalPreset } from '../types'
 
@@ -186,6 +186,16 @@ const customRestMinutes = ref(Math.floor((existingCustom.value?.restDuration ?? 
 const customRestSeconds = ref(Math.floor(((existingCustom.value?.restDuration ?? 60000) % 60000) / 1000))
 
 onMounted(() => store.loadCustomIntervals())
+
+watch(customSlot, (slot) => {
+  const ci = slot >= 0 ? store.customIntervals[slot] : null
+  customName.value = ci?.name ?? ''
+  customRounds.value = ci?.rounds ?? 5
+  customWorkMinutes.value = Math.floor((ci?.workDuration ?? 300000) / 60000)
+  customWorkSeconds.value = Math.floor(((ci?.workDuration ?? 300000) % 60000) / 1000)
+  customRestMinutes.value = Math.floor((ci?.restDuration ?? 60000) / 60000)
+  customRestSeconds.value = Math.floor(((ci?.restDuration ?? 60000) % 60000) / 1000)
+})
 
 function onModeChange() {
   store.setMode(selectedMode.value)

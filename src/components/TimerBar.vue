@@ -15,7 +15,7 @@ const emit = defineEmits<{ openModal: [] }>()
 const store = useTimerStore()
 
 function handleClick() {
-  if (store.phase === 'idle' && !store.isRunning) {
+  if (store.mode === 'clock' || (store.phase === 'idle' && !store.isRunning)) {
     emit('openModal')
   } else {
     store.toggle()
