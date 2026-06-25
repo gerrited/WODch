@@ -22,7 +22,9 @@ Zeigt Rundenanzeige und Timer horizontal zentriert nebeneinander:
 ```
 - Rundenanzeige links vom Timer
 - Beide Elemente gemeinsam horizontal zentriert
-- Klick auf die Leiste öffnet das Timer-Modal
+- Klick auf die Leiste: Start / Pause (wenn Timer läuft oder pausiert ist)
+- Klick auf die Leiste im Idle-Zustand: öffnet das Timer-Modal
+- ⚙-Icon in der rechten Ecke der Leiste: öffnet das Timer-Modal jederzeit
 - Mindesthöhe: 40px
 
 ### Zeile 2 — Hauptbereich (Standard: 85% Höhe)
@@ -114,7 +116,7 @@ intervalPreset: string   // 'tabata' | 'fgb1' | 'fgb2' | 'emom' | 'custom-1'…'
 
 ## Timer-Modal
 
-Öffnet sich per Klick auf die TimerBar (oder ⚙-Icon in der Ecke der Leiste). Schließt automatisch beim Start.
+Öffnet sich per ⚙-Icon in der Ecke der TimerBar, per Klick auf die Leiste im Idle-Zustand oder per `M`. Schließt automatisch beim Start.
 
 **Inhalt:**
 1. Modus-Auswahl (Radio-Buttons)
@@ -131,7 +133,7 @@ intervalPreset: string   // 'tabata' | 'fgb1' | 'fgb2' | 'emom' | 'custom-1'…'
 | `M` | Modal öffnen/schließen |
 
 **Verhalten:**
-- Pause/Resume direkt per Leertaste oder Klick auf die TimerBar — kein Modal nötig
+- Pause/Resume per Leertaste oder Klick auf die TimerBar (wenn Timer nicht im Idle) — kein Modal nötig
 - Reset setzt auf Ausgangsposition ohne Moduswechsel
 
 ---
