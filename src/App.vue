@@ -1,0 +1,8 @@
+<template>
+  <div id="app">WODch</div>
+</template>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #app { height: 100%; background: #000; color: #fff; font-family: monospace; }
+</style>
