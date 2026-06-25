@@ -7,7 +7,7 @@
 
 ## Überblick
 
-WODch ist eine Web-App für CrossFit-/Gym-Trainings. Sie kombiniert einen Workout-Editor, einen vollwertigen Gym-Timer (vergleichbar mit dem Rogue Fitness Echo Gym Timer 2.0) und einen Video-Player in einem flexibel anpassbaren Layout.
+WODch ist eine Web-App für Gym-Trainings. Sie kombiniert einen Workout-Editor, einen vollwertigen Gym-Timer und einen Video-Player in einem flexibel anpassbaren Layout.
 
 ---
 
@@ -163,6 +163,38 @@ Logik in `useVideoEmbed.ts` (Composable).
 
 - Kein Video eingefügt: schwarzer Bereich mit Platzhalter-Text
 - Instagram-Hinweis: Bei Ladefehler kurze Meldung „Post muss öffentlich sein"
+
+---
+
+## Deployment
+
+### Container Image
+Die App wird als statisches Build (`npm run build` → `dist/`) in einem Nginx-Container ausgeliefert. Multi-Stage Dockerfile:
+
+```
+Stage 1 (node): npm ci && npm run build
+Stage 2 (nginx:alpine): dist/ kopieren, nginx serving
+```
+
+### GitHub Actions Workflow
+Datei: `.github/workflows/docker.yml`
+
+**Trigger:**
+- Push auf `main` → Image-Tag: `latest`
+- Push eines Git-Tags (z.B. `v1.2.3`) → Image-Tag: `1.2.3` (und zusätzlich `latest`)
+
+**Schritte:**
+1. Checkout
+2. Docker Buildx setup
+3. Login bei GitHub Container Registry (`ghcr.io`)
+4. Image bauen und pushen nach `ghcr.io/<owner>/wodch:<tag>`
+
+**Registry:** GitHub Container Registry (`ghcr.io`) via GitHub Packages — kein externer Registry-Account nötig, Authentifizierung über `GITHUB_TOKEN`.
+
+### Versionierung
+- Git-Tags im Format `vX.Y.Z` lösen versionierte Releases aus
+- `main`-Builds immer als `latest` getaggt
+- Kein automatisches Tagging — Tags werden manuell gesetzt
 
 ---
 
