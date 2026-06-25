@@ -181,11 +181,11 @@ Datei: `.github/workflows/docker.yml`
 
 **Trigger:**
 - Push auf `main` → Image-Tag: `latest`
-- Push eines Git-Tags (z.B. `v1.2.3`) → Image-Tag: `1.2.3` (und zusätzlich `latest`)
+- Push eines Git-Tags (z.B. `v1.2.3`) → Image-Tag: `1.2.3` (und nicht `latest`)
 
 **Schritte:**
 1. Checkout
-2. Docker Buildx setup
+2. Docker Buildx (x64 and ARM64) setup
 3. Login bei GitHub Container Registry (`ghcr.io`)
 4. Image bauen und pushen nach `ghcr.io/<owner>/wodch:<tag>`
 
