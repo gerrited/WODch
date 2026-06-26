@@ -1,20 +1,23 @@
 export function useVideoEmbed() {
-  function toEmbedUrl(url: string): string | null {
+  function toEmbedUrl(url: string, loop: boolean): string | null {
     if (!url) return null
 
-    // youtube.com/watch?v=ID
+    let videoId: string | null = null
+
     const ytWatch = url.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]+)/)
-    if (ytWatch) return `https://www.youtube.com/embed/${ytWatch[1]}`
+    if (ytWatch) videoId = ytWatch[1]
 
-    // youtu.be/ID
     const ytShort = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/)
-    if (ytShort) return `https://www.youtube.com/embed/${ytShort[1]}`
+    if (ytShort) videoId = ytShort[1]
 
-    // instagram.com/reel/ID/ or instagram.com/p/ID/
-    const igPost = url.match(/instagram\.com\/(reel|p)\/([a-zA-Z0-9_-]+)/)
-    if (igPost) return `https://www.instagram.com/p/${igPost[2]}/embed/`
+    if (!videoId) return null
 
-    return null
+    const params = new URLSearchParams({ enablejsapi: '1' })
+    if (loop) {
+      params.set('loop', '1')
+      params.set('playlist', videoId)
+    }
+    return `https://www.youtube.com/embed/${videoId}?${params}`
   }
 
   return { toEmbedUrl }

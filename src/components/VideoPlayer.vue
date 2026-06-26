@@ -4,13 +4,18 @@
       <input
         v-model="rawUrl"
         class="url-input"
-        placeholder="YouTube oder Instagram URL einfügen..."
+        placeholder="YouTube URL einfügen..."
         @paste="onPaste"
       />
+      <label class="loop-toggle" title="Dauerschleife">
+        <input type="checkbox" v-model="loop" />
+        ∞
+      </label>
     </div>
     <div class="embed-area">
       <iframe
         v-if="embedUrl"
+        :key="embedUrl"
         :src="embedUrl"
         class="embed-frame"
         frameborder="0"
@@ -18,9 +23,9 @@
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
       />
       <div v-else-if="rawUrl && !embedUrl" class="error">
-        URL wird nicht unterstützt — oder Instagram-Post ist nicht öffentlich.
+        Keine gültige YouTube URL.
       </div>
-      <div v-else class="placeholder">YouTube / Instagram URL eingeben</div>
+      <div v-else class="placeholder">YouTube URL eingeben</div>
     </div>
   </div>
 </template>
@@ -31,7 +36,8 @@ import { useVideoEmbed } from '../composables/useVideoEmbed'
 
 const { toEmbedUrl } = useVideoEmbed()
 const rawUrl = ref('')
-const embedUrl = computed(() => toEmbedUrl(rawUrl.value))
+const loop = ref(false)
+const embedUrl = computed(() => toEmbedUrl(rawUrl.value, loop.value))
 
 function onPaste(e: ClipboardEvent) {
   e.preventDefault()
@@ -49,13 +55,18 @@ function onPaste(e: ClipboardEvent) {
 }
 
 .url-bar {
-  padding: 8px 12px;
-  border-bottom: 1px solid #222;
+  height: 40px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: 2px solid #333;
   flex-shrink: 0;
 }
 
 .url-input {
-  width: 100%;
+  flex: 1;
   background: #111;
   border: 1px solid #333;
   border-radius: 4px;
@@ -68,6 +79,20 @@ function onPaste(e: ClipboardEvent) {
 
 .url-input:focus { border-color: #555; }
 .url-input::placeholder { color: #444; }
+
+.loop-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #555;
+  font-size: 18px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.loop-toggle input { display: none; }
+.loop-toggle:has(input:checked) { color: #fff; }
 
 .embed-area {
   flex: 1;

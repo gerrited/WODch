@@ -31,7 +31,7 @@ function handleClick() {
   align-items: center;
   justify-content: center;
   background: #111;
-  border-bottom: 1px solid #222;
+  border-bottom: 2px solid #333;
   cursor: pointer;
   user-select: none;
   container-type: size;
@@ -68,7 +68,7 @@ function handleClick() {
   background: none;
   border: none;
   color: #444;
-  font-size: 18px;
+  font-size: 36px;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;

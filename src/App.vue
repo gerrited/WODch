@@ -36,8 +36,8 @@ const store = useTimerStore()
 const showModal = ref(false)
 
 function onKeydown(e: KeyboardEvent) {
-  const tag = (e.target as HTMLElement).tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return
+  const target = e.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
   if (e.code === 'Space') {
     e.preventDefault()
@@ -64,17 +64,17 @@ html, body, #app { height: 100%; background: #000; color: #fff; font-family: mon
 .inner-panes { height: 100%; }
 
 /* splitpanes Handles */
-:deep(.splitpanes__splitter) {
+.splitpanes--horizontal > .splitpanes__splitter {
+  height: 4px !important;
   background: #333 !important;
   z-index: 1;
 }
-:deep(.splitpanes--horizontal > .splitpanes__splitter) {
-  height: 2px !important;
+.splitpanes--vertical > .splitpanes__splitter {
+  width: 12px !important;
+  background: #0d0d0d !important;
+  z-index: 1;
 }
-:deep(.splitpanes--vertical > .splitpanes__splitter) {
-  width: 2px !important;
-}
-:deep(.splitpanes__splitter:hover) {
+.splitpanes__splitter:hover {
   background: #555 !important;
 }
 </style>
