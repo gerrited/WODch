@@ -34,6 +34,7 @@ function handleClick() {
   border-bottom: 1px solid #222;
   cursor: pointer;
   user-select: none;
+  container-type: size;
 }
 
 .timer-bar:hover { background: #161616; }
@@ -45,14 +46,14 @@ function handleClick() {
 }
 
 .round {
-  font-size: clamp(14px, 2vh, 22px);
+  font-size: clamp(14px, 25cqh, 9999px);
   color: #888;
   letter-spacing: 2px;
   font-weight: 600;
 }
 
 .time {
-  font-size: clamp(28px, 5vh, 72px);
+  font-size: clamp(28px, 60cqh, 9999px);
   font-weight: 900;
   color: #fff;
   letter-spacing: 4px;
