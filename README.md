@@ -119,7 +119,7 @@ The pipeline runs on every push to `main` and on version tags (`v*`):
 | Push to `main` | `latest` |
 | Push tag `v1.2.3` | `1.2.3` |
 
-Registry: `ghcr.io/<owner>/wodch`
+Registry: `ghcr.io/gerrited/wodch`
 
 Authentication uses the built-in `GITHUB_TOKEN` — no external registry account needed.
 
