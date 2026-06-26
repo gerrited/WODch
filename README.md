@@ -126,5 +126,5 @@ Authentication uses the built-in `GITHUB_TOKEN` — no external registry account
 Pull the latest image:
 
 ```bash
-docker pull ghcr.io/<owner>/wodch:latest
+docker pull ghcr.io/gerrited/wodch:latest
 ```
