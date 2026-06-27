@@ -2,10 +2,10 @@
   <div class="workout-wrapper">
     <div class="tab-bar">
       <div
-        v-for="(tab, i) in tabs"
-        :key="i"
+        v-for="(tab, i) in store.tabs"
+        :key="tab.id"
         class="tab"
-        :class="{ active: i === activeTab, 'drag-over': dragOverTab === i }"
+        :class="{ active: i === store.activeTab, 'drag-over': dragOverTab === i }"
         draggable="true"
         @click="switchTab(i)"
         @dblclick.stop="startRename(i)"
@@ -26,7 +26,7 @@
           @click.stop
         />
         <span v-else class="tab-title">{{ tab.title }}</span>
-        <span v-if="tabs.length > 1" class="tab-close" @click.stop="removeTab(i)">✕</span>
+        <span v-if="store.tabs.length > 1" class="tab-close" @click.stop="removeTab(i)">✕</span>
       </div>
       <button class="tab-add" @click="addTab">+</button>
     </div>
@@ -45,14 +45,10 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted } from 'vue'
+import { useWorkoutStore } from '../stores/workoutStore'
 
-interface Tab {
-  title: string
-  content: string
-}
+const store = useWorkoutStore()
 
-const tabs = ref<Tab[]>([{ title: 'Workout 1', content: '' }])
-const activeTab = ref(0)
 const editorRef = ref<HTMLElement>()
 const renamingTab = ref(-1)
 const renameValue = ref('')
@@ -62,30 +58,24 @@ const dragOverTab = ref(-1)
 
 function switchTab(i: number) {
   if (renamingTab.value >= 0) return
-  activeTab.value = i
+  store.switchTab(i)
 }
 
-watch(activeTab, async () => {
+watch(() => store.activeTab, async () => {
   await nextTick()
-  if (editorRef.value) editorRef.value.innerText = tabs.value[activeTab.value].content
+  if (editorRef.value) editorRef.value.innerText = store.tabs[store.activeTab].content
 })
 
 function onInput() {
   const editor = editorRef.value
   if (!editor) return
   if (editor.innerText.trim() === '') editor.innerHTML = ''
-  tabs.value[activeTab.value].content = editor.innerText
+  store.setContent(store.activeTab, editor.innerText)
 }
 
-function addTab() {
-  tabs.value.push({ title: `Workout ${tabs.value.length + 1}`, content: '' })
-  activeTab.value = tabs.value.length - 1
-}
+function addTab() { store.addTab() }
 
-function removeTab(i: number) {
-  tabs.value.splice(i, 1)
-  if (activeTab.value >= tabs.value.length) activeTab.value = tabs.value.length - 1
-}
+function removeTab(i: number) { store.removeTab(i) }
 
 function onDragStart(i: number, e: DragEvent) {
   dragTab.value = i
@@ -95,28 +85,25 @@ function onDragStart(i: number, e: DragEvent) {
 function onDrop(i: number) {
   const from = dragTab.value
   if (from === i || from === -1) return
-  const moved = tabs.value.splice(from, 1)[0]
-  tabs.value.splice(i, 0, moved)
-  activeTab.value = i
+  store.reorderTabs(from, i)
   dragTab.value = -1
   dragOverTab.value = -1
 }
 
 async function startRename(i: number) {
   renamingTab.value = i
-  renameValue.value = tabs.value[i].title
+  renameValue.value = store.tabs[i].title
   await nextTick()
   renameInputRef.value?.select()
 }
 
 function commitRename(i: number) {
-  const t = renameValue.value.trim()
-  if (t) tabs.value[i].title = t
+  store.renameTab(i, renameValue.value)
   renamingTab.value = -1
 }
 
 onMounted(() => {
-  if (editorRef.value) editorRef.value.innerText = tabs.value[0].content
+  if (editorRef.value) editorRef.value.innerText = store.tabs[0].content
 })
 </script>
 
