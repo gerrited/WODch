@@ -2,48 +2,60 @@
   <div class="video-player">
     <div class="url-bar">
       <input
-        v-model="rawUrl"
+        v-model="store.rawUrl"
         class="url-input"
         placeholder="YouTube URL einfügen..."
         @paste="onPaste"
       />
       <label class="loop-toggle" title="Dauerschleife">
-        <input type="checkbox" v-model="loop" />
+        <input type="checkbox" v-model="store.loop" />
         ∞
       </label>
     </div>
     <div class="embed-area">
-      <iframe
-        v-if="embedUrl"
-        :key="embedUrl"
-        :src="embedUrl"
-        class="embed-frame"
-        frameborder="0"
-        allowfullscreen
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      />
-      <div v-else-if="rawUrl && !embedUrl" class="error">
+      <div v-if="store.rawUrl && !currentVideoId" class="error">
         Keine gültige YouTube URL.
       </div>
-      <div v-else class="placeholder">YouTube URL eingeben</div>
+      <div v-else-if="!store.rawUrl" class="placeholder">YouTube URL eingeben</div>
+      <div ref="playerContainer" class="embed-frame" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useVideoEmbed } from '../composables/useVideoEmbed'
+import { ref, watch } from 'vue'
+import { useVideoEmbed, extractVideoId, videoLoop } from '../composables/useVideoEmbed'
+import { useVideoStore } from '../stores/videoStore'
 
-const { toEmbedUrl } = useVideoEmbed()
-const rawUrl = ref('')
-const loop = ref(false)
-const embedUrl = computed(() => toEmbedUrl(rawUrl.value, loop.value))
+const store = useVideoStore()
+const { initPlayer, loadVideo } = useVideoEmbed()
+const playerContainer = ref<HTMLElement>()
+const currentVideoId = ref<string | null>(null)
 
 function onPaste(e: ClipboardEvent) {
   e.preventDefault()
   const text = e.clipboardData?.getData('text') ?? ''
-  if (text) rawUrl.value = text
+  if (text) store.rawUrl = text
 }
+
+watch(() => store.rawUrl, async (url) => {
+  const id = extractVideoId(url)
+  if (!id) { currentVideoId.value = null; return }
+  if (id === currentVideoId.value) return
+  currentVideoId.value = id
+  if (playerContainer.value) {
+    // initPlayer erwartet ein Element; ersetze den Container-Inhalt durch ein frisches div
+    const el = document.createElement('div')
+    playerContainer.value.innerHTML = ''
+    playerContainer.value.appendChild(el)
+    await initPlayer(el, id)
+  }
+})
+
+// Loop-Zustand in das Singleton-Modul spiegeln
+watch(() => store.loop, (val) => {
+  videoLoop.value = val
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -105,7 +117,6 @@ function onPaste(e: ClipboardEvent) {
 .embed-frame {
   width: 100%;
   height: 100%;
-  border: none;
 }
 
 .placeholder, .error {
