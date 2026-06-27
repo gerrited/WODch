@@ -31,8 +31,10 @@ import WorkoutEditor from './components/WorkoutEditor.vue'
 import VideoPlayer from './components/VideoPlayer.vue'
 import TimerModal from './components/TimerModal.vue'
 import { useTimerStore } from './stores/timerStore'
+import { useSession, extractSessionId } from './composables/useSession'
 
 const store = useTimerStore()
+const { joinSession } = useSession()
 const showModal = ref(false)
 
 function onKeydown(e: KeyboardEvent) {
@@ -50,9 +52,13 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-  store.start() // Uhr startet direkt
+  store.start()
   document.addEventListener('keydown', onKeydown)
+
+  const id = extractSessionId()
+  if (id) joinSession(id)
 })
+
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
 
