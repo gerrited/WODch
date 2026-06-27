@@ -50,7 +50,7 @@ watch(() => store.rawUrl, async (url) => {
     playerContainer.value.appendChild(el)
     await initPlayer(el, id)
   }
-})
+}, { immediate: true })
 
 // Loop-Zustand in das Singleton-Modul spiegeln
 watch(() => store.loop, (val) => {
