@@ -4,15 +4,28 @@
       <span v-if="store.displayRound" class="round">{{ store.displayRound }}</span>
       <span class="time">{{ store.displayTime }}</span>
     </div>
+    <ShareButton />
     <button class="gear" @click.stop="emit('openModal')" title="Timer-Einstellungen">⚙</button>
+    <span class="connection-dot" :class="dotClass" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useTimerStore } from '../stores/timerStore'
+import { useSession } from '../composables/useSession'
+import ShareButton from './ShareButton.vue'
 
 const emit = defineEmits<{ openModal: [] }>()
 const store = useTimerStore()
+const { sessionId, isConnected, connectionError } = useSession()
+
+const dotClass = computed(() => {
+  if (!sessionId.value) return 'dot-off'
+  if (connectionError.value) return 'dot-error'
+  if (isConnected.value) return 'dot-ok'
+  return 'dot-off'
+})
 
 function handleClick() {
   if (store.mode === 'clock' || (store.phase === 'idle' && !store.isRunning)) {
@@ -76,4 +89,19 @@ function handleClick() {
 }
 
 .gear:hover { color: #888; background: #222; }
+
+.connection-dot {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s;
+}
+
+.dot-off { background: #333; }
+.dot-ok { background: #4caf50; }
+.dot-error { background: #e63946; }
 </style>
