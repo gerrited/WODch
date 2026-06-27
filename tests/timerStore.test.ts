@@ -254,3 +254,118 @@ describe('displayRound', () => {
     expect(store.displayRound).toBe('1 / 8')
   })
 })
+
+describe('sync fields (startedAt / accumulatedMs)', () => {
+  it('start() setzt startedAt auf aktuellen Timestamp', () => {
+    vi.setSystemTime(new Date('2024-01-01T10:00:00.000Z'))
+    const store = useTimerStore()
+    store.setMode('stopwatch')
+    store.start()
+    expect(store.startedAt).toBe(new Date('2024-01-01T10:00:00.000Z').getTime())
+  })
+
+  it('start() setzt accumulatedMs auf 0 nach reset', () => {
+    const store = useTimerStore()
+    store.setMode('stopwatch')
+    store.start()
+    vi.advanceTimersByTime(3000)
+    store.reset()
+    store.start()
+    expect(store.accumulatedMs).toBe(0)
+  })
+
+  it('pause() setzt startedAt auf null und accumulatedMs auf elapsed', () => {
+    vi.setSystemTime(new Date('2024-01-01T10:00:00.000Z'))
+    const store = useTimerStore()
+    store.setMode('stopwatch')
+    store.start()
+    vi.advanceTimersByTime(5000)
+    store.pause()
+    expect(store.startedAt).toBeNull()
+    expect(store.accumulatedMs).toBe(5000)
+  })
+
+  it('reset() setzt startedAt und accumulatedMs auf null/0', () => {
+    const store = useTimerStore()
+    store.setMode('stopwatch')
+    store.start()
+    vi.advanceTimersByTime(3000)
+    store.reset()
+    expect(store.startedAt).toBeNull()
+    expect(store.accumulatedMs).toBe(0)
+  })
+
+  it('_nextPhase setzt startedAt neu und accumulatedMs auf 0', () => {
+    vi.setSystemTime(new Date('2024-01-01T10:00:00.000Z'))
+    const store = useTimerStore()
+    store.applyPreset('tabata')
+    store.start()
+    const startedAt = store.startedAt
+    vi.setSystemTime(new Date('2024-01-01T10:00:20.000Z'))
+    vi.advanceTimersByTime(20000) // work→rest transition
+    expect(store.startedAt).toBeGreaterThan(startedAt!)
+    expect(store.accumulatedMs).toBe(0)
+  })
+})
+
+describe('syncFromRemote', () => {
+  it('startet lokalen Tick wenn isRunning: true', () => {
+    vi.setSystemTime(new Date('2024-01-01T10:00:00.000Z'))
+    const store = useTimerStore()
+    store.syncFromRemote({
+      mode: 'stopwatch',
+      preset: null,
+      phase: 'idle',
+      isRunning: true,
+      startedAt: Date.now() - 5000,
+      accumulatedMs: 0,
+      countdownTarget: 180000,
+      countupStart: 0,
+      workDuration: 20000,
+      restDuration: 10000,
+      warmupDuration: 10000,
+      warmupEnabled: false,
+      emomInterval: 60000,
+      emomRounds: 10,
+      currentRound: 0,
+      totalRounds: 8,
+      clock12h: false,
+      customIntervals: [],
+    })
+    expect(store.isRunning).toBe(true)
+    vi.advanceTimersByTime(1000)
+    // elapsed muss weiterlaufen (≈ 6000ms nach sync)
+    expect(store.elapsed).toBeGreaterThan(5000)
+  })
+
+  it('stoppt lokalen Tick wenn isRunning: false', () => {
+    const store = useTimerStore()
+    store.setMode('stopwatch')
+    store.start()
+    vi.advanceTimersByTime(3000)
+    store.syncFromRemote({
+      mode: 'stopwatch',
+      preset: null,
+      phase: 'idle',
+      isRunning: false,
+      startedAt: null,
+      accumulatedMs: 3000,
+      countdownTarget: 180000,
+      countupStart: 0,
+      workDuration: 20000,
+      restDuration: 10000,
+      warmupDuration: 10000,
+      warmupEnabled: false,
+      emomInterval: 60000,
+      emomRounds: 10,
+      currentRound: 0,
+      totalRounds: 8,
+      clock12h: false,
+      customIntervals: [],
+    })
+    expect(store.isRunning).toBe(false)
+    const snap = store.elapsed
+    vi.advanceTimersByTime(2000)
+    expect(store.elapsed).toBe(snap) // kein Fortschritt
+  })
+})

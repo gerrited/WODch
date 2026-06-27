@@ -47,8 +47,8 @@ export const useTimerStore = defineStore('timer', {
     phase: 'idle' as TimerPhase,
     isRunning: false,
     elapsed: 0,
-    lastElapsed: 0,
-    startTime: null as number | null,
+    accumulatedMs: 0,
+    startedAt: null as number | null,
     clockDisplay: formatClock(new Date(), false),
     clock12h: false,
     countdownTarget: 3 * 60 * 1000,
@@ -93,15 +93,15 @@ export const useTimerStore = defineStore('timer', {
       this.preset = null
       this.phase = 'idle'
       this.elapsed = 0
-      this.lastElapsed = 0
-      this.startTime = null
+      this.accumulatedMs = 0
+      this.startedAt = null
       this.currentRound = 0
       if (mode === 'clock') this.clockDisplay = formatClock(new Date(), this.clock12h)
     },
 
     start() {
       if (this.isRunning) return
-      this.startTime = Date.now()
+      this.startedAt = Date.now()
       this.isRunning = true
       if (this.mode === 'clock') {
         this.clockDisplay = formatClock(new Date(), this.clock12h)
@@ -114,7 +114,7 @@ export const useTimerStore = defineStore('timer', {
         this.phase = this.warmupEnabled ? 'warmup' : 'work'
         if (this.phase === 'work') this.currentRound = 1
         this.elapsed = 0
-        this.lastElapsed = 0
+        this.accumulatedMs = 0
       }
       _intervalId = setInterval(() => this._tick(), TICK_MS)
     },
@@ -122,8 +122,8 @@ export const useTimerStore = defineStore('timer', {
     pause() {
       if (!this.isRunning) return
       this._stop()
-      this.lastElapsed = this.elapsed
-      this.startTime = null
+      this.accumulatedMs = this.elapsed
+      this.startedAt = null
       this.isRunning = false
     },
 
@@ -136,8 +136,8 @@ export const useTimerStore = defineStore('timer', {
       this._stop()
       this.isRunning = false
       this.elapsed = 0
-      this.lastElapsed = 0
-      this.startTime = null
+      this.accumulatedMs = 0
+      this.startedAt = null
       this.phase = 'idle'
       this.currentRound = 0
     },
@@ -192,9 +192,57 @@ export const useTimerStore = defineStore('timer', {
       localStorage.setItem(CUSTOM_KEY, JSON.stringify(this.customIntervals))
     },
 
+    syncFromRemote(remote: {
+      mode: TimerMode
+      preset: IntervalPreset | null
+      phase: TimerPhase
+      isRunning: boolean
+      startedAt: number | null
+      accumulatedMs: number
+      countdownTarget: number
+      countupStart: number
+      workDuration: number
+      restDuration: number
+      warmupDuration: number
+      warmupEnabled: boolean
+      emomInterval: number
+      emomRounds: number
+      currentRound: number
+      totalRounds: number
+      clock12h: boolean
+      customIntervals: CustomInterval[]
+    }) {
+      this._stop()
+      this.mode = remote.mode
+      this.preset = remote.preset
+      this.phase = remote.phase
+      this.isRunning = remote.isRunning
+      this.startedAt = remote.startedAt
+      this.accumulatedMs = remote.accumulatedMs
+      this.countdownTarget = remote.countdownTarget
+      this.countupStart = remote.countupStart
+      this.workDuration = remote.workDuration
+      this.restDuration = remote.restDuration
+      this.warmupDuration = remote.warmupDuration
+      this.warmupEnabled = remote.warmupEnabled
+      this.emomInterval = remote.emomInterval
+      this.emomRounds = remote.emomRounds
+      this.currentRound = remote.currentRound
+      this.totalRounds = remote.totalRounds
+      this.clock12h = remote.clock12h
+      this.customIntervals = remote.customIntervals ?? []
+      if (remote.isRunning && remote.mode !== 'clock') {
+        _intervalId = setInterval(() => this._tick(), TICK_MS)
+      } else if (remote.isRunning && remote.mode === 'clock') {
+        _intervalId = setInterval(() => {
+          this.clockDisplay = formatClock(new Date(), this.clock12h)
+        }, CLOCK_TICK_MS)
+      }
+    },
+
     _tick() {
-      if (this.startTime === null) return
-      this.elapsed = this.lastElapsed + (Date.now() - this.startTime)
+      if (this.startedAt === null) return
+      this.elapsed = this.accumulatedMs + (Date.now() - this.startedAt)
       this._checkPhase()
     },
 
@@ -226,8 +274,8 @@ export const useTimerStore = defineStore('timer', {
       this.phase = phase
       this.currentRound = round
       this.elapsed = 0
-      this.lastElapsed = 0
-      this.startTime = Date.now()
+      this.accumulatedMs = 0
+      this.startedAt = Date.now()
     },
 
     _nextRound() {
