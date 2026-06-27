@@ -28,7 +28,7 @@ import { useVideoEmbed, extractVideoId, videoLoop } from '../composables/useVide
 import { useVideoStore } from '../stores/videoStore'
 
 const store = useVideoStore()
-const { initPlayer, loadVideo } = useVideoEmbed()
+const { initPlayer } = useVideoEmbed()
 const playerContainer = ref<HTMLElement>()
 const currentVideoId = ref<string | null>(null)
 
