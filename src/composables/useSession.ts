@@ -6,7 +6,6 @@ import { useTimerStore } from '../stores/timerStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { useVideoStore } from '../stores/videoStore'
 import { useVideoEmbed } from './useVideoEmbed'
-import type { WorkoutTab } from '../stores/workoutStore'
 
 export const sessionId = ref<string | null>(null)
 export const isConnected = ref(false)

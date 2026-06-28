@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useVideoEmbed, extractVideoId, videoLoop } from '../composables/useVideoEmbed'
 import { useVideoStore } from '../stores/videoStore'
 
@@ -43,8 +43,8 @@ watch(() => store.rawUrl, async (url) => {
   if (!id) { currentVideoId.value = null; return }
   if (id === currentVideoId.value) return
   currentVideoId.value = id
+  if (!playerContainer.value) await nextTick()  // vor mount: warten bis DOM bereit
   if (playerContainer.value) {
-    // initPlayer erwartet ein Element; ersetze den Container-Inhalt durch ein frisches div
     const el = document.createElement('div')
     playerContainer.value.innerHTML = ''
     playerContainer.value.appendChild(el)
@@ -117,6 +117,13 @@ watch(() => store.loop, (val) => {
 .embed-frame {
   width: 100%;
   height: 100%;
+}
+
+.embed-frame :deep(iframe) {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: none;
 }
 
 .placeholder, .error {

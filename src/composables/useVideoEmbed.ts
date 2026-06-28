@@ -51,6 +51,8 @@ export function useVideoEmbed() {
     currentVideoId = videoId
     player = new YT.Player(el, {
       videoId,
+      width: '100%',
+      height: '100%',
       playerVars: { controls: 1, rel: 0 },
       events: {
         onReady: () => {
