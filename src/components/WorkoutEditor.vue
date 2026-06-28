@@ -61,10 +61,14 @@ function switchTab(i: number) {
   store.switchTab(i)
 }
 
-watch(() => store.activeTab, async () => {
-  await nextTick()
-  if (editorRef.value) editorRef.value.innerText = store.tabs[store.activeTab].content
-})
+watch(
+  () => ({ activeTab: store.activeTab, tabs: store.tabs }),
+  async () => {
+    await nextTick()
+    if (editorRef.value) editorRef.value.innerText = store.tabs[store.activeTab]?.content ?? ''
+  },
+  { deep: true },
+)
 
 function onInput() {
   const editor = editorRef.value

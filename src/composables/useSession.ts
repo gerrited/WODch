@@ -22,7 +22,7 @@ export function useSession() {
   const timerStore = useTimerStore()
   const workoutStore = useWorkoutStore()
   const videoStore = useVideoStore()
-  const { play, pause, seekTo, getCurrentTime, setOnStateChange, markRemoteSync } = useVideoEmbed()
+  const { play, pause, seekTo, getCurrentTime, setOnStateChange, markRemoteSync, playerReady, setPendingVideoSync } = useVideoEmbed()
 
   let localChange = false
   let workoutDebounce: ReturnType<typeof setTimeout> | null = null
@@ -60,7 +60,8 @@ export function useSession() {
     }
   }
 
-  function applyTimerSnapshot(t: ReturnType<typeof buildTimerSnapshot> & { startedAt: number | null; accumulatedMs: number }) {
+  function applyTimerSnapshot(t: any) {
+    if (!t) return
     // syncFromRemote stoppt/startet den lokalen setInterval korrekt
     timerStore.syncFromRemote({
       mode: t.mode,
@@ -89,8 +90,12 @@ export function useSession() {
     const position = v.accumulatedSeconds + (v.isPlaying && v.startedAt !== null
       ? (Date.now() - v.startedAt) / 1000
       : 0)
-    seekTo(position)
-    if (v.isPlaying) { play() } else { pause() }
+    if (playerReady.value) {
+      seekTo(position)
+      if (v.isPlaying) { play() } else { pause() }
+    } else {
+      setPendingVideoSync(position, v.isPlaying)
+    }
   }
 
   function subscribe(id: string) {
@@ -105,14 +110,17 @@ export function useSession() {
         const data = snapshot.val()
 
         localChange = true
-        applyTimerSnapshot(data.timer)
-        if (data.workouts) {
-          workoutStore.setFromRemote(data.workouts.tabs ?? [], data.workouts.activeTab ?? 0)
+        try {
+          applyTimerSnapshot(data.timer)
+          if (data.workouts) {
+            workoutStore.setFromRemote(data.workouts.tabs ?? [], data.workouts.activeTab ?? 0)
+          }
+          if (data.videoUrl !== undefined) videoStore.rawUrl = data.videoUrl
+          if (data.video) applyVideoSnapshot(data.video)
+        } finally {
+          // Erst nach Vue-Flush wieder freigeben (Macrotask > Microtask)
+          setTimeout(() => { localChange = false }, 0)
         }
-        if (data.videoUrl !== undefined) videoStore.rawUrl = data.videoUrl
-        if (data.video) applyVideoSnapshot(data.video)
-        // Erst nach Vue-Flush wieder freigeben (Macrotask > Microtask)
-        setTimeout(() => { localChange = false }, 0)
       },
       () => {
         isConnected.value = false
@@ -140,6 +148,7 @@ export function useSession() {
         currentRound: timerStore.currentRound,
         totalRounds: timerStore.totalRounds,
         clock12h: timerStore.clock12h,
+        customIntervals: timerStore.customIntervals,
       }),
       () => {
         if (localChange) return
@@ -169,6 +178,7 @@ export function useSession() {
       (url) => {
         if (localChange) return
         set(dbRef(db, `sessions/${id}/videoUrl`), url)
+        set(dbRef(db, `sessions/${id}/video`), { isPlaying: false, startedAt: null, accumulatedSeconds: 0 })
         set(dbRef(db, `sessions/${id}/updatedAt`), Date.now())
       },
     )
@@ -206,7 +216,9 @@ export function useSession() {
     } catch {
       // Clipboard-Zugriff kann in nicht-sicheren Kontexten scheitern
     }
+    localChange = true
     subscribe(id)
+    setTimeout(() => { localChange = false }, 200)
   }
 
   function joinSession(id: string): void {

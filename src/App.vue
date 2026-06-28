@@ -31,7 +31,7 @@ import WorkoutEditor from './components/WorkoutEditor.vue'
 import VideoPlayer from './components/VideoPlayer.vue'
 import TimerModal from './components/TimerModal.vue'
 import { useTimerStore } from './stores/timerStore'
-import { useSession, extractSessionId } from './composables/useSession'
+import { useSession, extractSessionId, sessionId } from './composables/useSession'
 
 const store = useTimerStore()
 const { joinSession } = useSession()
@@ -51,15 +51,24 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
+function onHashChange() {
+  const id = extractSessionId()
+  if (id && id !== sessionId.value) joinSession(id)
+}
+
 onMounted(() => {
   store.start()
   document.addEventListener('keydown', onKeydown)
+  window.addEventListener('hashchange', onHashChange)
 
   const id = extractSessionId()
   if (id) joinSession(id)
 })
 
-onUnmounted(() => document.removeEventListener('keydown', onKeydown))
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('hashchange', onHashChange)
+})
 </script>
 
 <style>

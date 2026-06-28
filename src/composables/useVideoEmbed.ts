@@ -15,6 +15,7 @@ let currentVideoId: string | null = null
 let apiReady = false
 let apiLoading = false
 const pendingResolvers: (() => void)[] = []
+let pendingVideoSync: { position: number; playing: boolean } | null = null
 
 export const playerReady = ref(false)
 export const videoLoop = ref(false)  // von VideoPlayer.vue gesetzt, intern für Loop genutzt
@@ -52,7 +53,15 @@ export function useVideoEmbed() {
       videoId,
       playerVars: { controls: 1, rel: 0 },
       events: {
-        onReady: () => { playerReady.value = true },
+        onReady: () => {
+          playerReady.value = true
+          if (pendingVideoSync) {
+            player?.seekTo(pendingVideoSync.position, true)
+            if (pendingVideoSync.playing) player?.playVideo()
+            else player?.pauseVideo()
+            pendingVideoSync = null
+          }
+        },
         onStateChange: (e) => {
           // Loop intern behandeln — kein externer Callback nötig
           if (e.data === 0 && videoLoop.value && currentVideoId) {
@@ -86,5 +95,9 @@ export function useVideoEmbed() {
     lastRemoteSyncAt = Date.now()
   }
 
-  return { initPlayer, loadVideo, play, pause, seekTo, getCurrentTime, setOnStateChange, markRemoteSync, playerReady }
+  function setPendingVideoSync(position: number, playing: boolean) {
+    pendingVideoSync = { position, playing }
+  }
+
+  return { initPlayer, loadVideo, play, pause, seekTo, getCurrentTime, setOnStateChange, markRemoteSync, playerReady, setPendingVideoSync }
 }

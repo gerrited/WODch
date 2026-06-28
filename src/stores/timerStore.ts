@@ -213,6 +213,7 @@ export const useTimerStore = defineStore('timer', {
       customIntervals: CustomInterval[]
     }) {
       this._stop()
+      this.elapsed = remote.accumulatedMs
       this.mode = remote.mode
       this.preset = remote.preset
       this.phase = remote.phase
