@@ -58,7 +58,7 @@ export class SessionState {
       if (this.applyingRemote) return
       this.client.send('workouts/activeTab', i)
     }
-    workouts.onTabField = (id, field, value) => {
+    workouts.onTabField = (id, field) => {
       if (this.applyingRemote) return
       const key = `tab/${id}/${field}`
       const existing = this.debounces.get(key)
