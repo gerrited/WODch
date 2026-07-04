@@ -1,4 +1,4 @@
-import type { SessionDoc, TimerDoc, VideoDoc, WorkoutsDoc } from './types.ts'
+import type { SessionDoc, TimerDoc, VideoDoc, WorkoutsDoc } from './types.js'
 
 const TTL_MS = 24 * 60 * 60 * 1000
 
