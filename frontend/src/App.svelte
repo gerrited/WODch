@@ -2,6 +2,7 @@
   import SplitPane from './lib/components/SplitPane.svelte'
   import TimerBar from './lib/components/TimerBar.svelte'
   import TimerModal from './lib/components/TimerModal.svelte'
+  import WorkoutEditor from './lib/components/WorkoutEditor.svelte'
   import { timer } from './lib/stores/timer.svelte'
   import { session } from './lib/sync/session.svelte'
   import { onMount } from 'svelte'
@@ -36,7 +37,7 @@
     {#snippet b()}
       <SplitPane orientation="columns" initial={50} min={10}>
         {#snippet a()}
-          <div class="placeholder">Workout-Editor (Task 9)</div>
+          <WorkoutEditor />
         {/snippet}
         {#snippet b()}
           <div class="placeholder">Video-Player (Task 10)</div>
