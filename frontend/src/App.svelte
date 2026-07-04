@@ -3,6 +3,7 @@
   import TimerBar from './lib/components/TimerBar.svelte'
   import TimerModal from './lib/components/TimerModal.svelte'
   import WorkoutEditor from './lib/components/WorkoutEditor.svelte'
+  import VideoPlayer from './lib/components/VideoPlayer.svelte'
   import { timer } from './lib/stores/timer.svelte'
   import { session } from './lib/sync/session.svelte'
   import { onMount } from 'svelte'
@@ -40,7 +41,7 @@
           <WorkoutEditor />
         {/snippet}
         {#snippet b()}
-          <div class="placeholder">Video-Player (Task 10)</div>
+          <VideoPlayer />
         {/snippet}
       </SplitPane>
     {/snippet}
@@ -54,13 +55,5 @@
 <style>
   #layout {
     height: 100%;
-  }
-  .placeholder {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #333;
-    background: #000;
   }
 </style>
