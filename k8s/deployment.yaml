@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wodch
+  name: wodch-frontend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: wodch
+      app: wodch-frontend
   template:
     metadata:
       labels:
-        app: wodch
+        app: wodch-frontend
     spec:
       imagePullSecrets:
         - name: ghcr-secret
       containers:
         - name: frontend
-          image: ghcr.io/gerrited/wodch:latest
+          image: ghcr.io/gerrited/wodch-frontend:latest
           ports:
             - containerPort: 80
           resources:
@@ -30,29 +30,94 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: wodch
+  name: wodch-frontend
 spec:
   selector:
-    app: wodch
+    app: wodch-frontend
   ports:
     - port: 80
       targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wodch-sync
+spec:
+  # Sessions leben im Arbeitsspeicher — genau eine Instanz.
+  # Ausbaupfad bei Bedarf: Redis als Backing Store (siehe docs/rewrite-stack-options.md §6.2)
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wodch-sync
+  template:
+    metadata:
+      labels:
+        app: wodch-sync
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: sync
+          image: ghcr.io/gerrited/wodch-sync:latest
+          ports:
+            - containerPort: 8787
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8787
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8787
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wodch-sync
+spec:
+  selector:
+    app: wodch-sync
+  ports:
+    - port: 8787
+      targetPort: 8787
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: wodch
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    # WebSocket-Verbindungen lange offen halten
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
   rules:
     - host: wodch.g11s.cc
       http:
         paths:
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: wodch-sync
+                port:
+                  number: 8787
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: wodch
+                name: wodch-frontend
                 port:
                   number: 80
