@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { SessionState, extractSessionId } from './session.svelte'
+import { SessionState, extractSessionId, extractSessionIdFromPath } from './session.svelte'
 import { TimerStore } from '../stores/timer.svelte'
 import { WorkoutStore } from '../stores/workouts.svelte'
 import { VideoStore } from '../stores/video.svelte'
@@ -39,6 +39,19 @@ describe('extractSessionId', () => {
   })
 })
 
+describe('extractSessionIdFromPath', () => {
+  it('extrahiert die Session-ID aus dem Pfad', () => {
+    expect(extractSessionIdFromPath('/Xk9mQp')).toBe('Xk9mQp')
+    expect(extractSessionIdFromPath('/ab_c-1/')).toBe('ab_c-1')
+  })
+
+  it('null bei Root und verschachtelten Pfaden', () => {
+    expect(extractSessionIdFromPath('/')).toBeNull()
+    expect(extractSessionIdFromPath('')).toBeNull()
+    expect(extractSessionIdFromPath('/assets/app.js')).toBeNull()
+  })
+})
+
 describe('SessionState', () => {
   let client: FakeClient
   let timer: TimerStore
@@ -56,16 +69,40 @@ describe('SessionState', () => {
     session = new SessionState(client, { timer, workouts, video })
   })
 
-  afterEach(() => vi.useRealTimers())
+  afterEach(() => {
+    vi.useRealTimers()
+    history.replaceState(null, '', '/')
+  })
 
-  it('create verbindet mit nanoid(6), setzt Hash und liefert komplettes Doc als Seed', async () => {
+  it('create verbindet mit nanoid(6), setzt Pfad-URL und liefert komplettes Doc als Seed', async () => {
     await session.create()
     expect(client.connected).toMatch(/^[A-Za-z0-9_-]{6}$/)
-    expect(window.location.hash).toBe(`#session=${client.connected}`)
+    expect(window.location.pathname).toBe(`/${client.connected}`)
     const doc = client.localDoc!()
     expect(doc.timer.mode).toBe('clock')
     expect(doc.workouts.tabs).toHaveLength(1)
     expect(doc.updatedAt).toBeGreaterThan(0)
+  })
+
+  it('joinFromLocation joint anhand des Pfads', () => {
+    history.replaceState(null, '', '/Xk9mQp')
+    session.joinFromLocation()
+    expect(client.connected).toBe('Xk9mQp')
+    expect(session.id).toBe('Xk9mQp')
+  })
+
+  it('joinFromLocation normalisiert Legacy-Hash-Links auf die Pfadform', () => {
+    history.replaceState(null, '', '/#session=abc123')
+    session.joinFromLocation()
+    expect(client.connected).toBe('abc123')
+    expect(window.location.pathname).toBe('/abc123')
+    expect(window.location.hash).toBe('')
+  })
+
+  it('joinFromLocation ohne Session-ID tut nichts', () => {
+    session.joinFromLocation()
+    expect(client.connected).toBeNull()
+    expect(session.id).toBeNull()
   })
 
   it('Timer-Aktionen senden timer-Patch; applyRemote nicht', () => {

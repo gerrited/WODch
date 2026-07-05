@@ -7,8 +7,14 @@ import type { SessionDoc, TimerDoc, VideoDoc, WorkoutsDoc } from '../types'
 
 const DEBOUNCE_MS = 500
 
+// Legacy-Format: alte geteilte Links nutzen #session=<id>
 export function extractSessionId(hash: string): string | null {
   const match = hash.match(/[#&]session=([A-Za-z0-9_-]+)/)
+  return match ? match[1] : null
+}
+
+export function extractSessionIdFromPath(pathname: string): string | null {
+  const match = pathname.match(/^\/([A-Za-z0-9_-]+)\/?$/)
   return match ? match[1] : null
 }
 
@@ -129,7 +135,7 @@ export class SessionState {
   async create(): Promise<void> {
     const id = nanoid(6)
     this.joinSession(id)
-    window.location.hash = `session=${id}`
+    history.replaceState(null, '', `/${id}`)
     try {
       await navigator.clipboard.writeText(window.location.href)
     } catch {
@@ -150,9 +156,13 @@ export class SessionState {
     this.client.connect(id, () => this.buildDoc())
   }
 
-  joinFromHash(): void {
-    const id = extractSessionId(window.location.hash)
-    if (id && id !== this.id) this.joinSession(id)
+  joinFromLocation(): void {
+    const pathId = extractSessionIdFromPath(window.location.pathname)
+    const id = pathId ?? extractSessionId(window.location.hash)
+    if (!id || id === this.id) return
+    // Legacy-Hash-Links auf die Pfadform normalisieren, damit kopierte Links einheitlich sind
+    if (!pathId) history.replaceState(null, '', `/${id}`)
+    this.joinSession(id)
   }
 
   // Video-Integration (Task 10): Player meldet lokale Play/Pause/Seek-Zustände

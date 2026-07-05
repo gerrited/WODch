@@ -24,11 +24,11 @@
   }
 
   onMount(() => {
-    session.joinFromHash()
+    session.joinFromLocation()
   })
 </script>
 
-<svelte:window onkeydown={onKeydown} onhashchange={() => session.joinFromHash()} />
+<svelte:window onkeydown={onKeydown} onhashchange={() => session.joinFromLocation()} />
 
 <div id="layout">
   <SplitPane orientation="rows" initial={15} min={5}>
