@@ -1,130 +1,69 @@
 # WODch
 
-A gym training web app combining a full-featured interval timer, a multi-tab workout editor, and a YouTube video player in a fully resizable layout.
+Gym-Training-Web-App: vollwertiger Intervall-Timer, Multi-Tab-Workout-Editor und YouTube-Player in einem frei anpassbaren Split-Layout — mit Echtzeit-Session-Sharing per Link, ganz ohne Cloud-Anbieter.
 
 ## Features
 
-### Layout
-- Two-row resizable layout powered by [splitpanes](https://github.com/antoniandre/splitpanes)
-- **Row 1 (15%)** — Timer bar: round count + current time, horizontally centered. Gear icon opens settings.
-- **Row 2 (85%)** — Side-by-side resizable panes: workout editor (left) and video player (right)
-- All dividers are drag-resizable
+- **Timer** — 5 Modi: Uhrzeit (12h/24h), Stoppuhr (1/100s), Count-Down, Count-Up, Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, 10 Custom-Slots) und optionalem Warmup. Phase und Runde werden deterministisch aus Startzeitpunkt + Konfiguration abgeleitet.
+- **Workout-Editor** — mehrere Tabs (umbenennen per Doppelklick, sortieren per Drag & Drop), zentrierter Monospace-Text.
+- **Video-Player** — YouTube-URL einfügen (`watch?v=`/`youtu.be`), ∞-Loop, ±10s-Buttons.
+- **Session-Sharing** — 📤-Button erzeugt einen Link (`#session=<id>`). Alle Geräte mit dem Link sehen Timer, Workouts und Video synchron und haben volle Kontrolle (kein Host-Konzept, last-write-wins). Sessions verfallen 24 h nach der letzten Änderung.
+- **Bedienung** — Klick auf die Timer-Leiste: Start/Pause (im Idle: Einstellungen). Tastatur: `Space` Start/Pause, `R` Reset, `M` Einstellungen.
 
-### Timer
+## Architektur
 
-Timer text always fills the available bar height via CSS container queries.
+```
+frontend/   Svelte 5 + Vite + TypeScript, statisches SPA-Build hinter Nginx
+server/     Sync-Dienst: Node 22 + ws, Sessions in-Memory, 24h-TTL-Sweep
+k8s/        Deployments (frontend skalierbar, sync replicas: 1) + Ingress
+```
 
-5 modes:
+**Sync-Modell:** Clients verbinden sich per WebSocket (`/ws`) und tauschen Pfad-Patches aus (`timer`, `video`, `videoUrl`, `workouts`, `workouts/activeTab`, `tab/<id>/content|title`). Der laufende Timer wird **nie** gestreamt — übertragen werden nur Zustandsübergänge (`startedAt`, `accumulatedMs`); jeder Client rechnet die Anzeige lokal. Workout-Eingaben werden 500 ms debounced und pro Tab-Feld gepatcht, damit sich parallel Tippende nicht überschreiben.
 
-| Mode | Description |
-|---|---|
-| Clock | System time, 12h or 24h |
-| Stopwatch | Count up from 0, centisecond precision |
-| Count-Down | Countdown from a configurable target time |
-| Count-Up | Count up from a configurable start time |
-| Interval | Work/rest cycles with presets (see below) |
+**Re-Seed:** Jeder Client hält das komplette Session-Dokument lokal. Kennt der Server die Session nach einem Neustart nicht mehr (`missing`), seedet der Client seinen Stand einfach neu — Sessions überleben so Deploys und Pod-Neustarts ohne Datenbank.
 
-**Interval presets:**
-
-| Preset | Description |
-|---|---|
-| Tabata | 20s work / 10s rest × 8 rounds |
-| Fight Gone Bad 1 | 5 × (5 min work + 1 min rest) |
-| Fight Gone Bad 2 | 3 × (5 min work + 1 min rest) |
-| EMOM | Configurable interval × configurable rounds |
-| Custom 1–10 | Named programs: rounds, work duration, rest duration |
-
-**Warmup:** Optional countdown before the main interval starts (available in Interval mode).
-
-Custom interval programs are saved to `localStorage` and persist across sessions.
-
-### Timer Controls
-- **Click timer bar** — Toggle start/pause (in Clock mode: always opens settings)
-- **Gear icon** — Open settings modal at any time
-- **Keyboard shortcuts** (blocked when focus is in a text field):
-  - `Space` — Start / pause
-  - `R` — Reset
-  - `M` — Open / close settings modal
-
-### Workout Editor
-- Multiple tabs, each with a custom title
-- **Double-click** a tab title to rename it
-- **Drag** tabs to reorder them
-- Text is horizontally and vertically centered in the editor area
-- `contenteditable` div — no save, clears on reload by design
-
-### Video Player
-- Paste a YouTube URL into the input bar to embed the video
-- Supported URL formats:
-
-| Input | Embedded as |
-|---|---|
-| `youtube.com/watch?v=ID` | `youtube.com/embed/ID` |
-| `youtu.be/ID` | `youtube.com/embed/ID` |
-
-- **∞ button** (right of URL bar) — toggle infinite loop playback
-
-## Tech Stack
-
-| Technology | Purpose |
-|---|---|
-| [Vue 3](https://vuejs.org/) | UI framework |
-| [Vite](https://vitejs.dev/) | Build tool |
-| [TypeScript](https://www.typescriptlang.org/) | Type safety |
-| [Pinia](https://pinia.vuejs.org/) | Timer state management |
-| [splitpanes](https://github.com/antoniandre/splitpanes) | Resizable panel layout |
-| [Vitest](https://vitest.dev/) | Unit testing |
-| [jsdom](https://github.com/jsdom/jsdom) | DOM environment for tests |
-
-## Development
+## Entwicklung
 
 ```bash
-npm install
-npm run dev        # Dev server on http://localhost:5173
-npm test           # Run unit tests
-npm run test:watch # Watch mode
-npm run build      # Type-check + production build
+# Terminal 1 — Sync-Dienst (Port 8787)
+cd server && npm install && npm run dev
+
+# Terminal 2 — Frontend (Port 5173, proxied /ws → 8787)
+cd frontend && npm install && npm run dev
+```
+
+Tests (Vitest, in beiden Paketen):
+
+```bash
+npm test           # einmalig
+npm run test:watch # Watch-Mode
 ```
 
 ## Deployment
 
-### Docker
+Zwei Container-Images, gebaut per GitHub Actions bei Push auf `main` (Tag `latest`) und Git-Tags `vX.Y.Z` (Tag `X.Y.Z`), multi-arch (amd64 + arm64), Registry `ghcr.io`:
 
-The app is served as a static Vite build inside an Nginx container. Multi-stage build:
+| Image | Inhalt | Port |
+|---|---|---|
+| `ghcr.io/gerrited/wodch-frontend` | Statisches Build hinter Nginx | 80 |
+| `ghcr.io/gerrited/wodch-sync` | WebSocket-Sync-Dienst | 8787 |
 
-```
-Stage 1 (node:22-alpine)   npm ci && npm run build → dist/
-Stage 2 (nginx:alpine)     serve dist/ on port 80
-```
+Der Test-Job (beide Pakete: `npm test` + Build) muss vor dem Image-Build bestehen.
 
-Build and run locally:
-
-```bash
-docker build -t wodch:local .
-docker run -p 8080:80 wodch:local
-# App available at http://localhost:8080
-```
-
-### GitHub Actions
-
-Workflow file: `.github/workflows/docker.yml`
-
-The pipeline runs on every push to `main` and on version tags (`v*`):
-
-1. **Test job** — `npm ci` + `npm test` (must pass before the image is built)
-2. **Build & push job** — multi-arch image (`linux/amd64` + `linux/arm64`) pushed to GitHub Container Registry
-
-| Trigger | Image tag |
-|---|---|
-| Push to `main` | `latest` |
-| Push tag `v1.2.3` | `1.2.3` |
-
-Registry: `ghcr.io/gerrited/wodch`
-
-Authentication uses the built-in `GITHUB_TOKEN` — no external registry account needed.
-
-Pull the latest image:
+Lokal bauen:
 
 ```bash
-docker pull ghcr.io/gerrited/wodch:latest
+docker build -t wodch-frontend:local ./frontend
+docker build -t wodch-sync:local ./server
 ```
+
+### Kubernetes
+
+`k8s/deployment.yaml`: Frontend-Deployment + Service, Sync-Deployment (`replicas: 1`, `strategy: Recreate`, `/healthz`-Probes) + Service, ein Ingress (`wodch.g11s.cc`) mit `/ws` → Sync und `/` → Frontend (WebSocket-Timeouts via Annotations).
+
+Der Sync-Dienst hält Sessions im Arbeitsspeicher — bewusst eine Replica. Ausbaupfad für mehrere Replicas (Redis als Backing Store + Pub/Sub): siehe [docs/rewrite-stack-options.md](docs/rewrite-stack-options.md), Abschnitt 6.2.
+
+## Docs
+
+- [docs/rewrite-requirements.md](docs/rewrite-requirements.md) — vollständige Anforderungen (Grundlage des Rewrites)
+- [docs/rewrite-stack-options.md](docs/rewrite-stack-options.md) — Stack-Entscheidung inkl. Nebenläufigkeit & State-Haltung
