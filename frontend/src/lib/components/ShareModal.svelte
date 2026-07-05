@@ -5,12 +5,20 @@
 
   const qrSvg = $derived(renderSVG(url, { border: 1 }))
 
+  // Events enden am Overlay — die UI dahinter (z. B. die Timer-Leiste) darf nicht reagieren
   function onOverlayClick(e: MouseEvent) {
+    e.stopPropagation()
     if (e.target === e.currentTarget) onClose()
   }
 </script>
 
-<div class="modal-overlay" onclick={onOverlayClick} role="presentation">
+<div
+  class="modal-overlay"
+  onclick={onOverlayClick}
+  onpointerdown={(e) => e.stopPropagation()}
+  ontouchstart={(e) => e.stopPropagation()}
+  role="presentation"
+>
   <div class="modal">
     <button class="close-btn" onclick={onClose}>✕</button>
 
@@ -31,6 +39,8 @@
     align-items: center;
     justify-content: center;
     z-index: 100;
+    overscroll-behavior: contain;
+    touch-action: none;
   }
   .modal {
     background: #111;

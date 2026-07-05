@@ -92,12 +92,20 @@
     onClose()
   }
 
+  // Events enden am Overlay — die UI dahinter darf nicht reagieren
   function onOverlayClick(e: MouseEvent) {
+    e.stopPropagation()
     if (e.target === e.currentTarget) onClose()
   }
 </script>
 
-<div class="modal-overlay" onclick={onOverlayClick} role="presentation">
+<div
+  class="modal-overlay"
+  onclick={onOverlayClick}
+  onpointerdown={(e) => e.stopPropagation()}
+  ontouchstart={(e) => e.stopPropagation()}
+  role="presentation"
+>
   <div class="modal">
     <button class="close-btn" onclick={onClose}>✕</button>
 
@@ -236,6 +244,8 @@
     align-items: center;
     justify-content: center;
     z-index: 100;
+    overscroll-behavior: contain;
+    touch-action: none;
   }
   .modal {
     background: #111;
@@ -245,6 +255,7 @@
     width: 420px;
     max-height: 90vh;
     overflow-y: auto;
+    overscroll-behavior: contain;
     position: relative;
   }
   .close-btn {
