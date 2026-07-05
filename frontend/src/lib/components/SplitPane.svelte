@@ -5,18 +5,29 @@
     orientation = 'columns',
     initial = 50,
     min = 0,
+    storageKey,
     a,
     b,
   }: {
     orientation?: 'rows' | 'columns'
     initial?: number
     min?: number
+    storageKey?: string
     a: Snippet
     b: Snippet
   } = $props()
 
-  // svelte-ignore state_referenced_locally — initial ist bewusst nur der Startwert
-  let size = $state(initial) // % des ersten Bereichs
+  function loadSize(): number {
+    if (!storageKey) return initial
+    const raw = localStorage.getItem(storageKey)
+    if (raw === null || raw.trim() === '') return initial
+    const saved = Number(raw)
+    if (!Number.isFinite(saved)) return initial
+    return Math.min(100 - min, Math.max(min, saved))
+  }
+
+  // svelte-ignore state_referenced_locally — initial/storageKey bestimmen bewusst nur den Startwert
+  let size = $state(loadSize()) // % des ersten Bereichs
   let container: HTMLDivElement | undefined = $state()
   let dragging = $state(false)
 
@@ -37,6 +48,7 @@
 
   function onPointerUp() {
     dragging = false
+    if (storageKey) localStorage.setItem(storageKey, String(size))
   }
 </script>
 

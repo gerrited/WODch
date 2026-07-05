@@ -31,12 +31,12 @@
 <svelte:window onkeydown={onKeydown} onhashchange={() => session.joinFromLocation()} />
 
 <div id="layout">
-  <SplitPane orientation="rows" initial={15} min={5}>
+  <SplitPane orientation="rows" initial={15} min={5} storageKey="wodch-split-timer">
     {#snippet a()}
       <TimerBar onOpenModal={() => (showModal = true)} />
     {/snippet}
     {#snippet b()}
-      <SplitPane orientation="columns" initial={50} min={10}>
+      <SplitPane orientation="columns" initial={50} min={10} storageKey="wodch-split-editor">
         {#snippet a()}
           <WorkoutEditor />
         {/snippet}
