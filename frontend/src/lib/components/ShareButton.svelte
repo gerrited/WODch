@@ -1,12 +1,16 @@
 <script lang="ts">
   import { session } from '../sync/session.svelte'
+  import ShareModal from './ShareModal.svelte'
 
   const label = $derived(session.id ? 'Link kopieren' : 'Session teilen')
+
+  let shareUrl = $state<string | null>(null)
 
   async function handleClick(e: MouseEvent) {
     e.stopPropagation()
     if (session.id) await session.copyLink()
     else await session.create()
+    shareUrl = window.location.href
   }
 </script>
 
@@ -24,6 +28,10 @@
     {/if}
   </svg>
 </button>
+
+{#if shareUrl}
+  <ShareModal url={shareUrl} onClose={() => (shareUrl = null)} />
+{/if}
 
 <style>
   .share-btn {
