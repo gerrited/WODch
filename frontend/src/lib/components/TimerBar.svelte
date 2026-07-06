@@ -2,6 +2,7 @@
   import { timer } from '../stores/timer.svelte'
   import { session } from '../sync/session.svelte'
   import { barAction } from './barAction'
+  import Logo from './Logo.svelte'
   import ShareButton from './ShareButton.svelte'
 
   let { onOpenModal }: { onOpenModal: () => void } = $props()
@@ -25,6 +26,10 @@
 </script>
 
 <div class="timer-bar" onclick={handleClick} role="button" tabindex="-1" onkeydown={() => {}}>
+  <div class="brand">
+    <Logo />
+    <span class="connection-dot {dotClass}"></span>
+  </div>
   <div class="timer-center">
     {#if timer.displayRound}
       <span class="round">{timer.displayRound}</span>
@@ -40,7 +45,6 @@
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
   </button>
-  <span class="connection-dot {dotClass}"></span>
 </div>
 
 <style>
@@ -105,11 +109,16 @@
     color: #888;
     background: #222;
   }
-  .connection-dot {
+  .brand {
     position: absolute;
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .connection-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
