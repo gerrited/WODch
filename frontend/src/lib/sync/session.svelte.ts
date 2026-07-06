@@ -84,6 +84,10 @@ export class SessionState {
       this.client.send('videoUrl', url)
       this.client.send('video', this.videoDoc)
     }
+    video.onLoopChange = (loop) => {
+      if (this.applyingRemote) return
+      this.client.send('videoLoop', loop)
+    }
   }
 
   private applyDoc(doc: SessionDoc) {
@@ -92,6 +96,7 @@ export class SessionState {
       this.stores.timer.applyRemote(doc.timer)
       this.stores.workouts.applyRemote(doc.workouts)
       this.stores.video.applyRemoteUrl(doc.videoUrl)
+      this.stores.video.applyRemoteLoop(doc.videoLoop)
       this.videoDoc = doc.video
       this.applyRemoteVideoCb?.(doc.video)
     } finally {
@@ -110,6 +115,8 @@ export class SessionState {
         this.applyRemoteVideoCb?.(this.videoDoc)
       } else if (path === 'videoUrl') {
         this.stores.video.applyRemoteUrl(value as string)
+      } else if (path === 'videoLoop') {
+        this.stores.video.applyRemoteLoop(value as boolean)
       } else if (path === 'workouts') {
         this.stores.workouts.applyRemote(value as WorkoutsDoc)
       } else if (path === 'workouts/activeTab') {
@@ -127,6 +134,7 @@ export class SessionState {
       timer: { ...this.stores.timer.doc },
       video: { ...this.videoDoc },
       videoUrl: this.stores.video.rawUrl,
+      videoLoop: this.stores.video.loop,
       workouts: this.stores.workouts.snapshot(),
       updatedAt: Date.now(),
     }

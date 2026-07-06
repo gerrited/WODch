@@ -40,6 +40,7 @@ export interface SessionDoc {
   timer: TimerDoc
   video: VideoDoc
   videoUrl: string
+  videoLoop: boolean
   workouts: WorkoutsDoc
   updatedAt: number
 }

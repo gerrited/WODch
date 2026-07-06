@@ -28,6 +28,7 @@ function makeDoc(): SessionDoc {
     timer: makeTimer(),
     video: { isPlaying: false, startedAt: null, accumulatedSeconds: 0 },
     videoUrl: '',
+    videoLoop: false,
     workouts: {
       tabs: [
         { id: 'aaa111', title: 'Workout 1', content: 'Squats' },
@@ -69,15 +70,17 @@ describe('applyPatch', () => {
     expect(s.doc.updatedAt).toBe(99999)
   })
 
-  it('patcht video und videoUrl', () => {
+  it('patcht video, videoUrl und videoLoop', () => {
     const store = createStore()
     store.create('s1', makeDoc())
     expect(store.applyPatch('s1', 'video', { isPlaying: true, startedAt: 7, accumulatedSeconds: 3 }, 2)).toBe(true)
     expect(store.applyPatch('s1', 'videoUrl', 'https://youtu.be/abc', 3)).toBe(true)
+    expect(store.applyPatch('s1', 'videoLoop', true, 4)).toBe(true)
     const s = store.get('s1')!
     expect(s.doc.video.isPlaying).toBe(true)
     expect(s.doc.videoUrl).toBe('https://youtu.be/abc')
-    expect(s.doc.updatedAt).toBe(3)
+    expect(s.doc.videoLoop).toBe(true)
+    expect(s.doc.updatedAt).toBe(4)
   })
 
   it('patcht workouts komplett und workouts/activeTab einzeln', () => {

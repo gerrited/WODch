@@ -142,6 +142,21 @@ describe('SessionState', () => {
     expect(client.sent).toContainEqual(['video', { isPlaying: false, startedAt: null, accumulatedSeconds: 0 }])
   })
 
+  it('Loop-Umschalten sendet videoLoop und fließt in buildDoc ein', () => {
+    session.joinSession('abc123')
+    video.setLoop(true)
+    expect(client.sent).toContainEqual(['videoLoop', true])
+    expect(session.buildDoc().videoLoop).toBe(true)
+  })
+
+  it('eingehender videoLoop-Patch setzt den Store ohne Echo', () => {
+    session.joinSession('abc123')
+    const count = client.sent.length
+    client.simPatch('videoLoop', true)
+    expect(video.loop).toBe(true)
+    expect(client.sent).toHaveLength(count)
+  })
+
   it('eingehende Patches werden an die Stores dispatcht', () => {
     session.joinSession('abc123')
     const id = workouts.tabs[0].id
@@ -159,6 +174,7 @@ describe('SessionState', () => {
       timer: { ...timer.doc, mode: 'interval' },
       video: { isPlaying: false, startedAt: null, accumulatedSeconds: 0 },
       videoUrl: 'https://youtu.be/d',
+      videoLoop: true,
       workouts: { tabs: [{ id: 'r1', title: 'R', content: 'c' }], activeTab: 0 },
       updatedAt: 1,
     }
@@ -168,6 +184,7 @@ describe('SessionState', () => {
     expect(timer.doc.mode).toBe('interval')
     expect(workouts.tabs[0].id).toBe('r1')
     expect(video.rawUrl).toBe('https://youtu.be/d')
+    expect(video.loop).toBe(true)
     expect(client.sent).toHaveLength(count)
   })
 

@@ -47,6 +47,9 @@ export function createStore(): Store {
         } else if (path === 'videoUrl') {
           doc.videoUrl = value as string
           applied = true
+        } else if (path === 'videoLoop') {
+          doc.videoLoop = value as boolean
+          applied = true
         } else if (path === 'workouts') {
           doc.workouts = value as WorkoutsDoc
           applied = true

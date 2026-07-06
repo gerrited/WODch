@@ -7,6 +7,7 @@ function makeDoc(): SessionDoc {
     timer: defaultTimerDoc(),
     video: { isPlaying: false, startedAt: null, accumulatedSeconds: 0 },
     videoUrl: '',
+    videoLoop: false,
     workouts: { tabs: [{ id: 't1', title: 'Workout 1', content: '' }], activeTab: 0 },
     updatedAt: 42,
   }

@@ -59,7 +59,11 @@
     <button class="seek-btn" title="10 Sekunden zurück" onclick={() => seekRelative(-10)}>« 10s</button>
     <button class="seek-btn" title="10 Sekunden vor" onclick={() => seekRelative(10)}>10s »</button>
     <label class="loop-toggle" title="Dauerschleife">
-      <input type="checkbox" bind:checked={video.loop} />
+      <input
+        type="checkbox"
+        checked={video.loop}
+        onchange={(e) => video.setLoop((e.target as HTMLInputElement).checked)}
+      />
       ∞
     </label>
   </div>
