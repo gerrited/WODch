@@ -6,6 +6,7 @@ import {
   type TimerMode,
 } from '../types'
 import { elapsedNow, deriveInterval, displayTime, displayRound, type Derived } from '../timer/engine'
+import { clockOffset, syncedNow } from '../sync/clock'
 
 export const CUSTOM_KEY = 'wodch-custom-intervals'
 
@@ -17,7 +18,8 @@ export class TimerStore {
   // Vom Session-Layer gesetzt; feuert nach jeder lokalen Aktion (nie bei applyRemote)
   onDocChange?: (doc: TimerDoc) => void
 
-  elapsed = $derived(elapsedNow(this.doc, this.now))
+  // startedAt steht in Server-Zeit → lokale Uhr um den gemessenen Versatz korrigieren
+  elapsed = $derived(elapsedNow(this.doc, this.now + clockOffset()))
   derived: Derived = $derived(
     deriveInterval(this.doc, this.elapsed, this.doc.isRunning || this.doc.accumulatedMs > 0),
   )
@@ -36,12 +38,12 @@ export class TimerStore {
   start() {
     if (this.doc.isRunning) return
     this.now = Date.now()
-    this.commit({ isRunning: true, startedAt: Date.now() })
+    this.commit({ isRunning: true, startedAt: syncedNow() })
   }
 
   pause() {
     if (!this.doc.isRunning) return
-    this.commit({ isRunning: false, startedAt: null, accumulatedMs: elapsedNow(this.doc, Date.now()) })
+    this.commit({ isRunning: false, startedAt: null, accumulatedMs: elapsedNow(this.doc, syncedNow()) })
   }
 
   toggle() {

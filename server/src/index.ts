@@ -9,6 +9,7 @@ type ClientMsg =
   | { t: 'join'; session: string }
   | { t: 'seed'; session: string; doc: SessionDoc }
   | { t: 'patch'; path: string; value: unknown }
+  | { t: 'ping'; t0: number }
 
 export interface RunningServer {
   port: number
@@ -47,7 +48,10 @@ export function startServer(port: number): Promise<RunningServer> {
         return
       }
 
-      if (msg.t === 'join') {
+      if (msg.t === 'ping') {
+        // Uhr-Synchronisation: Clients messen ihren Versatz zur Server-Uhr
+        ws.send(JSON.stringify({ t: 'pong', t0: msg.t0, ts: Date.now() }))
+      } else if (msg.t === 'join') {
         leave()
         const session = store.get(msg.session)
         if (!session) {

@@ -77,7 +77,7 @@ describe('SyncClient', () => {
     const ws = MockWS.instances[0]
     expect(statuses).toEqual(['connecting'])
     ws.simOpen()
-    expect(ws.sent).toEqual([{ t: 'join', session: 'abc123' }])
+    expect(ws.sent[0]).toEqual({ t: 'join', session: 'abc123' })
     ws.simMessage({ t: 'doc', doc: makeDoc() })
     expect(docs).toHaveLength(1)
     expect(client.status()).toBe('connected')
@@ -88,8 +88,9 @@ describe('SyncClient', () => {
     const ws = MockWS.instances[0]
     ws.simOpen()
     ws.simMessage({ t: 'missing' })
-    expect(ws.sent[1]).toMatchObject({ t: 'seed', session: 'abc123' })
-    expect(ws.sent[1].doc.updatedAt).toBe(42)
+    const seed = ws.sent.find((m) => m.t === 'seed')
+    expect(seed).toMatchObject({ t: 'seed', session: 'abc123' })
+    expect(seed.doc.updatedAt).toBe(42)
     expect(client.status()).toBe('connected')
   })
 
@@ -103,7 +104,7 @@ describe('SyncClient', () => {
     ws.simMessage({ t: 'patch', path: 'videoUrl', value: 'https://youtu.be/x' })
     expect(patches).toEqual([['videoUrl', 'https://youtu.be/x']])
     client.send('workouts/activeTab', 1)
-    expect(ws.sent[1]).toEqual({ t: 'patch', path: 'workouts/activeTab', value: 1 })
+    expect(ws.sent.at(-1)).toEqual({ t: 'patch', path: 'workouts/activeTab', value: 1 })
   })
 
   it('reconnect nach Verbindungsabbruch mit Backoff, erneutes join', () => {
@@ -120,7 +121,7 @@ describe('SyncClient', () => {
     expect(MockWS.instances).toHaveLength(2)
     const ws2 = MockWS.instances[1]
     ws2.simOpen()
-    expect(ws2.sent).toEqual([{ t: 'join', session: 'abc123' }])
+    expect(ws2.sent[0]).toEqual({ t: 'join', session: 'abc123' })
     ws2.simMessage({ t: 'doc', doc: makeDoc() })
     expect(client.status()).toBe('connected')
   })
@@ -141,6 +142,22 @@ describe('SyncClient', () => {
     MockWS.instances[3].simDrop()
     vi.advanceTimersByTime(10_000)
     expect(MockWS.instances).toHaveLength(5)
+  })
+
+  it('misst den Uhr-Versatz per ping/pong und meldet ihn über onClockOffset', () => {
+    vi.setSystemTime(100_000)
+    const offsets: number[] = []
+    client.onClockOffset((o) => offsets.push(o))
+    client.connect('abc123', makeDoc)
+    const ws = MockWS.instances[0]
+    ws.simOpen()
+    const ping = ws.sent.find((m) => m.t === 'ping')
+    expect(ping).toEqual({ t: 'ping', t0: 100_000 })
+    // Antwort kommt 100ms später; Server-Uhr geht 1050ms vor (inkl. 50ms Hinweg)
+    vi.setSystemTime(100_100)
+    ws.simMessage({ t: 'pong', t0: 100_000, ts: 101_100 })
+    // offset = ((ts - t0) + (ts - t1)) / 2 = (1100 + 1000) / 2 = 1050
+    expect(offsets).toEqual([1050])
   })
 
   it('close beendet ohne Reconnect', () => {

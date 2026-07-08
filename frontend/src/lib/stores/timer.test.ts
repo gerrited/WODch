@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { TimerStore, CUSTOM_KEY } from './timer.svelte'
+import { setClockOffset } from '../sync/clock'
 import type { TimerDoc } from '../types'
 
 const SEC = 1000
@@ -15,7 +16,10 @@ describe('TimerStore', () => {
     store = new TimerStore()
   })
 
-  afterEach(() => vi.useRealTimers())
+  afterEach(() => {
+    setClockOffset(0)
+    vi.useRealTimers()
+  })
 
   it('default: clock, nicht laufend', () => {
     expect(store.doc.mode).toBe('clock')
@@ -94,6 +98,32 @@ describe('TimerStore', () => {
     store.applyRemote(remote)
     expect(spy).toHaveBeenCalledTimes(2)
     expect(store.doc.mode).toBe('countdown')
+  })
+
+  it('startedAt steht in Server-Zeit; elapsed ist trotz Geräte-Uhrenversatz konsistent', () => {
+    // Steuernde Instanz: lokale Uhr geht 1s hinter der Server-Uhr nach
+    setClockOffset(1000)
+    store.setMode('stopwatch')
+    store.start()
+    expect(store.doc.startedAt).toBe(101_000)
+    store.now = 103_500
+    expect(store.elapsed).toBe(3500)
+
+    // Anzeigende Instanz: lokale Uhr geht 500ms vor der Server-Uhr
+    setClockOffset(-500)
+    const receiver = new TimerStore()
+    receiver.applyRemote({ ...store.doc })
+    receiver.now = 104_000 // Server-Zeit ist dann 103_500 → gleiche elapsed-Basis
+    expect(receiver.elapsed).toBe(2500)
+  })
+
+  it('pause rechnet accumulatedMs mit Server-Zeit', () => {
+    setClockOffset(1000)
+    store.setMode('stopwatch')
+    store.start()
+    vi.setSystemTime(104_000)
+    store.pause()
+    expect(store.doc.accumulatedMs).toBe(4000)
   })
 
   it('derived: Tabata läuft deterministisch durch die Phasen', () => {

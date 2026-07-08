@@ -1,5 +1,6 @@
 /// <reference path="./youtube.d.ts" />
 import type { VideoDoc } from '../types'
+import { syncedNow } from '../sync/clock'
 
 export function extractVideoId(url: string): string | null {
   if (!url) return null
@@ -22,6 +23,10 @@ let loop = false
 // Echo-Schutz: Player-Events kurz nach einem Remote-Sync ignorieren
 let lastRemoteSyncAt = 0
 const ECHO_WINDOW_MS = 1000
+// Nach einem Remote-Play startet die Wiedergabe erst nach dem Puffern (~1s) —
+// beim PLAYING-Event wird die inzwischen veraltete Position nachkorrigiert.
+let pendingRemoteDoc: VideoDoc | null = null
+const DRIFT_TOLERANCE_S = 0.3
 
 let onLocalState: ((v: VideoDoc) => void) | null = null
 
@@ -36,16 +41,20 @@ export function setOnLocalStateChange(cb: (v: VideoDoc) => void) {
 export function captureVideoDoc(playing: boolean): VideoDoc {
   return {
     isPlaying: playing,
-    startedAt: playing ? Date.now() : null,
+    startedAt: playing ? syncedNow() : null, // Server-Zeit, s. clock.ts
     accumulatedSeconds: player?.getCurrentTime() ?? 0,
   }
 }
 
+export function expectedPosition(v: VideoDoc, now: number): number {
+  return v.accumulatedSeconds + (v.isPlaying && v.startedAt !== null ? (now - v.startedAt) / 1000 : 0)
+}
+
 export function applyRemoteVideo(v: VideoDoc): void {
   lastRemoteSyncAt = Date.now()
-  const position =
-    v.accumulatedSeconds + (v.isPlaying && v.startedAt !== null ? (Date.now() - v.startedAt) / 1000 : 0)
+  const position = expectedPosition(v, syncedNow())
   if (player && playerReady) {
+    pendingRemoteDoc = v.isPlaying ? { ...v } : null
     player.seekTo(position, true)
     if (v.isPlaying) player.playVideo()
     else player.pauseVideo()
@@ -56,6 +65,7 @@ export function applyRemoteVideo(v: VideoDoc): void {
 
 export function seekRelative(deltaSeconds: number): void {
   if (!player || !playerReady) return
+  pendingRemoteDoc = null
   const target = Math.max(0, player.getCurrentTime() + deltaSeconds)
   player.seekTo(target, true)
   // YT liefert kein Seek-Event — expliziter Sync-Write mit aktuellem Playstate
@@ -113,12 +123,25 @@ export async function initPlayer(el: HTMLElement, videoId: string): Promise<void
           player?.loadVideoById(currentVideoId)
           return
         }
-        if (Date.now() - lastRemoteSyncAt < ECHO_WINDOW_MS) return
         const PLAYING = 1
         const PAUSED = 2
         const ENDED = 0
+        // Verzögerter Wiedergabestart nach Remote-Play: Position nachziehen
+        if (e.data === PLAYING && pendingRemoteDoc) {
+          const expected = expectedPosition(pendingRemoteDoc, syncedNow())
+          if (Math.abs(expected - (player?.getCurrentTime() ?? 0)) > DRIFT_TOLERANCE_S) {
+            player?.seekTo(expected, true)
+          } else {
+            pendingRemoteDoc = null
+          }
+          return
+        }
+        if (Date.now() - lastRemoteSyncAt < ECHO_WINDOW_MS) return
         if (e.data === PLAYING) onLocalState?.(captureVideoDoc(true))
-        else if (e.data === PAUSED || e.data === ENDED) onLocalState?.(captureVideoDoc(false))
+        else if (e.data === PAUSED || e.data === ENDED) {
+          pendingRemoteDoc = null
+          onLocalState?.(captureVideoDoc(false))
+        }
       },
     },
   })
@@ -130,4 +153,5 @@ export function destroyPlayer(): void {
   playerReady = false
   currentVideoId = null
   pendingVideoSync = null
+  pendingRemoteDoc = null
 }

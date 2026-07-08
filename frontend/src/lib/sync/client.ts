@@ -7,6 +7,7 @@ export interface SyncClient {
   onStatus(cb: (s: SyncStatus) => void): void
   onDoc(cb: (doc: SessionDoc) => void): void
   onPatch(cb: (path: string, value: unknown) => void): void
+  onClockOffset(cb: (offsetMs: number) => void): void
   connect(sessionId: string, localDoc: () => SessionDoc): void
   send(path: string, value: unknown): void
   close(): void
@@ -29,6 +30,7 @@ export function createSyncClient(
   let statusCb: ((s: SyncStatus) => void) | null = null
   let docCb: ((doc: SessionDoc) => void) | null = null
   let patchCb: ((path: string, value: unknown) => void) | null = null
+  let clockOffsetCb: ((offsetMs: number) => void) | null = null
 
   function setStatus(s: SyncStatus) {
     status = s
@@ -51,6 +53,8 @@ export function createSyncClient(
     ws = wsFactory(wsUrl)
     ws.onopen = () => {
       ws?.send(JSON.stringify({ t: 'join', session: sessionId }))
+      // Uhr-Versatz zur Server-Uhr messen (NTP-artig, eine Messung pro Verbindung)
+      ws?.send(JSON.stringify({ t: 'ping', t0: Date.now() }))
     }
     ws.onmessage = (e) => {
       let msg: any
@@ -70,6 +74,9 @@ export function createSyncClient(
         setStatus('connected')
       } else if (msg.t === 'patch') {
         patchCb?.(msg.path, msg.value)
+      } else if (msg.t === 'pong') {
+        const t1 = Date.now()
+        clockOffsetCb?.((msg.ts - msg.t0 + (msg.ts - t1)) / 2)
       }
     }
     ws.onclose = () => {
@@ -93,6 +100,9 @@ export function createSyncClient(
     },
     onPatch(cb) {
       patchCb = cb
+    },
+    onClockOffset(cb) {
+      clockOffsetCb = cb
     },
     connect(id, doc) {
       sessionId = id

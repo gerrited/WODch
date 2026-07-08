@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid'
 import { createSyncClient, type SyncClient, type SyncStatus } from './client'
+import { setClockOffset } from './clock'
 import { timer as timerSingleton, type TimerStore } from '../stores/timer.svelte'
 import { workouts as workoutsSingleton, type WorkoutStore } from '../stores/workouts.svelte'
 import { video as videoSingleton, type VideoStore } from '../stores/video.svelte'
@@ -48,6 +49,8 @@ export class SessionState {
     client.onStatus((s) => {
       this.status = s
     })
+
+    client.onClockOffset((offset) => setClockOffset(offset))
 
     client.onDoc((doc) => this.applyDoc(doc))
     client.onPatch((path, value) => this.applyPatch(path, value))

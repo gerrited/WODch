@@ -18,6 +18,7 @@ class FakeClient implements SyncClient {
   onStatus(cb: (s: SyncStatus) => void) { this.statusCb = cb }
   onDoc(cb: (d: SessionDoc) => void) { this.docCb = cb }
   onPatch(cb: (p: string, v: unknown) => void) { this.patchCb = cb }
+  onClockOffset(_cb: (offsetMs: number) => void) {}
   connect(id: string, doc: () => SessionDoc) { this.connected = id; this.localDoc = doc }
   send(path: string, value: unknown) { this.sent.push([path, value]) }
   close() {}

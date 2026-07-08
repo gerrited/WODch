@@ -118,6 +118,19 @@ describe('sync protocol', () => {
     expect(server.store.get('sess04')!.clients.size).toBe(0)
   })
 
+  it('ping → pong mit t0-Echo und Server-Zeit', async () => {
+    const ws = await connect()
+    const before = Date.now()
+    send(ws, { t: 'ping', t0: 12345 })
+    const msg = await nextMsg(ws)
+    const after = Date.now()
+    expect(msg.t).toBe('pong')
+    expect(msg.t0).toBe(12345)
+    expect(msg.ts).toBeGreaterThanOrEqual(before)
+    expect(msg.ts).toBeLessThanOrEqual(after)
+    ws.close()
+  })
+
   it('healthz antwortet 200', async () => {
     const res = await fetch(`http://127.0.0.1:${server.port}/healthz`)
     expect(res.status).toBe(200)
