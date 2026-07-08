@@ -11,7 +11,8 @@
 
   let showModal = $state(false)
 
-  const mobileQuery = window.matchMedia('(max-width: 768px)')
+  // Schmal (Hochformat) oder flach (Smartphone im Querformat) → mobile Tab-Ansicht
+  const mobileQuery = window.matchMedia('(max-width: 768px), (max-height: 500px)')
   let isMobile = $state(mobileQuery.matches)
 
   function onKeydown(e: KeyboardEvent) {
