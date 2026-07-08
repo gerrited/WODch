@@ -1,5 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="WODch">
-  <rect x="1" y="1" width="46" height="46" rx="11" fill="#1a1a1a" stroke="#333" stroke-width="1.5" />
   <text x="23" y="31" text-anchor="middle" font-family="monospace" font-style="italic" font-weight="900" letter-spacing="-0.5">
     <tspan fill="#fff" font-size="21">W</tspan><tspan fill="#a8d129" font-size="16">ch</tspan>
   </text>
