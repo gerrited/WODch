@@ -19,12 +19,13 @@ describe('MobileTabs', () => {
   afterEach(() => {
     unmount(component)
     document.body.innerHTML = ''
+    localStorage.clear()
   })
 
   it('rendert drei Tabs und alle drei Panels gleichzeitig gemountet', () => {
     mountTabs()
     const tabs = [...document.querySelectorAll('[role="tab"]')]
-    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Video', 'Workout', 'Timer'])
+    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Workout', 'Timer', 'Video'])
     expect(document.querySelector('.fixture-video')).not.toBeNull()
     expect(document.querySelector('.fixture-workout')).not.toBeNull()
     expect(document.querySelector('.fixture-timer')).not.toBeNull()
@@ -33,7 +34,7 @@ describe('MobileTabs', () => {
   it('startet mit Workout als aktivem Tab', () => {
     mountTabs()
     const tabs = [...document.querySelectorAll('[role="tab"]')]
-    expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false'])
+    expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false'])
   })
 
   it('markiert nach Tap den gewählten Tab als aktiv', () => {
@@ -42,6 +43,28 @@ describe('MobileTabs', () => {
     tabs[2].click()
     flushSync()
     expect(tabs[2].getAttribute('aria-selected')).toBe('true')
-    expect(tabs[1].getAttribute('aria-selected')).toBe('false')
+    expect(tabs[0].getAttribute('aria-selected')).toBe('false')
+  })
+
+  it('merkt sich den aktiven Tab in localStorage', () => {
+    mountTabs()
+    const tabs = [...document.querySelectorAll('[role="tab"]')] as HTMLButtonElement[]
+    tabs[1].click()
+    flushSync()
+    expect(localStorage.getItem('wodch.activeTab')).toBe('timer')
+  })
+
+  it('stellt den gespeicherten Tab nach Reload wieder her', () => {
+    localStorage.setItem('wodch.activeTab', 'video')
+    mountTabs()
+    const tabs = [...document.querySelectorAll('[role="tab"]')]
+    expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'false', 'true'])
+  })
+
+  it('fällt bei ungültigem gespeicherten Wert auf Workout zurück', () => {
+    localStorage.setItem('wodch.activeTab', 'unbekannt')
+    mountTabs()
+    const tabs = [...document.querySelectorAll('[role="tab"]')]
+    expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false'])
   })
 })

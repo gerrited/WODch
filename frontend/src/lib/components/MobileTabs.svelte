@@ -14,13 +14,34 @@
   } = $props()
 
   const tabs = [
-    { id: 'video', label: 'Video' },
     { id: 'workout', label: 'Workout' },
     { id: 'timer', label: 'Timer' },
+    { id: 'video', label: 'Video' },
   ]
 
-  let active = $state(1) // Workout als Start-Tab (Mitte)
+  const STORAGE_KEY = 'wodch.activeTab'
+
+  function initialActive(): number {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      const index = tabs.findIndex((t) => t.id === stored)
+      if (index >= 0) return index
+    } catch {
+      // localStorage nicht verfügbar (z. B. Private Mode)
+    }
+    return 0
+  }
+
+  let active = $state(initialActive())
   let panelsEl: HTMLDivElement | undefined = $state()
+
+  $effect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, tabs[active].id)
+    } catch {
+      // localStorage nicht verfügbar
+    }
+  })
 
   function scrollToActive(behavior: ScrollBehavior) {
     if (!panelsEl) return
@@ -49,9 +70,9 @@
 
 <div class="mobile-tabs">
   <div class="panels" bind:this={panelsEl} onscroll={onScroll}>
-    <div class="panel">{@render video()}</div>
     <div class="panel">{@render workout()}</div>
     <div class="panel">{@render timer()}</div>
+    <div class="panel">{@render video()}</div>
   </div>
   <div class="tab-bar" role="tablist">
     {#each tabs as tab, i (tab.id)}
