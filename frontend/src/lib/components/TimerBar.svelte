@@ -4,6 +4,7 @@
   import { barAction } from './barAction'
   import Logo from './Logo.svelte'
   import ShareButton from './ShareButton.svelte'
+  import { sound } from '../audio/beeps.svelte'
 
   let { onOpenModal }: { onOpenModal: () => void } = $props()
 
@@ -15,6 +16,7 @@
   })
 
   function handleClick() {
+    sound.unlock()
     if (barAction(timer.doc, timer.derived, timer.elapsed) === 'modal') onOpenModal()
     else timer.toggle()
   }
@@ -22,6 +24,12 @@
   function handleGear(e: MouseEvent) {
     e.stopPropagation()
     onOpenModal()
+  }
+
+  function handleMute(e: MouseEvent) {
+    e.stopPropagation()
+    sound.unlock()
+    sound.toggleMuted()
   }
 </script>
 
@@ -39,6 +47,18 @@
     </span>
   </div>
   <ShareButton />
+  <button class="gear mute" onclick={handleMute} title={sound.muted ? 'Ton einschalten' : 'Ton ausschalten'} aria-label={sound.muted ? 'Ton einschalten' : 'Ton ausschalten'}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      {#if sound.muted}
+        <line x1="23" y1="9" x2="17" y2="15" />
+        <line x1="17" y1="9" x2="23" y2="15" />
+      {:else}
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      {/if}
+    </svg>
+  </button>
   <button class="gear" onclick={handleGear} title="Timer-Einstellungen" aria-label="Timer-Einstellungen">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="3" />
@@ -109,6 +129,9 @@
   .gear:hover {
     color: #888;
     background: #222;
+  }
+  .gear.mute {
+    right: 52px;
   }
   .brand {
     position: absolute;
