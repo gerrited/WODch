@@ -131,7 +131,7 @@
     background: #222;
   }
   .gear.mute {
-    right: 52px;
+    right: 108px;
   }
   .brand {
     position: absolute;

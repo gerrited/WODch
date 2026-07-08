@@ -10,7 +10,7 @@ export class SoundStore {
     try {
       this.muted = localStorage.getItem(MUTE_KEY) === '1'
     } catch {
-      // korrupte Daten ignorieren
+      // localStorage nicht verfügbar — Standard: Ton an
     }
   }
 
@@ -39,8 +39,7 @@ export class SoundStore {
 
   private beep(durationMs: number) {
     if (this.muted) return
-    if (typeof AudioContext === 'undefined') return
-    this.ctx ??= new AudioContext()
+    if (!this.ctx || this.ctx.state !== 'running') return
     const ctx = this.ctx
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
