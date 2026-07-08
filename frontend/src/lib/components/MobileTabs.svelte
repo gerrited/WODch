@@ -119,6 +119,6 @@
   }
   .tab.active {
     color: #fff;
-    border-top-color: #e63946;
+    border-top-color: #a8d129;
   }
 </style>
