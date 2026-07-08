@@ -96,7 +96,7 @@
   }
   .gear {
     position: absolute;
-    right: 12px;
+    right: 104px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
@@ -118,7 +118,7 @@
   }
   .help {
     position: absolute;
-    right: 104px;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
     background: none;

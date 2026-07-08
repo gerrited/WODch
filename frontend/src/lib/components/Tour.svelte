@@ -50,15 +50,16 @@
   )
 
   const CARD_WIDTH = 320
+  let cardHeight = $state(0)
 
   const cardStyle = $derived.by(() => {
     if (!targetRect) return ''
     const left = Math.max(16, Math.min(targetRect.left, window.innerWidth - CARD_WIDTH - 16))
-    const vertical =
-      placement === 'below'
-        ? `top: ${targetRect.bottom + 12}px;`
-        : `bottom: ${window.innerHeight - targetRect.top + 12}px;`
-    return `left: ${left}px; ${vertical}`
+    const desired =
+      placement === 'below' ? targetRect.bottom + 12 : targetRect.top - 12 - cardHeight
+    // In den Viewport klemmen — bei großen Zielen liegt die Karte dann über dem Spotlight
+    const top = Math.max(16, Math.min(desired, window.innerHeight - cardHeight - 16))
+    return `left: ${left}px; top: ${top}px;`
   })
 </script>
 
@@ -75,7 +76,7 @@
     <div class="backdrop"></div>
   {/if}
 
-  <div class="tour-card" class:center={!targetRect} style={cardStyle}>
+  <div class="tour-card" class:center={!targetRect} style={cardStyle} bind:clientHeight={cardHeight}>
     <div class="tour-title">{step.title}</div>
     <div class="tour-body">{step.body}</div>
     <div class="tour-footer">
