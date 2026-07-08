@@ -69,13 +69,14 @@
     gap: 24px;
   }
   .round {
-    font-size: clamp(14px, 25cqh, 9999px);
+    /* cqw-Deckel: im mobilen Vollbild begrenzt die Breite, nicht die Höhe */
+    font-size: clamp(14px, min(25cqh, 7cqw), 9999px);
     color: #888;
     letter-spacing: 2px;
     font-weight: 600;
   }
   .time {
-    font-size: clamp(28px, 60cqh, 9999px);
+    font-size: clamp(28px, min(60cqh, 12cqw), 9999px);
     font-weight: 900;
     color: #fff;
     letter-spacing: 4px;
@@ -132,5 +133,18 @@
   }
   .dot-error {
     background: #e63946;
+  }
+  /* Hoher Container (mobiles Vollbild-Panel): Logo/Buttons nach oben, Runde über der Zeit */
+  @container (max-aspect-ratio: 3/2) {
+    .brand,
+    .gear {
+      top: 20px;
+      transform: none;
+    }
+    .timer-center {
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
   }
 </style>

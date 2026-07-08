@@ -56,4 +56,11 @@
     color: #888;
     background: #222;
   }
+  /* Hoher Container (mobiles Vollbild-Panel): Button nach oben zu Logo und Zahnrad */
+  @container (max-aspect-ratio: 3/2) {
+    .share-btn {
+      top: 20px;
+      transform: none;
+    }
+  }
 </style>
