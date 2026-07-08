@@ -16,7 +16,10 @@ let player: YT.Player | null = null
 let currentVideoId: string | null = null
 let apiReady = false
 let apiLoading = false
-const pendingResolvers: (() => void)[] = []
+const pendingWaiters: { resolve: () => void; reject: (err: Error) => void }[] = []
+// Konkurrierende initPlayer-Aufrufe (URL-Eingabe tippt pro Zeichen): nur der
+// letzte darf den Player erzeugen, sonst landet er auf einem entfernten Element
+let initGeneration = 0
 let pendingVideoSync: VideoDoc | null = null
 let playerReady = false
 let loop = false
@@ -75,9 +78,9 @@ export function seekRelative(deltaSeconds: number): void {
 
 function loadYTApi(): Promise<void> {
   if (apiReady) return Promise.resolve()
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     if (apiLoading) {
-      pendingResolvers.push(resolve)
+      pendingWaiters.push({ resolve, reject })
       return
     }
     apiLoading = true
@@ -87,19 +90,36 @@ function loadYTApi(): Promise<void> {
       apiLoading = false
       if (prev) prev()
       resolve()
-      pendingResolvers.forEach((fn) => fn())
-      pendingResolvers.length = 0
+      pendingWaiters.forEach((w) => w.resolve())
+      pendingWaiters.length = 0
     }
     const tag = document.createElement('script')
     tag.src = 'https://www.youtube.com/iframe_api'
+    // Ohne onerror bliebe das Promise bei Netzwerkfehlern für immer offen
+    // und apiLoading dauerhaft true — kein Retry mehr möglich
+    tag.onerror = () => {
+      apiLoading = false
+      tag.remove()
+      const err = new Error('YouTube IFrame API konnte nicht geladen werden')
+      reject(err)
+      pendingWaiters.forEach((w) => w.reject(err))
+      pendingWaiters.length = 0
+    }
     document.head.appendChild(tag)
   })
 }
 
-export async function initPlayer(el: HTMLElement, videoId: string): Promise<void> {
+// Liefert false, wenn der Aufruf von einem neueren überholt wurde
+export async function initPlayer(el: HTMLElement, videoId: string): Promise<boolean> {
+  const generation = ++initGeneration
   await loadYTApi()
+  if (generation !== initGeneration) return false
   if (player) {
-    player.destroy()
+    try {
+      player.destroy()
+    } catch {
+      // destroy() kann werfen, wenn das Element bereits aus dem DOM entfernt wurde
+    }
     player = null
   }
   playerReady = false
@@ -145,6 +165,7 @@ export async function initPlayer(el: HTMLElement, videoId: string): Promise<void
       },
     },
   })
+  return true
 }
 
 export function destroyPlayer(): void {

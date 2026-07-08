@@ -31,7 +31,9 @@ describe('extractVideoId', () => {
 
 class FakePlayer {
   static last: FakePlayer | null = null
+  static instances: FakePlayer[] = []
   events: { onReady: () => void; onStateChange: (e: { data: number }) => void }
+  videoId: string
   currentTime = 0
   seekTo = vi.fn((s: number) => {
     this.currentTime = s
@@ -43,9 +45,11 @@ class FakePlayer {
   destroy = vi.fn()
   loadVideoById = vi.fn()
 
-  constructor(_el: unknown, cfg: { events: FakePlayer['events'] }) {
+  constructor(_el: unknown, cfg: { videoId?: string; events: FakePlayer['events'] }) {
     this.events = cfg.events
+    this.videoId = cfg.videoId ?? ''
     FakePlayer.last = this
+    FakePlayer.instances.push(this)
     queueMicrotask(() => cfg.events.onReady())
   }
 }
@@ -74,6 +78,69 @@ describe('expectedPosition', () => {
     const { expectedPosition } = await import('./youtube')
     const doc: VideoDoc = { isPlaying: true, startedAt: 1_000_000, accumulatedSeconds: 10 }
     expect(expectedPosition(doc, 1_005_000)).toBe(15)
+  })
+})
+
+// --- Robustheit der Player-Initialisierung ---
+// initPlayer ist async (wartet aufs API-Script). Ohne Schutz erzeugen
+// konkurrierende Aufrufe Player auf bereits entfernten DOM-Elementen,
+// und ein scheiterndes API-Script blockiert jeden weiteren Versuch.
+
+describe('initPlayer Robustheit', () => {
+  beforeEach(() => {
+    FakePlayer.last = null
+    FakePlayer.instances = []
+    delete (globalThis as any).YT
+    delete (window as any).onYouTubeIframeAPIReady
+  })
+
+  afterEach(() => {
+    delete (globalThis as any).YT
+    delete (window as any).onYouTubeIframeAPIReady
+    document.head.querySelectorAll('script[src*="iframe_api"]').forEach((s) => s.remove())
+  })
+
+  it('nur der letzte von zwei konkurrierenden Aufrufen erzeugt den Player', async () => {
+    vi.resetModules()
+    const yt = await import('./youtube')
+    const p1 = yt.initPlayer(document.createElement('div'), 'first')
+    const p2 = yt.initPlayer(document.createElement('div'), 'second')
+    ;(globalThis as any).YT = { Player: FakePlayer }
+    ;(window as any).onYouTubeIframeAPIReady?.()
+    await expect(p1).resolves.toBe(false)
+    await expect(p2).resolves.toBe(true)
+    expect(FakePlayer.instances).toHaveLength(1)
+    expect(FakePlayer.last!.videoId).toBe('second')
+  })
+
+  it('lässt initPlayer fehlschlagen, wenn das API-Script nicht lädt, und erlaubt Retry', async () => {
+    vi.resetModules()
+    const yt = await import('./youtube')
+    const p1 = yt.initPlayer(document.createElement('div'), 'abc')
+    const tag = document.head.querySelector('script[src*="iframe_api"]')!
+    tag.dispatchEvent(new Event('error'))
+    await expect(p1).rejects.toThrow()
+
+    // Nächster Aufruf startet einen neuen Ladeversuch
+    const p2 = yt.initPlayer(document.createElement('div'), 'abc')
+    ;(globalThis as any).YT = { Player: FakePlayer }
+    ;(window as any).onYouTubeIframeAPIReady?.()
+    await expect(p2).resolves.toBe(true)
+    expect(FakePlayer.last!.videoId).toBe('abc')
+  })
+
+  it('überlebt einen werfenden destroy() des alten Players', async () => {
+    vi.resetModules()
+    ;(globalThis as any).YT = { Player: FakePlayer }
+    const yt = await import('./youtube')
+    const p1 = yt.initPlayer(document.createElement('div'), 'one')
+    ;(window as any).onYouTubeIframeAPIReady?.()
+    await p1
+    FakePlayer.last!.destroy.mockImplementation(() => {
+      throw new Error('player element detached')
+    })
+    await expect(yt.initPlayer(document.createElement('div'), 'two')).resolves.toBe(true)
+    expect(FakePlayer.last!.videoId).toBe('two')
   })
 })
 

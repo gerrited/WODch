@@ -12,6 +12,7 @@
 
   let playerContainer: HTMLDivElement | undefined = $state()
   let currentVideoId = $state<string | null>(null)
+  let loadError = $state(false)
 
   function onPaste(e: ClipboardEvent) {
     e.preventDefault()
@@ -31,6 +32,20 @@
     setLoop(video.loop)
   })
 
+  async function loadVideo(id: string) {
+    if (!playerContainer) return
+    loadError = false
+    const el = document.createElement('div')
+    playerContainer.replaceChildren(el)
+    try {
+      await initPlayer(el, id)
+    } catch {
+      // API-Script nicht ladbar (z. B. Funkloch) — Fehler anzeigen statt
+      // stillschweigend so zu tun, als wäre das Video geladen
+      loadError = true
+    }
+  }
+
   $effect(() => {
     const id = extractVideoId(video.rawUrl)
     if (!id) {
@@ -39,11 +54,7 @@
     }
     if (id === currentVideoId) return
     currentVideoId = id
-    if (playerContainer) {
-      const el = document.createElement('div')
-      playerContainer.replaceChildren(el)
-      void initPlayer(el, id)
-    }
+    void loadVideo(id)
   })
 </script>
 
@@ -72,8 +83,19 @@
       <div class="error">Keine gültige YouTube URL.</div>
     {:else if !video.rawUrl}
       <div class="placeholder">YouTube URL eingeben</div>
+    {:else if loadError}
+      <div class="error">
+        Video konnte nicht geladen werden.
+        <button class="retry-btn" onclick={() => currentVideoId && loadVideo(currentVideoId)}>
+          Erneut versuchen
+        </button>
+      </div>
     {/if}
-    <div bind:this={playerContainer} class="embed-frame" class:hidden={!currentVideoId}></div>
+    <div
+      bind:this={playerContainer}
+      class="embed-frame"
+      class:hidden={!currentVideoId || loadError}
+    ></div>
   </div>
 </div>
 
@@ -175,5 +197,21 @@
   }
   .error {
     color: #e63946;
+  }
+  .retry-btn {
+    display: block;
+    margin: 10px auto 0;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #888;
+    font-size: 12px;
+    font-family: monospace;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  .retry-btn:hover {
+    color: #fff;
+    background: #1a1a1a;
   }
 </style>
