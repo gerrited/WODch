@@ -147,6 +147,24 @@ describe('displayTime', () => {
     const d = doc({ mode: 'interval', isRunning: true, startedAt: 0, warmupEnabled: true, warmupDuration: 10 * SEC })
     expect(displayTime(d, 4 * SEC, noon)).toBe('00:06')
   })
+
+  it('stopwatch mit warmup: erst Warmup-Restzeit, dann Stoppuhr ab 0', () => {
+    const d = doc({ mode: 'stopwatch', isRunning: true, startedAt: 0, warmupEnabled: true, warmupDuration: 10 * SEC })
+    expect(displayTime(d, 4 * SEC, noon)).toBe('00:06')
+    expect(displayTime(d, 12 * SEC, noon)).toBe('00:02.00')
+  })
+
+  it('countdown mit warmup: Ziel zählt erst nach Warmup', () => {
+    const d = doc({ mode: 'countdown', isRunning: true, startedAt: 0, countdownTarget: 60 * SEC, warmupEnabled: true, warmupDuration: 10 * SEC })
+    expect(displayTime(d, 4 * SEC, noon)).toBe('00:06')
+    expect(displayTime(d, 10 * SEC, noon)).toBe('01:00')
+  })
+
+  it('countup mit warmup: Startwert erst nach Warmup', () => {
+    const d = doc({ mode: 'countup', isRunning: true, startedAt: 0, countupStart: 90 * SEC, warmupEnabled: true, warmupDuration: 10 * SEC })
+    expect(displayTime(d, 4 * SEC, noon)).toBe('00:06')
+    expect(displayTime(d, 10 * SEC, noon)).toBe('01:30')
+  })
 })
 
 describe('displayRound', () => {
@@ -154,12 +172,17 @@ describe('displayRound', () => {
     expect(displayRound(doc({ mode: 'stopwatch' }), 5000)).toBeNull()
   })
 
-  it('null bei idle, warmup und done', () => {
+  it('null bei idle und done', () => {
     expect(displayRound(doc({ mode: 'interval', isRunning: false }), 0)).toBeNull()
-    const w = doc({ mode: 'interval', isRunning: true, startedAt: 0, warmupEnabled: true })
-    expect(displayRound(w, 3000)).toBeNull()
     const d = doc({ mode: 'interval', isRunning: true, startedAt: 0, totalRounds: 1, workDuration: 1000, restDuration: 0 })
     expect(displayRound(d, 5000)).toBeNull()
+  })
+
+  it('"WARMUP" während der Warmup-Phase (alle Modi)', () => {
+    const iv = doc({ mode: 'interval', isRunning: true, startedAt: 0, warmupEnabled: true, warmupDuration: 10 * SEC })
+    expect(displayRound(iv, 3000)).toBe('WARMUP')
+    const sw = doc({ mode: 'stopwatch', isRunning: true, startedAt: 0, warmupEnabled: true, warmupDuration: 10 * SEC })
+    expect(displayRound(sw, 3000)).toBe('WARMUP')
   })
 
   it('"runde / total" während work und rest', () => {

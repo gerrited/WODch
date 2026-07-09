@@ -55,18 +55,24 @@ function isStarted(doc: TimerDoc): boolean {
 
 export function displayTime(doc: TimerDoc, elapsed: number, now: Date): string {
   if (doc.mode === 'clock') return formatClock(now, doc.clock12h)
-  if (doc.mode === 'stopwatch') return formatMs(elapsed, true)
-  if (doc.mode === 'countdown') return formatMs(doc.countdownTarget - elapsed)
-  if (doc.mode === 'countup') return formatMs(doc.countupStart + elapsed)
-  // interval
-  const d = deriveInterval(doc, elapsed, isStarted(doc))
-  if (d.phase === 'idle' || d.phase === 'done') return formatMs(doc.workDuration)
-  return formatMs(d.remaining)
+  if (doc.mode === 'interval') {
+    const d = deriveInterval(doc, elapsed, isStarted(doc))
+    if (d.phase === 'idle' || d.phase === 'done') return formatMs(doc.workDuration)
+    return formatMs(d.remaining)
+  }
+  const started = isStarted(doc)
+  const warmup = doc.warmupEnabled ? doc.warmupDuration : 0
+  if (started && elapsed < warmup) return formatMs(warmup - elapsed)
+  const t = started ? elapsed - warmup : elapsed
+  if (doc.mode === 'stopwatch') return formatMs(t, true)
+  if (doc.mode === 'countdown') return formatMs(doc.countdownTarget - t)
+  return formatMs(doc.countupStart + t) // countup
 }
 
 export function displayRound(doc: TimerDoc, elapsed: number): string | null {
+  const d = derivePhase(doc, elapsed, isStarted(doc))
+  if (d.phase === 'warmup') return 'WARMUP'
   if (doc.mode !== 'interval') return null
-  const d = deriveInterval(doc, elapsed, isStarted(doc))
   if (d.phase !== 'work' && d.phase !== 'rest') return null
   return `${d.round} / ${doc.totalRounds}`
 }
