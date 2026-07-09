@@ -10,6 +10,8 @@
   import { timer } from './lib/stores/timer.svelte'
   import { session } from './lib/sync/session.svelte'
   import { onMount } from 'svelte'
+  import { detectCue, snapshot, type CueSnapshot } from './lib/audio/cues'
+  import { sound } from './lib/audio/beeps.svelte'
 
   let showModal = $state(false)
   let showTour = $state(false)
@@ -28,12 +30,23 @@
   const mobileQuery = window.matchMedia('(max-width: 768px), (max-height: 500px)')
   let isMobile = $state(mobileQuery.matches)
 
+  // Ton-Cues: bei jedem Tick den Schnappschuss vergleichen und ggf. piepen
+  let prevSnap: CueSnapshot | null = null
+  $effect(() => {
+    const next = snapshot(timer.doc, timer.derived, timer.elapsed)
+    const cue = detectCue(prevSnap, next)
+    prevSnap = next
+    if (cue === 'short') sound.beepShort()
+    else if (cue === 'long') sound.beepLong()
+  })
+
   function onKeydown(e: KeyboardEvent) {
     if (showTour) return
     const target = e.target as HTMLElement
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
     if (e.code === 'Space') {
       e.preventDefault()
+      sound.unlock()
       timer.toggle()
     } else if (e.code === 'KeyR') {
       timer.reset()
