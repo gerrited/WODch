@@ -124,6 +124,13 @@ spec:
                 name: wodch-backend
                 port:
                   number: 8787
+          - path: /generate
+            pathType: Prefix
+            backend:
+              service:
+                name: wodch-backend
+                port:
+                  number: 8787
           - path: /
             pathType: Prefix
             backend:
@@ -135,6 +142,13 @@ spec:
       http:
         paths:
           - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: wodch-backend
+                port:
+                  number: 8787
+          - path: /generate
             pathType: Prefix
             backend:
               service:
