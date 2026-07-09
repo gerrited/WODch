@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
 import WorkoutEditor from './WorkoutEditor.svelte'
 import { workouts } from '../stores/workouts.svelte'
@@ -50,5 +50,57 @@ describe('WorkoutEditor Fokus-Schutz', () => {
     el.dispatchEvent(new InputEvent('input', { bubbles: true }))
     flushSync()
     expect(workouts.tabs[0].content).toBe('getippt')
+  })
+})
+
+describe('WorkoutEditor AI-Generierung', () => {
+  beforeEach(() => {
+    workouts.applyRemote({ tabs: [{ id: 'w1', title: 'Workout 1', content: 'alt' }], activeTab: 0 })
+    component = mount(WorkoutEditor, { target: document.body })
+    flushSync()
+  })
+
+  afterEach(() => {
+    unmount(component)
+    document.body.innerHTML = ''
+    vi.restoreAllMocks()
+  })
+
+  it('öffnet den Dialog über den Magic-Button', () => {
+    expect(document.querySelector('.gen-input')).toBeNull()
+    ;(document.querySelector('[data-tour="ai-generate"]') as HTMLButtonElement).click()
+    flushSync()
+    expect(document.querySelector('.gen-input')).not.toBeNull()
+  })
+
+  it('schreibt das generierte Workout in den aktiven Tab', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ workout: 'FRAN\n21-15-9' }), { status: 200 })),
+    )
+    ;(document.querySelector('[data-tour="ai-generate"]') as HTMLButtonElement).click()
+    flushSync()
+    const ta = document.querySelector('.gen-input') as HTMLTextAreaElement
+    ta.value = 'Fran'
+    ta.dispatchEvent(new InputEvent('input', { bubbles: true }))
+    flushSync()
+    ;(document.querySelector('.btn-generate') as HTMLButtonElement).click()
+    await vi.waitFor(() => expect(workouts.tabs[0].content).toBe('FRAN\n21-15-9'))
+  })
+
+  it('lässt den Tab-Inhalt bei Fehler unberührt', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ error: 'kaputt' }), { status: 500 })),
+    )
+    ;(document.querySelector('[data-tour="ai-generate"]') as HTMLButtonElement).click()
+    flushSync()
+    const ta = document.querySelector('.gen-input') as HTMLTextAreaElement
+    ta.value = 'Fran'
+    ta.dispatchEvent(new InputEvent('input', { bubbles: true }))
+    flushSync()
+    ;(document.querySelector('.btn-generate') as HTMLButtonElement).click()
+    await vi.waitFor(() => expect(document.querySelector('.gen-error')).not.toBeNull())
+    expect(workouts.tabs[0].content).toBe('alt')
   })
 })

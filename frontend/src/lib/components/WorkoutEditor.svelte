@@ -2,6 +2,8 @@
   import { tick } from 'svelte'
   import { workouts } from '../stores/workouts.svelte'
   import ConfirmDialog from './ConfirmDialog.svelte'
+  import GenerateDialog from './GenerateDialog.svelte'
+  import { requestWorkout, PHRASES, nextPhraseIndex } from '../generate/generate'
 
   let editorEl: HTMLDivElement | undefined = $state()
   let focused = false
@@ -11,6 +13,37 @@
   let dragTab = -1
   let dragOverTab = $state(-1)
   let pendingDelete = $state<number | null>(null)
+
+  let showGenerate = $state(false)
+  let generating = $state(false)
+  let phraseIndex = $state(0)
+  let genError = $state<string | null>(null)
+  let phraseTimer: ReturnType<typeof setInterval> | undefined
+
+  function openGenerate() {
+    genError = null
+    showGenerate = true
+  }
+
+  async function runGenerate(prompt: string) {
+    showGenerate = false
+    genError = null
+    generating = true
+    phraseIndex = 0
+    phraseTimer = setInterval(() => {
+      phraseIndex = nextPhraseIndex(phraseIndex)
+    }, 1500)
+    const target = workouts.activeTab
+    try {
+      const workout = await requestWorkout(prompt)
+      workouts.setContent(target, workout)
+    } catch (e) {
+      genError = e instanceof Error ? e.message : 'Generierung fehlgeschlagen.'
+    } finally {
+      generating = false
+      clearInterval(phraseTimer)
+    }
+  }
 
   // innerText fehlt in jsdom — Fallback auf textContent (Inhalt ist reiner Text)
   function getText(el: HTMLElement): string {
@@ -142,6 +175,13 @@
       </div>
     {/each}
     <button class="tab-add" onclick={() => workouts.addTab()}>+</button>
+    <button
+      class="tab-magic"
+      data-tour="ai-generate"
+      title="Workout mit AI erstellen"
+      aria-label="Workout mit AI erstellen"
+      onclick={openGenerate}>✨</button
+    >
   </div>
   <div class="editor-area">
     <div
@@ -156,6 +196,14 @@
       role="textbox"
       tabindex="0"
     ></div>
+    {#if generating}
+      <div class="gen-overlay">
+        <span class="gen-phrase">{PHRASES[phraseIndex]}<span class="gen-dots"></span></span>
+      </div>
+    {/if}
+    {#if genError}
+      <div class="gen-error">{genError}</div>
+    {/if}
   </div>
 </div>
 
@@ -166,6 +214,10 @@
     onConfirm={confirmDelete}
     onCancel={() => (pendingDelete = null)}
   />
+{/if}
+
+{#if showGenerate}
+  <GenerateDialog onSubmit={runGenerate} onCancel={() => (showGenerate = false)} />
 {/if}
 
 <style>
@@ -253,6 +305,64 @@
     align-items: center;
     justify-content: center;
     overflow-y: auto;
+    position: relative;
+  }
+  .tab-magic {
+    background: none;
+    border: none;
+    color: #7cc;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 0 14px;
+    line-height: 1;
+    margin-left: auto;
+  }
+  .tab-magic:hover {
+    color: #fff;
+  }
+  .gen-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.85);
+  }
+  .gen-phrase {
+    color: #7cc;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    letter-spacing: 1px;
+  }
+  .gen-dots::after {
+    content: '';
+    animation: gen-dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes gen-dots {
+    0% {
+      content: '';
+    }
+    25% {
+      content: '.';
+    }
+    50% {
+      content: '..';
+    }
+    75% {
+      content: '...';
+    }
+  }
+  .gen-error {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #e63946;
+    font-size: 12px;
+    font-family: monospace;
+    background: #1a1a1a;
+    padding: 6px 12px;
+    border-radius: 4px;
   }
   .workout-editor {
     width: 100%;
