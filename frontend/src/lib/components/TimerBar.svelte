@@ -15,7 +15,7 @@
   })
 
   function handleClick() {
-    if (barAction(timer.doc, timer.derived, timer.elapsed) === 'modal') onOpenModal()
+    if (barAction(timer.doc, timer.derived) === 'modal') onOpenModal()
     else timer.toggle()
   }
 
