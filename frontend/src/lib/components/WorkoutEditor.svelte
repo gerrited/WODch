@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { workouts } from '../stores/workouts.svelte'
+  import ConfirmDialog from './ConfirmDialog.svelte'
 
   let editorEl: HTMLDivElement | undefined = $state()
   let focused = false
@@ -9,6 +10,7 @@
   let renameInput: HTMLInputElement | undefined = $state()
   let dragTab = -1
   let dragOverTab = $state(-1)
+  let pendingDelete = $state<number | null>(null)
 
   // innerText fehlt in jsdom — Fallback auf textContent (Inhalt ist reiner Text)
   function getText(el: HTMLElement): string {
@@ -70,6 +72,12 @@
     dragTab = -1
     dragOverTab = -1
   }
+
+  function confirmDelete() {
+    if (pendingDelete === null) return
+    workouts.removeTab(pendingDelete)
+    pendingDelete = null
+  }
 </script>
 
 <div class="workout-wrapper" data-tour="editor">
@@ -126,7 +134,7 @@
             tabindex="-1"
             onclick={(e) => {
               e.stopPropagation()
-              workouts.removeTab(i)
+              pendingDelete = i
             }}
             onkeydown={() => {}}>✕</span
           >
@@ -150,6 +158,15 @@
     ></div>
   </div>
 </div>
+
+{#if pendingDelete !== null}
+  <ConfirmDialog
+    title="Workout löschen?"
+    message={`„${workouts.tabs[pendingDelete]?.title ?? ''}" wird entfernt.`}
+    onConfirm={confirmDelete}
+    onCancel={() => (pendingDelete = null)}
+  />
+{/if}
 
 <style>
   .workout-wrapper {

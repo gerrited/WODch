@@ -43,12 +43,47 @@
     }
   })
 
+  let scrollAnim = 0
+
+  // Eigene, kurze Wisch-Animation — native 'smooth'-Scrolldauer ist nicht einstellbar.
+  // Snap wird währenddessen abgeschaltet, sonst klemmt scroll-snap-stop den Sprung
+  // über mehrere Panels auf ein einziges.
+  function animateScrollTo(target: number) {
+    if (!panelsEl) return
+    cancelAnimationFrame(scrollAnim)
+    const from = panelsEl.scrollLeft
+    const dist = target - from
+    if (dist === 0) return
+    const duration = 180
+    const start = performance.now()
+    const easeOut = (t: number) => 1 - (1 - t) ** 3
+    panelsEl.style.scrollSnapType = 'none'
+    const step = (now: number) => {
+      if (!panelsEl) return
+      const t = Math.min(1, (now - start) / duration)
+      panelsEl.scrollLeft = from + dist * easeOut(t)
+      if (t < 1) {
+        scrollAnim = requestAnimationFrame(step)
+      } else {
+        panelsEl.style.scrollSnapType = ''
+      }
+    }
+    scrollAnim = requestAnimationFrame(step)
+  }
+
+  const prefersReducedMotion = () =>
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
   function scrollToActive(behavior: ScrollBehavior) {
     if (!panelsEl) return
-    if (typeof panelsEl.scrollTo === 'function') {
-      panelsEl.scrollTo({ left: active * panelsEl.clientWidth, behavior })
+    const target = active * panelsEl.clientWidth
+    if (behavior === 'smooth' && !prefersReducedMotion()) {
+      animateScrollTo(target)
     } else {
-      panelsEl.scrollLeft = active * panelsEl.clientWidth
+      cancelAnimationFrame(scrollAnim)
+      panelsEl.style.scrollSnapType = ''
+      panelsEl.scrollLeft = target
     }
   }
 
