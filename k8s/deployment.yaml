@@ -41,7 +41,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wodch-sync
+  name: wodch-backend
 spec:
   # Sessions leben im Arbeitsspeicher — genau eine Instanz.
   # Ausbaupfad bei Bedarf: Redis als Backing Store (siehe docs/rewrite-stack-options.md §6.2)
@@ -50,17 +50,17 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: wodch-sync
+      app: wodch-backend
   template:
     metadata:
       labels:
-        app: wodch-sync
+        app: wodch-backend
     spec:
       imagePullSecrets:
         - name: ghcr-secret
       containers:
         - name: sync
-          image: ghcr.io/gerrited/wodch-sync:latest
+          image: ghcr.io/gerrited/wodch-backend:latest
           ports:
             - containerPort: 8787
           livenessProbe:
@@ -86,10 +86,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: wodch-sync
+  name: wodch-backend
 spec:
   selector:
-    app: wodch-sync
+    app: wodch-backend
   ports:
     - port: 8787
       targetPort: 8787
@@ -111,7 +111,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: wodch-sync
+                name: wodch-backend
                 port:
                   number: 8787
           - path: /
@@ -128,7 +128,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: wodch-sync
+                name: wodch-backend
                 port:
                   number: 8787
           - path: /

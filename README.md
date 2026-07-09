@@ -46,7 +46,7 @@ Zwei Container-Images, gebaut per GitHub Actions bei Push auf `main` (Tag `lates
 | Image | Inhalt | Port |
 |---|---|---|
 | `ghcr.io/gerrited/wodch-frontend` | Statisches Build hinter Nginx | 80 |
-| `ghcr.io/gerrited/wodch-sync` | WebSocket-Sync-Dienst | 8787 |
+| `ghcr.io/gerrited/wodch-backend` | WebSocket-Sync-Dienst + AI-Generierung | 8787 |
 
 Der Test-Job (beide Pakete: `npm test` + Build) muss vor dem Image-Build bestehen.
 
@@ -54,7 +54,7 @@ Lokal bauen:
 
 ```bash
 docker build -t wodch-frontend:local ./frontend
-docker build -t wodch-sync:local ./server
+docker build -t wodch-backend:local ./server
 ```
 
 ### Kubernetes

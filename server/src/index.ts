@@ -110,6 +110,6 @@ const isMain = process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWit
 if (isMain) {
   const port = Number(process.env.PORT ?? 8787)
   startServer(port).then(({ port: p }) => {
-    console.log(`wodch-sync listening on :${p} (ws path /ws)`)
+    console.log(`wodch-backend listening on :${p} (ws path /ws)`)
   })
 }
