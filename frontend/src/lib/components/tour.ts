@@ -42,6 +42,11 @@ export const desktopSteps: TourStep[] = [
     body: 'Freier Text für dein Workout. Mehrere Tabs: Doppelklick benennt um, Ziehen sortiert.',
   },
   {
+    target: 'ai-generate',
+    title: 'Workout per AI',
+    body: 'Der ✨-Button öffnet einen kleinen Dialog: Beschreibe kurz, was du willst — die AI erstellt daraus ein Workout und schreibt es in den aktiven Tab.',
+  },
+  {
     target: 'video',
     title: 'Video',
     body: 'YouTube-URL einfügen und das Video läuft — mit ∞-Loop und ±10s-Buttons.',
@@ -81,6 +86,12 @@ export const mobileSteps: TourStep[] = [
     tab: 0,
     title: 'Workouts',
     body: 'Freier Text für dein Workout. Mehrere Tabs: Doppeltippen benennt um, Ziehen sortiert.',
+  },
+  {
+    target: 'ai-generate',
+    tab: 0,
+    title: 'Workout per AI',
+    body: 'Der ✨-Button öffnet einen kleinen Dialog: Beschreibe kurz, was du willst — die AI erstellt daraus ein Workout und schreibt es in den aktiven Tab.',
   },
   {
     target: 'video',

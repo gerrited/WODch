@@ -26,9 +26,9 @@ describe('cardPlacement', () => {
 })
 
 describe('Schrittlisten', () => {
-  it('haben beide 7 Schritte und starten zentriert (ohne Ziel)', () => {
-    expect(desktopSteps).toHaveLength(7)
-    expect(mobileSteps).toHaveLength(7)
+  it('haben beide 8 Schritte und starten zentriert (ohne Ziel)', () => {
+    expect(desktopSteps).toHaveLength(8)
+    expect(mobileSteps).toHaveLength(8)
     expect(desktopSteps[0].target).toBeNull()
     expect(mobileSteps[0].target).toBeNull()
   })
