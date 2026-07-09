@@ -58,7 +58,7 @@
   })
 </script>
 
-<div class="video-player">
+<div class="video-player" data-tour="video">
   <div class="url-bar">
     <input
       value={video.rawUrl}

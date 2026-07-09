@@ -67,4 +67,12 @@ describe('MobileTabs', () => {
     const tabs = [...document.querySelectorAll('[role="tab"]')]
     expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false'])
   })
+
+  it('schaltet den Tab über den selectTab-Export um', () => {
+    mountTabs()
+    ;(component as { selectTab: (i: number) => void }).selectTab(2)
+    flushSync()
+    const tabs = [...document.querySelectorAll('[role="tab"]')]
+    expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'false', 'true'])
+  })
 })

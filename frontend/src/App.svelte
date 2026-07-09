@@ -5,6 +5,8 @@
   import TimerModal from './lib/components/TimerModal.svelte'
   import WorkoutEditor from './lib/components/WorkoutEditor.svelte'
   import VideoPlayer from './lib/components/VideoPlayer.svelte'
+  import Tour from './lib/components/Tour.svelte'
+  import { desktopSteps, mobileSteps, shouldAutoStart } from './lib/components/tour'
   import { timer } from './lib/stores/timer.svelte'
   import { session } from './lib/sync/session.svelte'
   import { onMount } from 'svelte'
@@ -12,6 +14,17 @@
   import { sound } from './lib/audio/beeps.svelte'
 
   let showModal = $state(false)
+  let showTour = $state(false)
+  let mobileTabs = $state<{ selectTab: (i: number) => void }>()
+
+  function endTour() {
+    showTour = false
+    try {
+      localStorage.setItem('wodch.tourDone', '1')
+    } catch {
+      // localStorage nicht verfügbar — Tour startet dann bei jedem Besuch
+    }
+  }
 
   // Schmal (Hochformat) oder flach (Smartphone im Querformat) → mobile Tab-Ansicht
   const mobileQuery = window.matchMedia('(max-width: 768px), (max-height: 500px)')
@@ -28,6 +41,7 @@
   })
 
   function onKeydown(e: KeyboardEvent) {
+    if (showTour) return
     const target = e.target as HTMLElement
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
     if (e.code === 'Space') {
@@ -45,6 +59,11 @@
     session.joinFromLocation()
     const onChange = (e: MediaQueryListEvent) => (isMobile = e.matches)
     mobileQuery.addEventListener('change', onChange)
+    try {
+      showTour = shouldAutoStart(localStorage.getItem('wodch.tourDone'))
+    } catch {
+      showTour = true
+    }
     return () => mobileQuery.removeEventListener('change', onChange)
   })
 </script>
@@ -53,7 +72,7 @@
 
 <div id="layout">
   {#if isMobile}
-    <MobileTabs>
+    <MobileTabs bind:this={mobileTabs}>
       {#snippet video()}
         <VideoPlayer />
       {/snippet}
@@ -61,13 +80,13 @@
         <WorkoutEditor />
       {/snippet}
       {#snippet timer()}
-        <TimerBar onOpenModal={() => (showModal = true)} />
+        <TimerBar onOpenModal={() => (showModal = true)} onStartTour={() => (showTour = true)} />
       {/snippet}
     </MobileTabs>
   {:else}
     <SplitPane orientation="rows" initial={15} min={5} storageKey="wodch-split-timer">
       {#snippet a()}
-        <TimerBar onOpenModal={() => (showModal = true)} />
+        <TimerBar onOpenModal={() => (showModal = true)} onStartTour={() => (showTour = true)} />
       {/snippet}
       {#snippet b()}
         <SplitPane orientation="columns" initial={50} min={10} storageKey="wodch-split-editor">
@@ -85,6 +104,14 @@
 
 {#if showModal}
   <TimerModal onClose={() => (showModal = false)} />
+{/if}
+
+{#if showTour}
+  <Tour
+    steps={isMobile ? mobileSteps : desktopSteps}
+    onClose={endTour}
+    onTab={(i) => mobileTabs?.selectTab(i)}
+  />
 {/if}
 
 <style>
