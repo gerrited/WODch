@@ -180,8 +180,14 @@
       data-tour="ai-generate"
       title="Workout mit AI erstellen"
       aria-label="Workout mit AI erstellen"
-      onclick={openGenerate}>✨</button
+      onclick={openGenerate}
     >
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path
+          d="M12 2l1.6 4.6L18 8.2l-4.4 1.6L12 14.4l-1.6-4.6L6 8.2l4.4-1.6L12 2zM19 13l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9L19 13zM5 14l.7 2 2 .7-2 .7L5 19.4l-.7-2-2-.7 2-.7L5 14z"
+        />
+      </svg>
+    </button>
   </div>
   <div class="editor-area">
     <div
@@ -310,12 +316,18 @@
   .tab-magic {
     background: none;
     border: none;
-    color: #7cc;
-    font-size: 15px;
+    color: #444;
     cursor: pointer;
     padding: 0 14px;
     line-height: 1;
     margin-left: auto;
+    display: flex;
+    align-items: center;
+  }
+  .tab-magic svg {
+    width: 16px;
+    height: 16px;
+    display: block;
   }
   .tab-magic:hover {
     color: #fff;
