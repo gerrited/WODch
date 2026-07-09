@@ -2,6 +2,8 @@ import { createServer } from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createStore, type Store } from './store.js'
 import type { SessionDoc } from './types.js'
+import { createRateLimiter } from './rateLimit.js'
+import { handleGenerate, hasApiKey, generateWorkout as defaultGenerateWorkout } from './generate.js'
 
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000
 
@@ -17,13 +19,58 @@ export interface RunningServer {
   close(): Promise<void>
 }
 
-export function startServer(port: number): Promise<RunningServer> {
+export function startServer(
+  port: number,
+  opts: { generateWorkout?: (prompt: string) => Promise<string> } = {},
+): Promise<RunningServer> {
   const store = createStore()
+  const rateLimiter = createRateLimiter(10, 60_000)
+  const generateWorkout = opts.generateWorkout ?? defaultGenerateWorkout
 
   const http = createServer((req, res) => {
     if (req.url === '/healthz') {
       res.writeHead(200, { 'content-type': 'text/plain' })
       res.end('ok')
+      return
+    }
+    if (req.url === '/generate' && req.method === 'POST') {
+      const ip =
+        (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
+        req.socket.remoteAddress ||
+        'unknown'
+      let raw = ''
+      let tooLarge = false
+      req.on('data', (chunk) => {
+        raw += chunk
+        // Harte Obergrenze gegen übergroße Bodies (Prompt-Cap ist 500 Zeichen).
+        if (raw.length > 4096) {
+          tooLarge = true
+          req.destroy()
+        }
+      })
+      req.on('end', () => {
+        void (async () => {
+          if (tooLarge) {
+            res.writeHead(400, { 'content-type': 'application/json' })
+            res.end(JSON.stringify({ error: 'Anfrage zu groß.' }))
+            return
+          }
+          let prompt: unknown
+          try {
+            prompt = JSON.parse(raw).prompt
+          } catch {
+            res.writeHead(400, { 'content-type': 'application/json' })
+            res.end(JSON.stringify({ error: 'Ungültiges JSON.' }))
+            return
+          }
+          const result = await handleGenerate(
+            { prompt, ip },
+            { rateLimiter, hasApiKey, generateWorkout },
+          )
+          res.writeHead(result.status, { 'content-type': 'application/json' })
+          res.end(JSON.stringify(result.body))
+        })()
+      })
       return
     }
     res.writeHead(404)
