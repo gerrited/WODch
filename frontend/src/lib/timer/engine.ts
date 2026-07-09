@@ -21,7 +21,11 @@ export function elapsedNow(
 
 // Deterministische Ableitung von Phase/Runde aus der Gesamt-Laufzeit —
 // es gibt keine Transition-Writes, jeder Client rechnet identisch.
-export function deriveInterval(cfg: IntervalConfig, elapsed: number, started: boolean): Derived {
+export function deriveInterval(
+  cfg: IntervalConfig,
+  elapsed: number,
+  started: boolean,
+): Exclude<Derived, { phase: 'running' }> {
   if (!started) return { phase: 'idle' }
   const warmup = cfg.warmupEnabled ? cfg.warmupDuration : 0
   if (elapsed < warmup) return { phase: 'warmup', round: 0, remaining: warmup - elapsed }
@@ -58,8 +62,7 @@ export function displayTime(doc: TimerDoc, elapsed: number, now: Date): string {
   if (doc.mode === 'interval') {
     const d = deriveInterval(doc, elapsed, isStarted(doc))
     if (d.phase === 'idle' || d.phase === 'done') return formatMs(doc.workDuration)
-    if (d.phase === 'warmup' || d.phase === 'work' || d.phase === 'rest') return formatMs(d.remaining)
-    return formatMs(doc.workDuration)
+    return formatMs(d.remaining)
   }
   const started = isStarted(doc)
   const warmup = doc.warmupEnabled ? doc.warmupDuration : 0
