@@ -8,7 +8,7 @@ Gym-Training-Web-App: vollwertiger Intervall-Timer, Multi-Tab-Workout-Editor und
 - **Workout-Editor** — mehrere Tabs (umbenennen per Doppelklick, sortieren per Drag & Drop), zentrierter Monospace-Text.
 - **Video-Player** — YouTube-URL einfügen (`watch?v=`/`youtu.be`), ∞-Loop, ±10s-Buttons.
 - **Session-Sharing** — 📤-Button erzeugt einen Link (`#session=<id>`). Alle Geräte mit dem Link sehen Timer, Workouts und Video synchron und haben volle Kontrolle (kein Host-Konzept, last-write-wins). Sessions verfallen 24 h nach der letzten Änderung.
-- **Bedienung** — Klick auf die Timer-Leiste: Start/Pause (im Idle: Einstellungen). Tastatur: `Space` Start/Pause, `R` Reset, `M` Einstellungen.
+- **Bedienung** — Klick auf die Timer-Leiste: Start/Pause (im Idle: Einstellungen). Tastatur: `Space` Start/Pause, `R` Reset, `M` Einstellungen. Beim ersten Besuch führt eine kurze Tour durch die Funktionen — jederzeit neu startbar über den ?-Button in der Timer-Leiste.
 
 ## Architektur
 

@@ -22,3 +22,13 @@ if (typeof globalThis.localStorage === 'undefined') {
     Object.defineProperty(window, 'localStorage', { value: shim, configurable: true })
   }
 }
+
+// jsdom kennt keinen ResizeObserver — bind:clientHeight (Tour.svelte) braucht ihn zum Mounten. No-op-Shim.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverShim {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = ResizeObserverShim as unknown as typeof ResizeObserver
+}

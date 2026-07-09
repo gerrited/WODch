@@ -57,6 +57,12 @@
     scrollToActive('smooth')
   }
 
+  // Für die Onboarding-Tour: Tab von außen umschalten, ohne Scroll-Animation
+  export function selectTab(index: number) {
+    active = index
+    scrollToActive('instant')
+  }
+
   function onScroll() {
     if (!panelsEl) return
     active = activeIndexFromScroll(panelsEl.scrollLeft, panelsEl.clientWidth, tabs.length)

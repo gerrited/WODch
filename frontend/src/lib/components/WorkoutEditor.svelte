@@ -72,7 +72,7 @@
   }
 </script>
 
-<div class="workout-wrapper">
+<div class="workout-wrapper" data-tour="editor">
   <div class="tab-bar">
     {#each workouts.tabs as tab, i (tab.id)}
       <div
