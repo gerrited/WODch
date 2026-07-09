@@ -75,6 +75,12 @@ describe('TimerStore', () => {
     expect(store.doc).toMatchObject({ workDuration: 90 * SEC, restDuration: 0, totalRounds: 12 })
   })
 
+  it('applyPreset lässt warmupEnabled unangetastet', () => {
+    store.setConfig({ warmupEnabled: true })
+    store.applyPreset('emom')
+    expect(store.doc.warmupEnabled).toBe(true)
+  })
+
   it('custom interval: speichern, laden, anwenden', () => {
     store.saveCustomInterval(2, { name: 'Murph', rounds: 4, workDuration: 3 * MIN, restDuration: 30 * SEC })
     const fresh = new TimerStore()
