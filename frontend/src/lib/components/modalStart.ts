@@ -45,7 +45,7 @@ export function applyModalStart(timer: TimerStore, form: ModalForm): void {
       timer.applyPreset(form.preset)
     }
   }
-  const warmupEnabled = timer.doc.warmupEnabled && form.mode === 'interval'
+  const warmupEnabled = timer.doc.warmupEnabled && form.mode !== 'clock'
   if (warmupEnabled) {
     timer.setConfig({ warmupDuration: ms(form.warmupMin, form.warmupSec) })
   }

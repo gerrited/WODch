@@ -65,4 +65,20 @@ describe('applyModalStart', () => {
     expect(timer.doc.warmupDuration).toBe(90_000)
     expect(timer.derived).toMatchObject({ phase: 'warmup' })
   })
+
+  it('warmup: übernimmt Dauer auch bei countdown', () => {
+    timer.setMode('countdown')
+    timer.setConfig({ warmupEnabled: true })
+    applyModalStart(timer, form({ mode: 'countdown', warmupMin: 0, warmupSec: 20 }))
+    expect(timer.doc.warmupDuration).toBe(20_000)
+    expect(timer.derived).toMatchObject({ phase: 'warmup' })
+  })
+
+  it('warmup: greift bei emom (applyPreset überschreibt nicht mehr)', () => {
+    timer.setMode('interval')
+    timer.setConfig({ warmupEnabled: true })
+    applyModalStart(timer, form({ mode: 'interval', preset: 'emom', warmupMin: 0, warmupSec: 15 }))
+    expect(timer.doc.warmupEnabled).toBe(true)
+    expect(timer.doc.warmupDuration).toBe(15_000)
+  })
 })

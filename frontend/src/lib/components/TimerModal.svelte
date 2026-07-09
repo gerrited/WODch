@@ -210,7 +210,7 @@
       </section>
     {/if}
 
-    {#if selectedMode === 'interval'}
+    {#if selectedMode !== 'clock'}
       <section class="section">
         <div class="label">WARMUP</div>
         <div class="config-row">

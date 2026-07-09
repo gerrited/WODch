@@ -18,7 +18,8 @@ export function snapshot(doc: TimerDoc, derived: Derived, elapsed: number): CueS
     return { isRunning: doc.isRunning, phase: 'countdown', round: 0, secondsLeft }
   }
   if (doc.mode === 'interval') {
-    if (derived.phase === 'idle') return null
+    // 'running' kommt im Intervall-Modus nicht vor (deriveInterval liefert es nie)
+    if (derived.phase === 'idle' || derived.phase === 'running') return null
     if (derived.phase === 'done') return { isRunning: doc.isRunning, phase: 'done', round: 0, secondsLeft: 0 }
     return {
       isRunning: doc.isRunning,

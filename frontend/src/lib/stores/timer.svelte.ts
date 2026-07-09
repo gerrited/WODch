@@ -5,7 +5,7 @@ import {
   type TimerDoc,
   type TimerMode,
 } from '../types'
-import { elapsedNow, deriveInterval, displayTime, displayRound, type Derived } from '../timer/engine'
+import { elapsedNow, derivePhase, displayTime, displayRound, type Derived } from '../timer/engine'
 import { clockOffset, syncedNow } from '../sync/clock'
 
 export const CUSTOM_KEY = 'wodch-custom-intervals'
@@ -21,7 +21,7 @@ export class TimerStore {
   // startedAt steht in Server-Zeit → lokale Uhr um den gemessenen Versatz korrigieren
   elapsed = $derived(elapsedNow(this.doc, this.now + clockOffset()))
   derived: Derived = $derived(
-    deriveInterval(this.doc, this.elapsed, this.doc.isRunning || this.doc.accumulatedMs > 0),
+    derivePhase(this.doc, this.elapsed, this.doc.isRunning || this.doc.accumulatedMs > 0),
   )
   displayTime = $derived(displayTime(this.doc, this.elapsed, new Date(this.now)))
   displayRound = $derived(displayRound(this.doc, this.elapsed))
@@ -70,7 +70,6 @@ export class TimerStore {
       isRunning: false,
       startedAt: null,
       accumulatedMs: 0,
-      warmupEnabled: false,
     }
     if (preset === 'tabata') {
       this.commit({ ...base, workDuration: 20_000, restDuration: 10_000, totalRounds: 8 })
