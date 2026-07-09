@@ -58,7 +58,8 @@ export function displayTime(doc: TimerDoc, elapsed: number, now: Date): string {
   if (doc.mode === 'interval') {
     const d = deriveInterval(doc, elapsed, isStarted(doc))
     if (d.phase === 'idle' || d.phase === 'done') return formatMs(doc.workDuration)
-    return formatMs(d.remaining)
+    if (d.phase === 'warmup' || d.phase === 'work' || d.phase === 'rest') return formatMs(d.remaining)
+    return formatMs(doc.workDuration)
   }
   const started = isStarted(doc)
   const warmup = doc.warmupEnabled ? doc.warmupDuration : 0

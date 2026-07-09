@@ -39,7 +39,7 @@
     {#if timer.displayRound}
       <span class="round">{timer.displayRound}</span>
     {/if}
-    <span class="time" class:work={timer.derived.phase === 'work'} class:rest={timer.derived.phase === 'rest'}>
+    <span class="time" class:work={timer.derived.phase === 'work'} class:rest={timer.derived.phase === 'rest'} class:warmup={timer.derived.phase === 'warmup'}>
       {timer.displayTime}
     </span>
   </div>
@@ -93,6 +93,9 @@
   }
   .time.rest {
     color: #2dc653;
+  }
+  .time.warmup {
+    color: #f0a500;
   }
   .gear {
     position: absolute;
