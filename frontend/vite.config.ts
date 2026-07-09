@@ -11,6 +11,9 @@ export default defineConfig(({ mode }) => ({
         target: 'ws://localhost:8787',
         ws: true,
       },
+      '/generate': {
+        target: 'http://localhost:8787',
+      },
     },
   },
   test: {
