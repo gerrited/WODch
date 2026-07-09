@@ -8,6 +8,7 @@ export type IntervalConfig = Pick<
 
 export type Derived =
   | { phase: 'idle' }
+  | { phase: 'running' }
   | { phase: 'warmup' | 'work' | 'rest'; round: number; remaining: number }
   | { phase: 'done' }
 
@@ -32,6 +33,20 @@ export function deriveInterval(cfg: IntervalConfig, elapsed: number, started: bo
   const tIn = t - idx * cycle
   if (tIn < cfg.workDuration) return { phase: 'work', round: idx + 1, remaining: cfg.workDuration - tIn }
   return { phase: 'rest', round: idx + 1, remaining: cycle - tIn }
+}
+
+// Modus-bewusste Phase: Intervall behält work/rest/done, einfache Modi kennen
+// nur warmup → running (Countdown zusätzlich done). Uhrzeit hat keine Phasen.
+export function derivePhase(doc: TimerDoc, elapsed: number, started: boolean): Derived {
+  if (!started) return { phase: 'idle' }
+  if (doc.mode === 'interval') return deriveInterval(doc, elapsed, started)
+  if (doc.mode === 'clock') return { phase: 'running' }
+  const warmup = doc.warmupEnabled ? doc.warmupDuration : 0
+  if (elapsed < warmup) return { phase: 'warmup', round: 0, remaining: warmup - elapsed }
+  if (doc.mode === 'countdown') {
+    return elapsed - warmup >= doc.countdownTarget ? { phase: 'done' } : { phase: 'running' }
+  }
+  return { phase: 'running' } // stopwatch, countup
 }
 
 function isStarted(doc: TimerDoc): boolean {

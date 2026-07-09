@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { elapsedNow, deriveInterval, displayTime, displayRound } from './engine'
+import { elapsedNow, deriveInterval, derivePhase, displayTime, displayRound } from './engine'
 import { defaultTimerDoc, type TimerDoc } from '../types'
 
 const SEC = 1000
@@ -69,6 +69,43 @@ describe('deriveInterval Randfälle', () => {
   it('cycle 0 oder totalRounds 0 → done', () => {
     expect(deriveInterval({ warmupEnabled: false, warmupDuration: 0, workDuration: 0, restDuration: 0, totalRounds: 5 }, 0, true)).toEqual({ phase: 'done' })
     expect(deriveInterval({ warmupEnabled: false, warmupDuration: 0, workDuration: 20 * SEC, restDuration: 0, totalRounds: 0 }, 0, true)).toEqual({ phase: 'done' })
+  })
+})
+
+describe('derivePhase (modus-bewusst)', () => {
+  it('idle wenn nicht gestartet', () => {
+    expect(derivePhase(doc({ mode: 'stopwatch' }), 0, false)).toEqual({ phase: 'idle' })
+  })
+
+  it('stopwatch: running sobald gestartet (nie work/rest)', () => {
+    expect(derivePhase(doc({ mode: 'stopwatch' }), 5 * SEC, true)).toEqual({ phase: 'running' })
+  })
+
+  it('countup: running sobald gestartet', () => {
+    expect(derivePhase(doc({ mode: 'countup' }), 5 * SEC, true)).toEqual({ phase: 'running' })
+  })
+
+  it('countdown: running bis target, dann done', () => {
+    const d = doc({ mode: 'countdown', countdownTarget: 60 * SEC })
+    expect(derivePhase(d, 30 * SEC, true)).toEqual({ phase: 'running' })
+    expect(derivePhase(d, 60 * SEC, true)).toEqual({ phase: 'done' })
+  })
+
+  it('einfache Modi: warmup zuerst, dann running', () => {
+    const d = doc({ mode: 'stopwatch', warmupEnabled: true, warmupDuration: 10 * SEC })
+    expect(derivePhase(d, 3 * SEC, true)).toEqual({ phase: 'warmup', round: 0, remaining: 7 * SEC })
+    expect(derivePhase(d, 12 * SEC, true)).toEqual({ phase: 'running' })
+  })
+
+  it('countdown mit warmup: target läuft erst nach warmup', () => {
+    const d = doc({ mode: 'countdown', countdownTarget: 60 * SEC, warmupEnabled: true, warmupDuration: 10 * SEC })
+    expect(derivePhase(d, 65 * SEC, true)).toEqual({ phase: 'running' }) // 65-10 = 55 < 60
+    expect(derivePhase(d, 70 * SEC, true)).toEqual({ phase: 'done' })    // 70-10 = 60
+  })
+
+  it('interval: delegiert an deriveInterval', () => {
+    const d = doc({ mode: 'interval', workDuration: 20 * SEC, restDuration: 10 * SEC, totalRounds: 8 })
+    expect(derivePhase(d, 5 * SEC, true)).toEqual({ phase: 'work', round: 1, remaining: 15 * SEC })
   })
 })
 
