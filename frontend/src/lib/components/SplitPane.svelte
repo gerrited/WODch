@@ -93,7 +93,7 @@
     touch-action: none;
   }
   .rows > .divider {
-    height: 4px;
+    height: 12px;
     background: #333;
     cursor: row-resize;
   }
