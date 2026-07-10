@@ -174,7 +174,12 @@
         {/if}
       </div>
     {/each}
-    <button class="tab-add" onclick={() => workouts.addTab()}>+</button>
+    <button
+      class="tab-add"
+      title="Neues Workout"
+      aria-label="Neues Workout"
+      onclick={() => workouts.addTab()}>+</button
+    >
     <button
       class="tab-magic"
       data-tour="ai-generate"
@@ -301,6 +306,9 @@
     cursor: pointer;
     padding: 0 14px;
     line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .tab-add:hover {
     color: #fff;
@@ -325,8 +333,8 @@
     align-items: center;
   }
   .tab-magic svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     display: block;
   }
   .tab-magic:hover {
