@@ -6,6 +6,10 @@
   const MAX = 500
   let value = $state('')
   let inputEl: HTMLTextAreaElement | undefined = $state()
+  // Merkt sich, ob der Klick auf dem Overlay begonnen hat – verhindert
+  // versehentliches Schließen, wenn z. B. beim Vergrößern des Textfelds
+  // die Maustaste außerhalb des Dialogs losgelassen wird.
+  let pressStartedOnOverlay = false
 
   $effect(() => {
     // Beim Öffnen fokussieren
@@ -18,9 +22,15 @@
     onSubmit(trimmed)
   }
 
+  function onOverlayPointerDown(e: PointerEvent) {
+    e.stopPropagation()
+    pressStartedOnOverlay = e.target === e.currentTarget
+  }
+
   function onOverlayClick(e: MouseEvent) {
     e.stopPropagation()
-    if (e.target === e.currentTarget) onCancel()
+    if (e.target === e.currentTarget && pressStartedOnOverlay) onCancel()
+    pressStartedOnOverlay = false
   }
 
   function onKeydown(e: KeyboardEvent) {
@@ -39,7 +49,7 @@
 <div
   class="modal-overlay"
   onclick={onOverlayClick}
-  onpointerdown={(e) => e.stopPropagation()}
+  onpointerdown={onOverlayPointerDown}
   ontouchstart={(e) => e.stopPropagation()}
   role="presentation"
 >
