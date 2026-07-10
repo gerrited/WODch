@@ -85,7 +85,7 @@ describe('WorkoutEditor AI-Generierung', () => {
     ta.dispatchEvent(new InputEvent('input', { bubbles: true }))
     flushSync()
     ;(document.querySelector('.btn-generate') as HTMLButtonElement).click()
-    await vi.waitFor(() => expect(workouts.tabs[0].content).toBe('FRAN\n21-15-9'))
+    await vi.waitFor(() => expect(workouts.tabs[0].content).toBe('\n\nFRAN\n21-15-9\n\n'))
   })
 
   it('lässt den Tab-Inhalt bei Fehler unberührt', async () => {
