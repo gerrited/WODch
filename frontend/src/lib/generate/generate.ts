@@ -26,5 +26,15 @@ export async function requestWorkout(prompt: string): Promise<string> {
   if (!res.ok || typeof data.workout !== 'string') {
     throw new Error(data.error ?? 'Generierung fehlgeschlagen.')
   }
-  return data.workout
+  return formatWorkout(data.workout)
+}
+
+// Entfernt umschließende ```-Code-Fences und rahmt den Text mit je zwei
+// Leerzeilen vor und nach dem Workout.
+export function formatWorkout(raw: string): string {
+  let text = raw.trim()
+  // Öffnendes ``` (optional mit Sprach-Angabe) und schließendes ``` entfernen
+  text = text.replace(/^```[^\n]*\n?/, '').replace(/\n?```\s*$/, '')
+  text = text.trim()
+  return `\n\n${text}\n\n`
 }
