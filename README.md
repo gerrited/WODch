@@ -2,6 +2,8 @@
 
 Gym-Training-Web-App: vollwertiger Intervall-Timer, Multi-Tab-Workout-Editor und YouTube-Player in einem frei anpassbaren Split-Layout — mit Echtzeit-Session-Sharing per Link, ganz ohne Cloud-Anbieter.
 
+![WODch Screenshot](screenshot.png)
+
 ## Features
 
 - **Timer** — 5 Modi: Uhrzeit (12h/24h), Stoppuhr (1/100s), Count-Down, Count-Up, Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, 10 Custom-Slots) und optionalem Warmup. Phase und Runde werden deterministisch aus Startzeitpunkt + Konfiguration abgeleitet.
