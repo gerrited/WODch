@@ -62,7 +62,7 @@
       bind:value
       maxlength={MAX}
       placeholder="z. B. 20 Min AMRAP mit Kettlebells, Fokus Beine"
-      rows="4"
+      rows="8"
     ></textarea>
     <div class="counter">{value.length}/{MAX}</div>
     <div class="actions">
