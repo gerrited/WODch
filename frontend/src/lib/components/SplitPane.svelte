@@ -99,7 +99,7 @@
   }
   .columns > .divider {
     width: 12px;
-    background: #0d0d0d;
+    background: #333;
     cursor: col-resize;
   }
   .divider:hover {
