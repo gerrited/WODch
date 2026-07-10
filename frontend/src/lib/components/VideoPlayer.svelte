@@ -195,6 +195,9 @@
     padding: 20px;
     position: absolute;
   }
+  .placeholder {
+    font-size: 32px;
+  }
   .error {
     color: #e63946;
   }
