@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => ({
       '/generate': {
         target: 'http://localhost:8787',
       },
+      '/estimate': {
+        target: 'http://localhost:8787',
+      },
     },
   },
   test: {
