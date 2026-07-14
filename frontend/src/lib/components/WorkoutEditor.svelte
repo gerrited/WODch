@@ -153,6 +153,12 @@
   onkeydown={(e) => {
     if (e.key === 'Escape' && (estimate || estimateError)) closeEstimate()
   }}
+  onpointerdown={(e) => {
+    if (!(estimate || estimateError)) return
+    const target = e.target as HTMLElement | null
+    if (target?.closest('.estimate-popover') || target?.closest('.tab-estimate')) return
+    closeEstimate()
+  }}
 />
 
 <div class="workout-wrapper" data-tour="editor">

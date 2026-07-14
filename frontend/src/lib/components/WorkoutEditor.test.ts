@@ -207,4 +207,44 @@ describe('WorkoutEditor Dauer-Schätzung', () => {
     await vi.waitFor(() => expect(document.querySelector('.estimate-error')).not.toBeNull())
     expect(document.querySelector('.estimate-error')?.textContent).toContain('kaputt')
   })
+
+  it('schließt das Popover bei Klick außerhalb', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ estimate: { totalMinutes: 18, segments: [] } }), {
+            status: 200,
+          }),
+      ),
+    )
+    ;(document.querySelector('[data-tour="estimate"]') as HTMLButtonElement).click()
+    await vi.waitFor(() => expect(document.querySelector('.estimate-popover')).not.toBeNull())
+
+    const editor = document.querySelector('.workout-editor') as HTMLElement
+    editor.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+    flushSync()
+
+    expect(document.querySelector('.estimate-popover')).toBeNull()
+  })
+
+  it('schließt das Popover NICHT bei erneutem Klick auf den Uhr-Button', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ estimate: { totalMinutes: 18, segments: [] } }), {
+            status: 200,
+          }),
+      ),
+    )
+    const btn = document.querySelector('[data-tour="estimate"]') as HTMLButtonElement
+    btn.click()
+    await vi.waitFor(() => expect(document.querySelector('.estimate-popover')).not.toBeNull())
+
+    btn.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+    flushSync()
+
+    expect(document.querySelector('.estimate-popover')).not.toBeNull()
+  })
 })
