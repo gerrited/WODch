@@ -11,22 +11,30 @@ export function nextPhraseIndex(current: number): number {
   return (current + 1) % PHRASES.length
 }
 
-export async function requestWorkout(prompt: string): Promise<string> {
+export interface Phase {
+  title: string
+  content: string
+}
+
+export async function requestWorkout(prompt: string): Promise<Phase[]> {
   const res = await fetch('/generate', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ prompt }),
   })
-  let data: { workout?: string; error?: string } = {}
+  let data: { phases?: { title?: string; content?: string }[]; error?: string } = {}
   try {
     data = await res.json()
   } catch {
     // Body leer/kein JSON — fällt unten auf Default-Fehler zurück
   }
-  if (!res.ok || typeof data.workout !== 'string') {
+  if (!res.ok || !Array.isArray(data.phases) || data.phases.length === 0) {
     throw new Error(data.error ?? 'Generierung fehlgeschlagen.')
   }
-  return formatWorkout(data.workout)
+  return data.phases.map((p) => ({
+    title: typeof p.title === 'string' ? p.title : '',
+    content: formatWorkout(p.content ?? ''),
+  }))
 }
 
 // Entfernt umschließende ```-Code-Fences und rahmt den Text mit je zwei

@@ -6,12 +6,37 @@ afterEach(() => {
 })
 
 describe('requestWorkout', () => {
-  it('gibt das Workout bei Erfolg zurück', async () => {
+  it('gibt formatierte Phasen bei Erfolg zurück', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response(JSON.stringify({ workout: 'FRAN' }), { status: 200 })),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ phases: [{ title: '', content: 'FRAN' }] }), { status: 200 }),
+      ),
     )
-    expect(await requestWorkout('leicht')).toBe('\n\nFRAN\n\n')
+    expect(await requestWorkout('leicht')).toEqual([{ title: '', content: '\n\nFRAN\n\n' }])
+  })
+
+  it('gibt mehrere formatierte Phasen zurück', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              phases: [
+                { title: 'Warm-up', content: 'Run' },
+                { title: 'Metcon', content: '21-15-9' },
+              ],
+            }),
+            { status: 200 },
+          ),
+      ),
+    )
+    expect(await requestWorkout('x')).toEqual([
+      { title: 'Warm-up', content: '\n\nRun\n\n' },
+      { title: 'Metcon', content: '\n\n21-15-9\n\n' },
+    ])
   })
 
   it('wirft mit der Server-Fehlermeldung bei Fehler-Status', async () => {
@@ -20,6 +45,14 @@ describe('requestWorkout', () => {
       vi.fn(async () => new Response(JSON.stringify({ error: 'Zu viele Anfragen.' }), { status: 429 })),
     )
     await expect(requestWorkout('x')).rejects.toThrow('Zu viele Anfragen.')
+  })
+
+  it('wirft bei leerem Phasen-Array', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ phases: [] }), { status: 200 })),
+    )
+    await expect(requestWorkout('x')).rejects.toThrow('Generierung fehlgeschlagen.')
   })
 })
 
