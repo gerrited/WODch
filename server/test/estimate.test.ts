@@ -101,6 +101,18 @@ describe('parseEstimate', () => {
     expect(parseEstimate({ totalMinutes: 5, segments: [] })).toEqual({ totalMinutes: 5, segments: [] })
   })
 
+  it('berechnet totalMinutes aus der Segment-Summe, nicht aus dem Modell-Wert', () => {
+    const res = parseEstimate({
+      totalMinutes: 38,
+      segments: [
+        { label: 'Warmup', minutes: 8 },
+        { label: 'EMOM 16 Min', minutes: 16 },
+        { label: 'Cooldown', minutes: 6 },
+      ],
+    })
+    expect(res.totalMinutes).toBe(30)
+  })
+
   it('wirft bei fehlendem totalMinutes', () => {
     expect(() => parseEstimate({ segments: [] })).toThrow()
   })

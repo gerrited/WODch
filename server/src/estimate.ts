@@ -100,9 +100,6 @@ export function stripCodeFences(raw: string): string {
 export function parseEstimate(raw: unknown): DurationEstimate {
   if (typeof raw !== 'object' || raw === null) throw new Error('Kein Objekt')
   const o = raw as Record<string, unknown>
-  if (typeof o.totalMinutes !== 'number' || !Number.isFinite(o.totalMinutes) || o.totalMinutes <= 0) {
-    throw new Error('totalMinutes ungültig')
-  }
   if (!Array.isArray(o.segments)) throw new Error('segments ungültig')
   const segments = o.segments.map((s): DurationSegment => {
     if (typeof s !== 'object' || s === null) throw new Error('Segment ungültig')
@@ -113,7 +110,15 @@ export function parseEstimate(raw: unknown): DurationEstimate {
     }
     return { label: seg.label, minutes: seg.minutes }
   })
-  return { totalMinutes: o.totalMinutes, segments }
+  // Gesamtdauer deterministisch aus den Segment-Schätzungen ableiten — das vom
+  // Modell gelieferte totalMinutes weicht regelmäßig von der Summe ab. Nur ohne
+  // Segmente vertrauen wir dem Modell-Wert.
+  const totalMinutes =
+    segments.length > 0 ? segments.reduce((n, s) => n + s.minutes, 0) : o.totalMinutes
+  if (typeof totalMinutes !== 'number' || !Number.isFinite(totalMinutes) || totalMinutes <= 0) {
+    throw new Error('totalMinutes ungültig')
+  }
+  return { totalMinutes, segments }
 }
 
 // Dünner SDK-Wrapper — bewusst nicht unit-getestet (kein Live-Call in Tests).
