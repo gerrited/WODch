@@ -121,4 +121,34 @@ describe('WorkoutStore', () => {
     expect(store.tabs.map((t) => t.title)).toEqual(['Workout 1', 'A', 'B'])
     expect(store.activeTab).toBe(1)
   })
+
+  it('applyGenerated mit leerem Phasen-Array ist ein No-op ohne onStructure', () => {
+    const spy = vi.fn()
+    store.onStructure = spy
+    store.applyGenerated(0, [])
+    expect(store.tabs).toHaveLength(1)
+    expect(store.tabs[0].content).toBe('')
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('applyGenerated mit mehreren Phasen behält Titel des aktiven Tabs bei leerem Phasen-Titel', () => {
+    store.applyGenerated(0, [
+      { title: '', content: 'Run' },
+      { title: 'Metcon', content: '21-15-9' },
+    ])
+    expect(store.tabs.map((t) => t.title)).toEqual(['Workout 1', 'Metcon'])
+    expect(store.tabs.map((t) => t.content)).toEqual(['Run', '21-15-9'])
+  })
+
+  it('applyGenerated fügt mitten in eine längere Tab-Liste ein und erhält Folge-Tabs', () => {
+    store.addTab() // Workout 2, index 1
+    store.addTab() // Workout 3, index 2
+    store.switchTab(1)
+    store.applyGenerated(1, [
+      { title: 'A', content: 'a' },
+      { title: 'B', content: 'b' },
+    ])
+    expect(store.tabs.map((t) => t.title)).toEqual(['Workout 1', 'A', 'B', 'Workout 3'])
+    expect(store.activeTab).toBe(1)
+  })
 })

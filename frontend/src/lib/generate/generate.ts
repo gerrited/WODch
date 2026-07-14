@@ -33,7 +33,7 @@ export async function requestWorkout(prompt: string): Promise<Phase[]> {
   }
   return data.phases.map((p) => ({
     title: typeof p.title === 'string' ? p.title : '',
-    content: formatWorkout(p.content ?? ''),
+    content: formatWorkout(typeof p.content === 'string' ? p.content : ''),
   }))
 }
 

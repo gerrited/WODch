@@ -36,6 +36,7 @@ export function parsePhases(raw: string): Phase[] {
   }
   for (const line of raw.split('\n')) {
     const m = PHASE_MARKER.exec(line)
+    // Titel muss echte Zeichen enthalten, sonst ist es eine reine Trennlinie (z. B. ======)
     if (m && /[^\s=]/.test(m[1])) {
       flush()
       current = { title: m[1].trim(), lines: [] }
