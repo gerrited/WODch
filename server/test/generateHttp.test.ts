@@ -25,7 +25,7 @@ describe('POST /generate', () => {
       body: JSON.stringify({ prompt: 'Beine' }),
     })
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ workout: 'WORKOUT für: Beine' })
+    expect(await res.json()).toEqual({ phases: [{ title: '', content: 'WORKOUT für: Beine' }] })
   })
 
   it('lehnt fehlerhaftes JSON mit 400 ab', async () => {

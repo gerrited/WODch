@@ -3,13 +3,50 @@ import type { RateLimiter } from './rateLimit.js'
 
 export const GENERATE_CONFIG = {
   model: 'claude-haiku-4-5',
-  maxTokens: 800,
+  maxTokens: 1500,
   maxPromptChars: 500,
   systemPrompt:
-    'Du bist ein erfahrener CrossFit- und Gym-Coach. Erstelle aus dem Wunsch des Nutzers ein ' +
-    'einzelnes Workout. Gib ausschließlich das Workout als reinen, zentrierbaren Monospace-Text ' +
-    'zurück — keine Einleitung, keine Markdown-Formatierung, keine Erklärungen. Halte dich kurz.',
+    'Du bist ein erfahrener CrossFit- und Gym-Coach. Erstelle aus dem Wunsch des ' +
+    'Nutzers ein Workout als reinen, zentrierbaren Monospace-Text — keine Einleitung, ' +
+    'keine Markdown-Formatierung, keine Erklärungen. Wenn es sinnvoll ist, gliedere das ' +
+    'Workout in Phasen (z. B. Warm-up, das eigentliche Workout, Skill/Accessory, ' +
+    'Cooldown). Trenne jede Phase durch eine eigene Zeile im Format "=== Titel ===" ' +
+    'direkt vor ihrem Inhalt, wobei Titel ein kurzer Phasenname ist. Gib bei einem ' +
+    'einfachen Workout ohne sinnvolle Phasen einfach nur das Workout ohne solche ' +
+    'Trennzeilen zurück. Halte dich kurz.',
 } as const
+
+export interface Phase {
+  title: string
+  content: string
+}
+
+const PHASE_MARKER = /^\s*={2,}\s*(.+?)\s*={2,}\s*$/
+
+// Splittet den Rohtext an Marker-Zeilen "=== Titel ===". Ohne Marker entsteht
+// genau eine Phase mit leerem Titel. Leere Phasen werden verworfen.
+export function parsePhases(raw: string): Phase[] {
+  const phases: Phase[] = []
+  let current: { title: string; lines: string[] } | null = null
+  const flush = () => {
+    if (!current) return
+    const content = current.lines.join('\n').trim()
+    if (content) phases.push({ title: current.title, content })
+    current = null
+  }
+  for (const line of raw.split('\n')) {
+    const m = PHASE_MARKER.exec(line)
+    if (m && /[^\s=]/.test(m[1])) {
+      flush()
+      current = { title: m[1].trim(), lines: [] }
+    } else {
+      if (!current) current = { title: '', lines: [] }
+      current.lines.push(line)
+    }
+  }
+  flush()
+  return phases
+}
 
 export interface GenerateDeps {
   rateLimiter: RateLimiter
@@ -37,8 +74,8 @@ export async function handleGenerate(
     return { status: 400, body: { error: 'Ungültiger Wunsch-Text.' } }
   }
   try {
-    const workout = await deps.generateWorkout(prompt)
-    return { status: 200, body: { workout } }
+    const raw = await deps.generateWorkout(prompt)
+    return { status: 200, body: { phases: parsePhases(raw) } }
   } catch {
     return { status: 500, body: { error: 'Generierung fehlgeschlagen.' } }
   }
