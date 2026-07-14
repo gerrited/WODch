@@ -35,8 +35,8 @@
     }, 1500)
     const target = workouts.activeTab
     try {
-      const workout = await requestWorkout(prompt)
-      workouts.setContent(target, workout)
+      const phases = await requestWorkout(prompt)
+      workouts.applyGenerated(target, phases)
     } catch (e) {
       genError = e instanceof Error ? e.message : 'Generierung fehlgeschlagen.'
     } finally {
