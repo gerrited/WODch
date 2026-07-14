@@ -5,13 +5,16 @@
 
 ## Ziel
 
-Der Nutzer soll die voraussichtliche Dauer des Workouts im **aktuell aktiven Tab**
-schätzen lassen können. Die Schätzung erfolgt AI-basiert (Server-seitig über Claude
-Haiku, wie die bestehende Generierung) und zeigt eine **Gesamtdauer plus kurze
-Aufschlüsselung** in benannte Abschnitte an.
+Der Nutzer soll die voraussichtliche Dauer des **gesamten Workouts über alle Tabs
+hinweg** schätzen lassen können. Nutzer teilen ein Workout häufig in Tabs auf (z. B.
+Warmup / MetCon / Cooldown); daher ist die Summe über alle Tabs die sinnvolle
+Schätzung. Die Schätzung erfolgt AI-basiert (Server-seitig über Claude Haiku, wie die
+bestehende Generierung) und zeigt eine **Gesamtdauer plus Aufschlüsselung** in
+benannte Abschnitte an — bevorzugt ein Abschnitt pro Tab, mit dem Tab-Titel als Label.
 
-Nur der aktive Tab wird verwendet. Die Schätzung ist read-only, ephemeral und wird
-weder persistiert noch über die Session synchronisiert.
+Alle Tabs mit nicht-leerem Inhalt gehen samt Titel in die Schätzung ein. Die Schätzung
+ist read-only, ephemeral und wird weder persistiert noch über die Session
+synchronisiert.
 
 ## Nicht-Ziele (YAGNI)
 
@@ -19,7 +22,6 @@ weder persistiert noch über die Session synchronisiert.
 - Keine Persistenz, kein Session-Sync des Ergebnisses.
 - Keine lokale Heuristik / kein Offline-Fallback.
 - Keine Historie mehrerer Schätzungen.
-- Keine Schätzung über mehrere Tabs hinweg.
 
 ## Architektur & Datenfluss
 
@@ -27,8 +29,8 @@ Spiegelt den bestehenden Generate-Flow, aber ohne Schreiben in den Tab-Inhalt:
 
 ```
 WorkoutEditor (Uhr-Button, .tab-estimate)
-   → estimateDuration(content)              [frontend/src/lib/generate/estimate.ts]
-   → POST /estimate { content }             [server/src/index.ts Route → estimate.ts]
+   → estimateDuration(tabs)                 [frontend/src/lib/generate/estimate.ts]
+   → POST /estimate { tabs: [{title,content}] }  [server/src/index.ts Route → estimate.ts]
    → Claude Haiku, System-Prompt "Schätze die Dauer …", JSON-Antwort
    → { totalMinutes, segments: [{ label, minutes }] }
    → Popover rendert Ergebnis
@@ -37,14 +39,21 @@ WorkoutEditor (Uhr-Button, .tab-estimate)
 - **Modell:** `claude-haiku-4-5` (gleich wie Generate).
 - **Geteilte Infrastruktur:** derselbe Rate-Limiter (`createRateLimiter(10, 60_000)`)
   und `hasApiKey`-Check wie `/generate`.
-- **Prompt-Cap:** gleiche Zeichengrenze wie Generate (`maxPromptChars = 500`),
-  gleiches hartes Body-Limit (4096 Bytes) in der Route.
+- **Eingabe:** alle Tabs mit nicht-leerem Inhalt, jeweils `{ title, content }`. Der
+  Server serialisiert sie zu einem Prompt (Tab-Titel als Überschrift je Abschnitt).
+- **Cap:** kombinierte Länge aller Tab-Inhalte ≤ `maxPromptChars = 2000`; hartes
+  Body-Limit der Route auf 16384 Bytes angehoben (Generate bleibt bei 4096).
 
 ## Datentypen
 
 Frontend (`frontend/src/lib/generate/estimate.ts`):
 
 ```ts
+export interface EstimateTab {
+  title: string
+  content: string
+}
+
 export interface DurationSegment {
   label: string
   minutes: number
@@ -56,6 +65,7 @@ export interface DurationEstimate {
 }
 ```
 
+Request-Body: `{ tabs: EstimateTab[] }` (nur Tabs mit nicht-leerem `content`).
 Server-Antwort-Body bei Erfolg: `{ estimate: DurationEstimate }`.
 Server-Antwort-Body bei Fehler: `{ error: string }` (deutsche Meldung).
 
@@ -65,25 +75,31 @@ Server-Antwort-Body bei Fehler: `{ error: string }` (deutsche Meldung).
 
 Analog zu `generate.ts`:
 
-- `ESTIMATE_CONFIG`: `{ model: 'claude-haiku-4-5', maxTokens, maxPromptChars: 500,
+- `ESTIMATE_CONFIG`: `{ model: 'claude-haiku-4-5', maxTokens, maxPromptChars: 2000,
   systemPrompt }`.
-  - System-Prompt: fordert Claude auf, die Dauer eines gegebenen Workouts zu schätzen
-    und **ausschließlich striktes JSON** im Schema `{ "totalMinutes": number,
-    "segments": [{ "label": string, "minutes": number }] }` zurückzugeben — keine
-    Einleitung, keine Markdown-Fences, keine Erklärung. Labels auf Deutsch, kurz
-    (z. B. "Warmup", "Workout", "Cooldown"). `segments` darf leer sein, wenn das
-    Workout keine klaren Phasen hat.
-- `handleEstimate(input: { content: unknown; ip: string }, deps)`:
+  - System-Prompt: erklärt, dass die Eingabe ein Workout ist, das der Nutzer **in
+    benannte Abschnitte (Tabs)** aufgeteilt haben kann (z. B. Warmup / MetCon /
+    Cooldown). Claude soll die Gesamtdauer schätzen und **ausschließlich striktes
+    JSON** im Schema `{ "totalMinutes": number, "segments": [{ "label": string,
+    "minutes": number }] }` zurückgeben — keine Einleitung, keine Markdown-Fences,
+    keine Erklärung. **Bevorzugt ein Abschnitt pro Tab, mit dem Tab-Titel als
+    Label.** Labels auf Deutsch, kurz. `segments` darf leer sein, wenn keine klaren
+    Phasen erkennbar sind.
+- `buildPrompt(tabs: EstimateTab[]): string` (rein, unit-getestet): serialisiert die
+  Tabs zu einem Text, jeweils mit dem Titel als Überschrift, gefolgt vom Inhalt.
+- `handleEstimate(input: { tabs: unknown; ip: string }, deps)`:
   - `hasApiKey()` false → `{ status: 503, body: { error: 'Schätzung ist nicht konfiguriert.' } }`
   - `rateLimiter.allow(ip)` false → `{ status: 429, body: { error: 'Zu viele Anfragen. Bitte kurz warten.' } }`
-  - leerer / > `maxPromptChars` Content → `{ status: 400, body: { error: 'Ungültiger Workout-Text.' } }`
-  - Erfolg → ruft `deps.estimateDuration(content)`, das ein validiertes
+  - Validierung: `tabs` ist Array von `{ title: string, content: string }`; nach
+    Filtern leerer Inhalte ≥ 1 Tab; kombinierte Content-Länge ≤ `maxPromptChars`.
+    Sonst → `{ status: 400, body: { error: 'Ungültiger Workout-Text.' } }`
+  - Erfolg → ruft `deps.estimateDuration(tabs)`, das ein validiertes
     `DurationEstimate` liefert → `{ status: 200, body: { estimate } }`
   - Fehler (inkl. Parsing/Schema) → `{ status: 500, body: { error: 'Schätzung fehlgeschlagen.' } }`
 - `hasApiKey()`: identisch zu generate (kann geteilt/importiert werden).
-- `estimateDuration(content)`: dünner SDK-Wrapper (nicht unit-getestet). Ruft Claude,
-  extrahiert Text-Blocks, **strippt Code-Fences defensiv** (wie `formatWorkout`),
-  `JSON.parse`, dann `parseEstimate`.
+- `estimateDuration(tabs)`: dünner SDK-Wrapper (nicht unit-getestet). `buildPrompt`,
+  ruft Claude, extrahiert Text-Blocks, **strippt Code-Fences defensiv** (wie
+  `formatWorkout`), `JSON.parse`, dann `parseEstimate`.
 - `parseEstimate(raw: unknown): DurationEstimate` (rein, unit-getestet): validiert
   Schema — `totalMinutes` endliche positive Zahl; `segments` Array aus
   `{ label: nicht-leerer String, minutes: endliche nicht-negative Zahl }`. Bei
@@ -91,9 +107,10 @@ Analog zu `generate.ts`:
 
 ### `server/src/index.ts` (Route)
 
-Neue Route `if (req.url === '/estimate' && req.method === 'POST')`, die das exakte
-Muster der `/generate`-Route spiegelt: IP-Extraktion, `raw`-Akkumulation mit
-4096-Byte-Cap, JSON-Parse mit 400 bei Fehler, dann `handleEstimate`.
+Neue Route `if (req.url === '/estimate' && req.method === 'POST')`, die das Muster der
+`/generate`-Route spiegelt: IP-Extraktion, `raw`-Akkumulation mit **16384-Byte-Cap**
+(größer als bei Generate wegen mehrerer Tabs), JSON-Parse mit 400 bei Fehler, dann
+`handleEstimate({ tabs: JSON.parse(raw).tabs, ip }, …)`.
 
 `startServer`-`opts` wird um `estimateDuration?` erweitert (für Test-Injektion,
 analog zu `generateWorkout?`).
@@ -107,10 +124,10 @@ analog zu `generateWorkout?`).
 ### `frontend/src/lib/generate/estimate.ts` (neu)
 
 ```ts
-export async function estimateDuration(content: string): Promise<DurationEstimate>
+export async function estimateDuration(tabs: EstimateTab[]): Promise<DurationEstimate>
 ```
 
-Ruft `POST /estimate` mit `{ content }`, parst `{ estimate }` bei OK, wirft
+Ruft `POST /estimate` mit `{ tabs }`, parst `{ estimate }` bei OK, wirft
 `Error(data.error ?? 'Schätzung fehlgeschlagen.')` bei Nicht-OK oder fehlendem
 `estimate`. Muster wie `requestWorkout`.
 
@@ -130,15 +147,15 @@ ersten der beiden Buttons). Gleicher Stil: `color: #444`, Hover `#fff`, 18px SVG
 
 **Verhalten:**
 
-- Button disabled, wenn `estimating` oder aktiver Tab-Content leer/nur Whitespace.
+- Button disabled, wenn `estimating` oder **alle** Tabs leer/nur Whitespace sind.
 - Ladephase: dezenter Puls/Spinner am Uhr-Button (kein Vollbild-Overlay wie bei
   Generate — Editor bleibt bedienbar).
-- Bei Klick: `target = workouts.activeTab` merken, `estimateDuration(content)`.
-  Ergebnis nur anwenden, wenn `workouts.activeTab === target` (gleiches Muster wie
-  `runGenerate`).
-- `onInput` setzt `estimateStale = true`, falls ein `estimate` offen ist.
-- Tab-Wechsel (`activeTab` ändert sich): `estimate`, `estimateError`, `estimateStale`
-  zurücksetzen (Ergebnis gehört zu genau einem Tab).
+- Bei Klick: alle Tabs mit nicht-leerem Inhalt als `EstimateTab[]` sammeln
+  (`{ title, content }`), `estimateDuration(tabs)`.
+- Die Schätzung gilt für das **gesamte Workout** (alle Tabs), nicht für einen
+  einzelnen Tab. Sie wird beim Tab-Wechsel **nicht** verworfen.
+- `onInput` setzt `estimateStale = true`, falls ein `estimate` offen ist (Änderung an
+  irgendeinem Tab macht das Ergebnis veraltet).
 
 **Popover:** Erscheint unterhalb der Tab-Leiste, rechtsbündig unter dem Uhr-Button.
 Panel im GenerateDialog-Stil (`#111`, `1px solid #333`, radius 8px, Monospace).
@@ -166,8 +183,10 @@ Panel im GenerateDialog-Stil (`#111`, `1px solid #333`, radius 8px, Monospace).
 - 503 / 429 / 400 → jeweilige deutsche Meldung im Popover.
 - Segment-Minuten müssen sich nicht exakt zur Gesamtdauer summieren; die Gesamtdauer
   ist maßgeblich und prominent.
-- Tab-Wechsel während laufendem Request: Ergebnis wird verworfen, wenn Ziel-Tab nicht
-  mehr aktiv.
+- Der Nutzer kann während einer laufenden Schätzung den Tab wechseln oder tippen; das
+  beeinflusst den laufenden Request nicht (Ergebnis gilt global). Tippen setzt
+  anschließend `estimateStale`.
+- Kombinierte Content-Länge über `maxPromptChars` → 400 (im Popover angezeigt).
 - Kaputtes/nicht-schema-konformes JSON von Claude → 500 (im Server via `parseEstimate`
   abgefangen).
 - Nach Reload ist die Schätzung weg (kein Persistieren).
@@ -175,13 +194,14 @@ Panel im GenerateDialog-Stil (`#111`, `1px solid #333`, radius 8px, Monospace).
 ## Tests (Vitest)
 
 - **`server/test/estimate.test.ts`** — `handleEstimate` mit gemocktem
-  `estimateDuration`: 503- / 429- / 400-Pfade, Erfolg (200 + `{ estimate }`).
-  Plus `parseEstimate`: gültiges JSON → Objekt; fehlende/falsch-typisierte Felder →
-  `throw`; Code-Fence-Stripping.
+  `estimateDuration`: 503- / 429- / 400-Pfade (leere/nur-Whitespace Tabs, kombinierter
+  Content über Cap), Erfolg (200 + `{ estimate }`). Plus `parseEstimate`: gültiges
+  JSON → Objekt; fehlende/falsch-typisierte Felder → `throw`; Code-Fence-Stripping.
+  Plus `buildPrompt`: Tabs werden mit Titeln serialisiert.
 - **`server/test/estimateHttp.test.ts`** — Route-Verdrahtung via `startServer(0,
-  { estimateDuration })`: 200-Erfolg, `not json` → 400, leerer Content → 400.
+  { estimateDuration })`: 200-Erfolg, `not json` → 400, leeres `tabs`-Array → 400.
 - **`frontend/src/lib/generate/estimate.test.ts`** — `fetch` gemockt: OK → parst zu
-  `DurationEstimate`; Fehler-Body; Nicht-OK-Status wirft.
+  `DurationEstimate`; sendet `{ tabs }`; Fehler-Body; Nicht-OK-Status wirft.
 - UI-State (`stale`/`disabled`) wird — wie GenerateDialog — leichtgewichtig getestet,
   soweit sinnvoll isolierbar.
 
