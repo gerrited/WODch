@@ -8,11 +8,17 @@ export const ESTIMATE_CONFIG = {
   systemPrompt:
     'Du bist ein erfahrener CrossFit- und Gym-Coach. Der Nutzer gibt dir ein Workout, das ' +
     'er in benannte Abschnitte (Tabs, z. B. Warmup, MetCon, Cooldown) aufgeteilt haben kann. ' +
-    'Schätze die realistische Gesamtdauer in Minuten. Gib ausschließlich striktes JSON im ' +
+    'Schätze die realistische Gesamtdauer in Minuten. Berücksichtige JEDE Zeile — auch reine ' +
+    'Wiederholungs-Bewegungen ohne Zeitangabe (z. B. "10 Kettlebell Swings"). Rechne für diese ' +
+    'eine realistische Ausführungsdauer hinzu (grobe Richtwerte: ~2–3 s pro Wiederholung bei ' +
+    'Bewegungen wie Swings, Squats, Wall Balls; plus kurze Übergänge/Rüstzeit zwischen Übungen). ' +
+    'Explizite Zeitangaben wie "5 Min row" addierst du zusätzlich, nicht ersetzend. ' +
+    'Gib ausschließlich striktes JSON im ' +
     'Schema {"totalMinutes": number, "segments": [{"label": string, "minutes": number}]} ' +
-    'zurück — keine Einleitung, keine Markdown-Fences, keine Erklärung. Erzeuge bevorzugt ' +
-    'einen Abschnitt pro Tab und nutze den Tab-Titel als Label. Labels kurz und auf Deutsch. ' +
-    'segments darf leer sein, wenn keine klaren Phasen erkennbar sind.',
+    'zurück — keine Einleitung, keine Markdown-Fences, keine Erklärung. Erzeuge GENAU einen ' +
+    'Abschnitt pro übergebenem Tab und nutze den Tab-Titel als Label; erfinde keine Abschnitte, ' +
+    'die nicht im Input vorkommen. totalMinutes ist die Summe der segment-Minuten. Labels kurz ' +
+    'und auf Deutsch.',
 } as const
 
 export interface EstimateTab {
@@ -116,6 +122,8 @@ export async function estimateDuration(tabs: EstimateTab[]): Promise<DurationEst
   const response = await client.messages.create({
     model: ESTIMATE_CONFIG.model,
     max_tokens: ESTIMATE_CONFIG.maxTokens,
+    // Deterministisch: identische Workouts sollen identische Schätzungen liefern.
+    temperature: 0,
     system: ESTIMATE_CONFIG.systemPrompt,
     messages: [{ role: 'user', content: buildPrompt(tabs) }],
   })
