@@ -4,6 +4,7 @@
   import ConfirmDialog from './ConfirmDialog.svelte'
   import GenerateDialog from './GenerateDialog.svelte'
   import { requestWorkout, PHRASES, nextPhraseIndex } from '../generate/generate'
+  import { estimateDuration, type EstimateTab, type DurationEstimate } from '../generate/estimate'
 
   let editorEl: HTMLDivElement | undefined = $state()
   let focused = false
@@ -19,6 +20,40 @@
   let phraseIndex = $state(0)
   let genError = $state<string | null>(null)
   let phraseTimer: ReturnType<typeof setInterval> | undefined
+
+  let estimating = $state(false)
+  let estimate = $state<DurationEstimate | null>(null)
+  let estimateError = $state<string | null>(null)
+  let estimateStale = $state(false)
+  let hasContent = $derived(workouts.tabs.some((t) => t.content.trim() !== ''))
+
+  function collectTabs(): EstimateTab[] {
+    return workouts.tabs
+      .filter((t) => t.content.trim() !== '')
+      .map((t) => ({ title: t.title, content: t.content }))
+  }
+
+  async function runEstimate() {
+    const tabs = collectTabs()
+    if (tabs.length === 0 || estimating) return
+    estimateError = null
+    estimateStale = false
+    estimating = true
+    try {
+      estimate = await estimateDuration(tabs)
+    } catch (e) {
+      estimate = null
+      estimateError = e instanceof Error ? e.message : 'Schätzung fehlgeschlagen.'
+    } finally {
+      estimating = false
+    }
+  }
+
+  function closeEstimate() {
+    estimate = null
+    estimateError = null
+    estimateStale = false
+  }
 
   function openGenerate() {
     genError = null
@@ -66,6 +101,7 @@
     if (!editorEl) return
     if (getText(editorEl).trim() === '') editorEl.replaceChildren()
     workouts.setContent(workouts.activeTab, getText(editorEl))
+    if (estimate) estimateStale = true
   }
 
   function onFocus() {
@@ -112,6 +148,12 @@
     pendingDelete = null
   }
 </script>
+
+<svelte:window
+  onkeydown={(e) => {
+    if (e.key === 'Escape' && (estimate || estimateError)) closeEstimate()
+  }}
+/>
 
 <div class="workout-wrapper" data-tour="editor">
   <div class="tab-bar">
@@ -180,19 +222,36 @@
       aria-label="Neues Workout"
       onclick={() => workouts.addTab()}>+</button
     >
-    <button
-      class="tab-magic"
-      data-tour="ai-generate"
-      title="Workout mit AI erstellen"
-      aria-label="Workout mit AI erstellen"
-      onclick={openGenerate}
-    >
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path
-          d="M12 2l1.6 4.6L18 8.2l-4.4 1.6L12 14.4l-1.6-4.6L6 8.2l4.4-1.6L12 2zM19 13l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9L19 13zM5 14l.7 2 2 .7-2 .7L5 19.4l-.7-2-2-.7 2-.7L5 14z"
-        />
-      </svg>
-    </button>
+    <div class="tab-actions">
+      <button
+        class="tab-magic"
+        data-tour="ai-generate"
+        title="Workout mit AI erstellen"
+        aria-label="Workout mit AI erstellen"
+        onclick={openGenerate}
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path
+            d="M12 2l1.6 4.6L18 8.2l-4.4 1.6L12 14.4l-1.6-4.6L6 8.2l4.4-1.6L12 2zM19 13l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9L19 13zM5 14l.7 2 2 .7-2 .7L5 19.4l-.7-2-2-.7 2-.7L5 14z"
+          />
+        </svg>
+      </button>
+      <button
+        class="tab-estimate"
+        data-tour="estimate"
+        title="Dauer schätzen"
+        aria-label="Dauer schätzen"
+        class:busy={estimating}
+        disabled={estimating || !hasContent}
+        onclick={runEstimate}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="13" r="8" />
+          <path d="M12 13V9" stroke-linecap="round" />
+          <path d="M9 2h6" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
   </div>
   <div class="editor-area">
     <div
@@ -216,6 +275,28 @@
       <div class="gen-error">{genError}</div>
     {/if}
   </div>
+  {#if estimate || estimateError}
+    <div class="estimate-popover" role="dialog" aria-label="Geschätzte Dauer">
+      <button class="estimate-close" onclick={closeEstimate} aria-label="Schließen">✕</button>
+      {#if estimateError}
+        <div class="estimate-error">{estimateError}</div>
+      {:else if estimate}
+        <div class="estimate-total">~ {estimate.totalMinutes} Min</div>
+        {#if estimateStale}
+          <div class="estimate-stale">Text geändert — neu schätzen</div>
+        {/if}
+        {#if estimate.segments.length > 0}
+          <div class="estimate-divider"></div>
+          {#each estimate.segments as seg}
+            <div class="estimate-seg">
+              <span class="estimate-seg-label">{seg.label}</span>
+              <span class="estimate-seg-min">~{seg.minutes} Min</span>
+            </div>
+          {/each}
+        {/if}
+      {/if}
+    </div>
+  {/if}
 </div>
 
 {#if pendingDelete !== null}
@@ -238,6 +319,7 @@
     display: flex;
     flex-direction: column;
     background: #000;
+    position: relative;
   }
   .tab-bar {
     display: flex;
@@ -321,23 +403,50 @@
     overflow-y: auto;
     position: relative;
   }
-  .tab-magic {
+  .tab-actions {
+    display: flex;
+    align-items: stretch;
+    margin-left: auto;
+  }
+  .tab-magic,
+  .tab-estimate {
     background: none;
     border: none;
     color: #444;
     cursor: pointer;
     padding: 0 14px;
     line-height: 1;
-    margin-left: auto;
     display: flex;
     align-items: center;
+  }
+  .tab-estimate:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .tab-estimate.busy {
+    animation: estimate-pulse 1s ease-in-out infinite;
+  }
+  @keyframes estimate-pulse {
+    0%,
+    100% {
+      opacity: 0.4;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  .tab-estimate svg {
+    width: 18px;
+    height: 18px;
+    display: block;
   }
   .tab-magic svg {
     width: 18px;
     height: 18px;
     display: block;
   }
-  .tab-magic:hover {
+  .tab-magic:hover,
+  .tab-estimate:hover:not(:disabled) {
     color: #fff;
   }
   .gen-overlay {
@@ -399,5 +508,64 @@
   .workout-editor:empty::before {
     content: attr(data-placeholder);
     color: #333;
+  }
+  .estimate-popover {
+    position: absolute;
+    top: 44px;
+    right: 8px;
+    z-index: 50;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 16px 18px;
+    min-width: 220px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #ccc;
+    text-align: left;
+  }
+  .estimate-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 4px;
+  }
+  .estimate-close:hover {
+    color: #fff;
+  }
+  .estimate-total {
+    color: #7cc;
+    font-size: 22px;
+    letter-spacing: 1px;
+  }
+  .estimate-stale {
+    color: #b58a4a;
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .estimate-divider {
+    border-top: 1px solid #2a2a2a;
+    margin: 12px 0 8px;
+  }
+  .estimate-seg {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 13px;
+    padding: 2px 0;
+  }
+  .estimate-seg-label {
+    color: #999;
+  }
+  .estimate-seg-min {
+    color: #ccc;
+  }
+  .estimate-error {
+    color: #e63946;
+    font-size: 13px;
   }
 </style>

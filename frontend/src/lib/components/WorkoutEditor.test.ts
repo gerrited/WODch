@@ -137,3 +137,74 @@ describe('WorkoutEditor AI-Generierung', () => {
     expect(workouts.tabs[0].content).toBe('alt')
   })
 })
+
+describe('WorkoutEditor Dauer-Schätzung', () => {
+  beforeEach(() => {
+    workouts.applyRemote({
+      tabs: [
+        { id: 'w1', title: 'Warmup', content: '3 Runden' },
+        { id: 'w2', title: 'MetCon', content: 'Fran' },
+      ],
+      activeTab: 0,
+    })
+    component = mount(WorkoutEditor, { target: document.body })
+    flushSync()
+  })
+
+  afterEach(() => {
+    unmount(component)
+    document.body.innerHTML = ''
+    vi.restoreAllMocks()
+  })
+
+  it('zeigt das Popover mit Gesamtdauer und Segmenten nach Klick', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              estimate: { totalMinutes: 18, segments: [{ label: 'MetCon', minutes: 18 }] },
+            }),
+            { status: 200 },
+          ),
+      ),
+    )
+    ;(document.querySelector('[data-tour="estimate"]') as HTMLButtonElement).click()
+    await vi.waitFor(() => expect(document.querySelector('.estimate-popover')).not.toBeNull())
+    expect(document.querySelector('.estimate-total')?.textContent).toContain('18')
+    expect(document.querySelector('.estimate-popover')?.textContent).toContain('MetCon')
+  })
+
+  it('sendet alle nicht-leeren Tabs an den Endpoint', async () => {
+    const fetchMock = vi.fn(
+      async (_url: string, _init?: RequestInit) =>
+        new Response(JSON.stringify({ estimate: { totalMinutes: 5, segments: [] } }), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    ;(document.querySelector('[data-tour="estimate"]') as HTMLButtonElement).click()
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)
+    expect(body.tabs).toEqual([
+      { title: 'Warmup', content: '3 Runden' },
+      { title: 'MetCon', content: 'Fran' },
+    ])
+  })
+
+  it('deaktiviert den Button, wenn alle Tabs leer sind', () => {
+    workouts.applyRemote({ tabs: [{ id: 'w1', title: 'Warmup', content: '   ' }], activeTab: 0 })
+    flushSync()
+    const btn = document.querySelector('[data-tour="estimate"]') as HTMLButtonElement
+    expect(btn.disabled).toBe(true)
+  })
+
+  it('zeigt eine Fehlermeldung im Popover bei Fehler-Status', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ error: 'kaputt' }), { status: 500 })),
+    )
+    ;(document.querySelector('[data-tour="estimate"]') as HTMLButtonElement).click()
+    await vi.waitFor(() => expect(document.querySelector('.estimate-error')).not.toBeNull())
+    expect(document.querySelector('.estimate-error')?.textContent).toContain('kaputt')
+  })
+})
