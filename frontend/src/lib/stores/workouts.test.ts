@@ -86,4 +86,39 @@ describe('WorkoutStore', () => {
     store.applyRemoteTabField('nope', 'content', 'x')
     expect(store.tabs[0].content).toBe('remote text')
   })
+
+  it('applyGenerated mit einer Phase setzt nur Inhalt, Titel bleibt', () => {
+    const spy = vi.fn()
+    store.onStructure = spy
+    store.applyGenerated(0, [{ title: '', content: 'FRAN' }])
+    expect(store.tabs).toHaveLength(1)
+    expect(store.tabs[0].title).toBe('Workout 1')
+    expect(store.tabs[0].content).toBe('FRAN')
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('applyGenerated mit mehreren Phasen ersetzt aktiven Tab und hängt an', () => {
+    const spy = vi.fn()
+    store.onStructure = spy
+    store.applyGenerated(0, [
+      { title: 'Warm-up', content: 'Run' },
+      { title: 'Metcon', content: '21-15-9' },
+      { title: 'Cooldown', content: 'Stretch' },
+    ])
+    expect(store.tabs).toHaveLength(3)
+    expect(store.tabs.map((t) => t.title)).toEqual(['Warm-up', 'Metcon', 'Cooldown'])
+    expect(store.tabs.map((t) => t.content)).toEqual(['Run', '21-15-9', 'Stretch'])
+    expect(store.activeTab).toBe(0)
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('applyGenerated fügt neue Tabs hinter dem aktiven ein', () => {
+    store.addTab() // Tab 2, activeTab = 1
+    store.applyGenerated(1, [
+      { title: 'A', content: 'a' },
+      { title: 'B', content: 'b' },
+    ])
+    expect(store.tabs.map((t) => t.title)).toEqual(['Workout 1', 'A', 'B'])
+    expect(store.activeTab).toBe(1)
+  })
 })
