@@ -4,6 +4,12 @@ import { createStore, type Store } from './store.js'
 import type { SessionDoc } from './types.js'
 import { createRateLimiter } from './rateLimit.js'
 import { handleGenerate, hasApiKey, generateWorkout as defaultGenerateWorkout } from './generate.js'
+import {
+  handleEstimate,
+  estimateDuration as defaultEstimateDuration,
+  type EstimateTab,
+  type DurationEstimate,
+} from './estimate.js'
 
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000
 
@@ -21,11 +27,15 @@ export interface RunningServer {
 
 export function startServer(
   port: number,
-  opts: { generateWorkout?: (prompt: string) => Promise<string> } = {},
+  opts: {
+    generateWorkout?: (prompt: string) => Promise<string>
+    estimateDuration?: (tabs: EstimateTab[]) => Promise<DurationEstimate>
+  } = {},
 ): Promise<RunningServer> {
   const store = createStore()
   const rateLimiter = createRateLimiter(10, 60_000)
   const generateWorkout = opts.generateWorkout ?? defaultGenerateWorkout
+  const estimateDuration = opts.estimateDuration ?? defaultEstimateDuration
 
   const http = createServer((req, res) => {
     if (req.url === '/healthz') {
@@ -66,6 +76,46 @@ export function startServer(
           const result = await handleGenerate(
             { prompt, ip },
             { rateLimiter, hasApiKey, generateWorkout },
+          )
+          res.writeHead(result.status, { 'content-type': 'application/json' })
+          res.end(JSON.stringify(result.body))
+        })()
+      })
+      return
+    }
+    if (req.url === '/estimate' && req.method === 'POST') {
+      const ip =
+        (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
+        req.socket.remoteAddress ||
+        'unknown'
+      let raw = ''
+      let tooLarge = false
+      req.on('data', (chunk) => {
+        raw += chunk
+        // Höheres Limit als bei /generate, da mehrere Tabs kombiniert werden.
+        if (raw.length > 16384) {
+          tooLarge = true
+          req.destroy()
+        }
+      })
+      req.on('end', () => {
+        void (async () => {
+          if (tooLarge) {
+            res.writeHead(400, { 'content-type': 'application/json' })
+            res.end(JSON.stringify({ error: 'Anfrage zu groß.' }))
+            return
+          }
+          let tabs: unknown
+          try {
+            tabs = JSON.parse(raw).tabs
+          } catch {
+            res.writeHead(400, { 'content-type': 'application/json' })
+            res.end(JSON.stringify({ error: 'Ungültiges JSON.' }))
+            return
+          }
+          const result = await handleEstimate(
+            { tabs, ip },
+            { rateLimiter, hasApiKey, estimateDuration },
           )
           res.writeHead(result.status, { 'content-type': 'application/json' })
           res.end(JSON.stringify(result.body))
