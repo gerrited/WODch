@@ -27,7 +27,7 @@ Vollständige Anforderungen: [docs/rewrite-requirements.md](docs/rewrite-require
 | **Frontend** | Svelte 5 (Runes-API: `$state`/`$derived`/`$effect`), Vite 6, TypeScript |
 | **Backend** | Node 22, `ws` (WebSocket), `@anthropic-ai/sdk` (KI-Features) |
 | **Tests** | Vitest (in beiden Paketen), jsdom fürs Frontend |
-| **IDs / QR** | `nanoid` (6-stellige Session-/Tab-IDs), `uqr` (QR-Code im Share-Modal) |
+| **IDs / QR** | `nanoid` (16-stellige Session-IDs, 6-stellige Tab-IDs), `uqr` (QR-Code im Share-Modal) |
 | **Deployment** | Docker (multi-arch), Nginx (Frontend), Kubernetes, GitHub Actions |
 
 Bemerkenswert: **keine State-Management-Library, kein Router, keine UI-Komponenten-Library, keine Datenbank.** Alles läuft über Svelte-5-Runes und handgeschriebene Klassen. Das ist Absicht (siehe Stack-Doku).
@@ -140,7 +140,7 @@ sequenceDiagram
   Note over SRV: Session neu angelegt aus Client-Doc
 ```
 
-Jeder Client hält das **komplette Session-Dokument lokal**. Kennt der Server die Session nach Neustart nicht mehr (`missing`), seedet der erste Client seinen Stand einfach neu. Deshalb braucht es keine Datenbank und keine Persistenz — Sessions überleben Deploys und Pod-Neustarts. Logik: [client.ts:70-74](frontend/src/lib/sync/client.ts#L70-L74) und `seed`-Handling in [index.ts:205-212](server/src/index.ts#L205-L212).
+Jeder Client hält das **komplette Session-Dokument lokal**. Kennt der Server die Session nach Neustart nicht mehr (`missing`), seedet der erste Client seinen Stand einfach neu. Deshalb braucht es keine Datenbank und keine Persistenz — Sessions überleben Deploys und Pod-Neustarts. Logik: [client.ts:70-74](frontend/src/lib/sync/client.ts#L70-L74) und `seed`-Handling in [index.ts:223-235](server/src/index.ts#L223-L235).
 
 ### Uhr-Synchronisation
 
@@ -156,11 +156,11 @@ Da `startedAt` in **Server-Zeit** über das Netz geht, würden Geräte mit falsc
 
 | Concern | Umsetzung |
 |---|---|
-| **Auth** | **Es gibt keine.** Wer den Link hat, hat volle Kontrolle. Session-IDs sind 6-stellige `nanoid`s (bewusstes Trade-off: kurze teilbare Links vs. Erratbarkeit). |
+| **Auth** | **Es gibt keine.** Wer den Link hat, hat volle Kontrolle. Session-IDs sind 16-stellige `nanoid`s (Bearer-Capability; bis 2026-07-20 waren es 6, alte Links funktionieren per Re-Seed weiter). |
 | **Logging** | Minimal — nur ein Startup-`console.log` im Server. Keine strukturierten Logs. |
-| **Error Handling** | Defensiv & still: eingehende WebSocket-Nachrichten werden schema-validiert und bei Abweichung verworfen ([index.ts:28-51](server/src/index.ts#L28-L51)), der Handler liegt komplett in `try/catch` ([index.ts:179-227](server/src/index.ts#L179-L227)), Patch-Werte validiert `applyPatch` strukturell. `try/catch` um `localStorage`, `clipboard`, JSON-Parsing. KI-Fehler → generische Fehlermeldung, nie Stacktrace an Client. |
+| **Error Handling** | Defensiv & still: eingehende WebSocket-Nachrichten werden schema-validiert und bei Abweichung verworfen ([index.ts:36-60](server/src/index.ts#L36-L60)), der Handler liegt komplett in `try/catch` ([index.ts:192-251](server/src/index.ts#L192-L251)), Patch-Werte validiert `applyPatch` strukturell. `try/catch` um `localStorage`, `clipboard`, JSON-Parsing. KI-Fehler → generische Fehlermeldung, nie Stacktrace an Client. |
 | **Config** | Fast keine. `PORT` (Default 8787) und `ANTHROPIC_API_KEY` per Env. Frontend hat gar keine Runtime-Config — WS-URL wird aus `location` abgeleitet ([session.svelte.ts:22-25](frontend/src/lib/sync/session.svelte.ts#L22-L25)). |
-| **Rate Limiting** | Nur für KI-Routen: 10 Anfragen/60 s pro IP plus globalem Gesamtbudget 30/60 s als Circuit Breaker, gleitendes Fenster ([rateLimit.ts](server/src/rateLimit.ts)). IP-Schlüssel ist das rechteste XFF-Element (`clientIp`, [index.ts:53-61](server/src/index.ts#L53-L61)); der Ingress überschreibt XFF komplett. |
+| **Rate Limiting** | KI-Routen: 10 Anfragen/60 s pro IP plus globalem Gesamtbudget 30/60 s als Circuit Breaker. WebSocket: 30/60 s für `join`/`seed`, 300/60 s für `patch` pro IP. Alles gleitende Fenster ([rateLimit.ts](server/src/rateLimit.ts)); IP-Schlüssel ist das rechteste XFF-Element (`clientIp`, [index.ts:63-70](server/src/index.ts#L63-L70)), der Ingress überschreibt XFF komplett. |
 
 ---
 
@@ -176,7 +176,7 @@ Da `startedAt` in **Server-Zeit** über das Netz geht, würden Geräte mit falsc
 
 4. **Der `onDocChange`/`applyingRemote`-Vertrag.** Stores feuern Callbacks (`onDocChange`, `onStructure`, `onTabField`, …) **nur bei lokalen Aktionen**, nie bei `applyRemote*()`. Der Session-Layer setzt beim Anwenden entfernter Patches `applyingRemote = true`. Verletzt du diese Trennung, baust du eine Sync-Endlosschleife. Zentrale Stelle: [session.svelte.ts:58-93](frontend/src/lib/sync/session.svelte.ts#L58-L93).
 
-5. **Feld-granulares, debounced Patchen von Workout-Text.** Tab-Inhalte werden pro Feld (`tab/<id>/content`) mit 500 ms Debounce gepatcht ([session.svelte.ts:70-83](frontend/src/lib/sync/session.svelte.ts#L70-L83)), damit sich parallel Tippende nicht gegenseitig überschreiben. Der Patch-Pfad ist eine kleine DSL — die erlaubten Pfade stehen zentral in [store.ts `applyPatch`](server/src/store.ts#L94-L140) und müssen mit dem Frontend-`applyPatch` übereinstimmen.
+5. **Feld-granulares, debounced Patchen von Workout-Text.** Tab-Inhalte werden pro Feld (`tab/<id>/content`) mit 500 ms Debounce gepatcht ([session.svelte.ts:70-83](frontend/src/lib/sync/session.svelte.ts#L70-L83)), damit sich parallel Tippende nicht gegenseitig überschreiben. Der Patch-Pfad ist eine kleine DSL — die erlaubten Pfade stehen zentral in [store.ts `applyPatch`](server/src/store.ts#L131-L176) und müssen mit dem Frontend-`applyPatch` übereinstimmen.
 
 6. **Video pausiert immer bei `startedAt`.** Video-Sync funktioniert wie der Timer über `startedAt`/`accumulatedSeconds`, nicht über gestreamte Positionen.
 
@@ -225,12 +225,13 @@ Frontend-`build` läuft `svelte-check` (Typprüfung) **vor** `vite build` — Ty
 
 ### ⚠️ Akuter Stolperstein: Offene Security-Befunde
 
-Die [SECURITY_REVIEW.md](SECURITY_REVIEW.md) enthält Befunde mit konkreter Fix-Reihenfolge; die beiden schwersten (WS-Validierung, XFF-Rate-Limit-Bypass) sind behoben, **der Rest ist offen**. Die nächsten:
+Die [SECURITY_REVIEW.md](SECURITY_REVIEW.md) enthält Befunde mit konkreter Fix-Reihenfolge; die schweren serverseitigen Befunde (1–4, 9) sind behoben. **Offen sind nur noch Deployment-/Client-Themen (mittel bis niedrig):**
 
-- **Kein Rate-Limit auf dem WebSocket + aufzählbare 6-stellige Session-IDs (hoch):** `join` lässt sich ohne Limit durchprobieren → fremde Sessions aufzählen, lesen und überschreiben (volle Kontrolle ist by design, Erratbarkeit nicht).
-- **Unbegrenzte Ressourcen (mittel):** kein `maxPayload` am `WebSocketServer`, `seed`-Dokument und In-Memory-Store ohne Größenlimit → Speichererschöpfung bis zum OOM-Kill möglich.
+- **Kein TLS/HSTS im Ingress, keine Security-Header in Nginx (mittel):** ohne TLS-Terminierung laufen HTTP/`ws://` im Klartext; fehlende `X-Frame-Options`/CSP erlauben Clickjacking.
+- **Container laufen als root (niedrig):** kein `USER` in beiden Dockerfiles, kein `securityContext` im Deployment.
+- **Clients validieren Remote-Werte nicht defensiv (niedrig):** der Server ist inzwischen single source of truth für die Doc-Struktur; Guards im Frontend-`applyPatch` wären Defense-in-Depth.
 
-Arbeite die Fix-Reihenfolge in [SECURITY_REVIEW.md](SECURITY_REVIEW.md) ab, bevor du größere Features baust.
+Details und Fix-Reihenfolge: [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
 
 ### Host-Namen (historischer Hinweis)
 
@@ -273,7 +274,7 @@ Solide bei reiner Logik (Timer-Engine, Store-Klassen, Sync-Client, Server-Handle
 
 Am besten etwas Kleines, klar Umrissenes, das dich durch **einen kompletten Client-Server-Pfad** führt, ohne die riskante `WorkoutEditor`-Komponente:
 
-- **Idealer Einstieg (und ohnehin nötig): einen Security-Fix aus [SECURITY_REVIEW.md](SECURITY_REVIEW.md) umsetzen** (§4) — z. B. Befund 4: `maxPayload` am `WebSocketServer` plus Größenlimits für `seed`-Dokument und Store. Führt durch WebSocket-Handler → [store.ts](server/src/store.ts) → Server-Tests und macht dich mit dem Sync-Herz vertraut.
+- **Idealer Einstieg (und ohnehin nötig): einen Security-Fix aus [SECURITY_REVIEW.md](SECURITY_REVIEW.md) umsetzen** (§4) — z. B. Befund 6: Security-Header in [frontend/nginx.conf](frontend/nginx.conf) ergänzen (CSP, `X-Frame-Options`, `X-Content-Type-Options`). Klein und klar umrissen, und du lernst Frontend-Container und Deployment kennen.
 - **Alternativ zum Warmwerden:** einen Charakterisierungs-Test für eine bisher untestete Komponente schreiben (z. B. [ShareButton.svelte](frontend/src/lib/components/ShareButton.svelte) — klein und überschaubar). Zeigt dir das Test-Setup (jsdom, `test-setup.ts`) und Svelte-5-Komponententests.
 
 ### Faustregeln

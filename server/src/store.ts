@@ -2,6 +2,22 @@ import type { SessionDoc, TimerDoc, VideoDoc, WorkoutsDoc } from './types.js'
 
 const TTL_MS = 24 * 60 * 60 * 1000
 
+// Größenlimits für Session-Dokumente (SECURITY_REVIEW Befund 4): begrenzen den
+// Speicher pro Session und gelten für Seeds wie für Patches gleichermaßen.
+export const SESSION_DOC_LIMITS = {
+  maxTabs: 20,
+  maxTabTitleChars: 200,
+  maxTabContentChars: 10_000,
+  maxVideoUrlChars: 500,
+} as const
+
+// Harte Obergrenze der Session-Anzahl gegen Speichererschöpfung durch Seed-Flut.
+// Worst case grob gedeckelt: Seed-Frame ≤ 64 KiB (maxPayload) plus Patch-Wachstum
+// innerhalb der Feldlimits → ~210 KB pro Doc → 200 × 210 KB ≈ 41 MB < 64 Mi
+// Container-Limit. Reale Docs sind wenige KB, 200 gleichzeitige Sessions sind
+// für die App („Handvoll Sessions") weit überdimensioniert.
+export const MAX_SESSIONS = 200
+
 // Struktur-Validierung aller Patch-Werte. Der Server ist die single source of truth:
 // ein Angreifer darf weder den Prozess crashen noch kaputte Docs an andere Clients
 // weiterreichen können (SECURITY_REVIEW Befund 1/5).
@@ -52,14 +68,32 @@ function isWorkoutsDoc(v: unknown): v is WorkoutsDoc {
   return (
     isRecord(v) &&
     Array.isArray(v.tabs) &&
+    v.tabs.length <= SESSION_DOC_LIMITS.maxTabs &&
     v.tabs.every(
       (t) =>
         isRecord(t) &&
         typeof t.id === 'string' &&
         typeof t.title === 'string' &&
-        typeof t.content === 'string',
+        t.title.length <= SESSION_DOC_LIMITS.maxTabTitleChars &&
+        typeof t.content === 'string' &&
+        t.content.length <= SESSION_DOC_LIMITS.maxTabContentChars,
     ) &&
     isFiniteNumber(v.activeTab)
+  )
+}
+
+// Volle Struktur-Validierung für Seeds (Befund 4/5): ein kaputtes Seed-Doc darf
+// weder gespeichert noch an beitretende Clients weitergereicht werden.
+export function validateSessionDoc(v: unknown): v is SessionDoc {
+  return (
+    isRecord(v) &&
+    isTimerDoc(v.timer) &&
+    isVideoDoc(v.video) &&
+    typeof v.videoUrl === 'string' &&
+    v.videoUrl.length <= SESSION_DOC_LIMITS.maxVideoUrlChars &&
+    typeof v.videoLoop === 'boolean' &&
+    isWorkoutsDoc(v.workouts) &&
+    isFiniteNumber(v.updatedAt)
   )
 }
 
@@ -70,7 +104,7 @@ export interface Session {
 
 export interface Store {
   get(id: string): Session | undefined
-  create(id: string, doc: SessionDoc): Session
+  create(id: string, doc: SessionDoc): Session | null
   applyPatch(id: string, path: string, value: unknown, now?: number): boolean
   sweep(now?: number): string[]
 }
@@ -86,6 +120,9 @@ export function createStore(): Store {
     create(id, doc) {
       const existing = sessions.get(id)
       if (existing) return existing
+      // Obergrenze erreicht: Seed verweigern statt den Speicher unbegrenzt wachsen
+      // zu lassen (Befund 4). Der sweep räumt abgelaufene Sessions weiter frei.
+      if (sessions.size >= MAX_SESSIONS) return null
       const session: Session = { doc, clients: new Set() }
       sessions.set(id, session)
       return session
@@ -109,7 +146,7 @@ export function createStore(): Store {
         } else if (path === 'video' && isVideoDoc(value)) {
           doc.video = value
           applied = true
-        } else if (path === 'videoUrl' && typeof value === 'string') {
+        } else if (path === 'videoUrl' && typeof value === 'string' && value.length <= SESSION_DOC_LIMITS.maxVideoUrlChars) {
           doc.videoUrl = value
           applied = true
         } else if (path === 'videoLoop' && typeof value === 'boolean') {
@@ -126,7 +163,11 @@ export function createStore(): Store {
           applied = true
         }
       } else if (parts.length === 3 && parts[0] === 'tab' && (parts[2] === 'content' || parts[2] === 'title')) {
-        if (typeof value === 'string' && isRecord(doc.workouts) && Array.isArray(doc.workouts.tabs)) {
+        // Feldlimits wie bei der Doc-Validierung, damit Patches ein Doc nicht über
+        // die Seed-Grenzen hinaus wachsen lassen (Befund 4).
+        const maxLen =
+          parts[2] === 'content' ? SESSION_DOC_LIMITS.maxTabContentChars : SESSION_DOC_LIMITS.maxTabTitleChars
+        if (typeof value === 'string' && value.length <= maxLen && isRecord(doc.workouts) && Array.isArray(doc.workouts.tabs)) {
           const tab = doc.workouts.tabs.find((t) => isRecord(t) && t.id === parts[1])
           if (tab) {
             tab[parts[2] as 'content' | 'title'] = value

@@ -75,9 +75,9 @@ describe('SessionState', () => {
     history.replaceState(null, '', '/')
   })
 
-  it('create verbindet mit nanoid(6), setzt Pfad-URL und liefert komplettes Doc als Seed', async () => {
+  it('create verbindet mit nanoid(16), setzt Pfad-URL und liefert komplettes Doc als Seed', async () => {
     await session.create()
-    expect(client.connected).toMatch(/^[A-Za-z0-9_-]{6}$/)
+    expect(client.connected).toMatch(/^[A-Za-z0-9_-]{16}$/)
     expect(window.location.pathname).toBe(`/${client.connected}`)
     const doc = client.localDoc!()
     expect(doc.timer.mode).toBe('clock')

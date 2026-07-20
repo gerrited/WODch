@@ -144,7 +144,8 @@ export class SessionState {
   }
 
   async create(): Promise<void> {
-    const id = nanoid(6)
+    // 16 Zeichen: Session-IDs sind Bearer-Tokens; 6 wären per WS enumerierbar (Befund 3)
+    const id = nanoid(16)
     this.joinSession(id)
     history.replaceState(null, '', `/${id}`)
     try {

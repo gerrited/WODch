@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage } from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
-import { createStore, type Store } from './store.js'
+import { createStore, validateSessionDoc, type Store } from './store.js'
 import type { SessionDoc } from './types.js'
 import { createRateLimiter } from './rateLimit.js'
 import { handleGenerate, hasApiKey, generateWorkout as defaultGenerateWorkout } from './generate.js'
@@ -18,6 +18,15 @@ const SWEEP_INTERVAL_MS = 10 * 60 * 1000
 const AI_RATE_LIMIT_PER_IP = 10
 const AI_BUDGET_GLOBAL = 30
 const AI_RATE_WINDOW_MS = 60_000
+
+// Pro-IP-Limits auf dem WebSocket (SECURITY_REVIEW Befund 3): join/seed strikt
+// (Session-Aufzählung), patch großzügig (parallel Tippende hinter derselben IP).
+const WS_ENTRY_LIMIT = 30
+const WS_PATCH_LIMIT = 300
+const WS_RATE_WINDOW_MS = 60_000
+// Frame-Obergrenze statt 100-MiB-Default: das größte legitime Dokument liegt bei
+// wenigen KB (SECURITY_REVIEW Befund 4).
+const WS_MAX_PAYLOAD = 64 * 1024
 
 type ClientMsg =
   | { t: 'join'; session: string }
@@ -79,6 +88,8 @@ export function startServer(
   // Ein Budget über beide KI-Routen: Deckelt die Anthropic-Kosten auch dann,
   // wenn viele verschiedene IPs gleichzeitig anfragen.
   const globalAiBudget = createRateLimiter(AI_BUDGET_GLOBAL, AI_RATE_WINDOW_MS)
+  const wsEntryLimiter = createRateLimiter(WS_ENTRY_LIMIT, WS_RATE_WINDOW_MS)
+  const wsPatchLimiter = createRateLimiter(WS_PATCH_LIMIT, WS_RATE_WINDOW_MS)
   const generateWorkout = opts.generateWorkout ?? defaultGenerateWorkout
   const estimateDuration = opts.estimateDuration ?? defaultEstimateDuration
 
@@ -166,10 +177,12 @@ export function startServer(
     res.end()
   })
 
-  const wss = new WebSocketServer({ server: http, path: '/ws' })
+  const wss = new WebSocketServer({ server: http, path: '/ws', maxPayload: WS_MAX_PAYLOAD })
 
-  wss.on('connection', (ws: WebSocket) => {
+  wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     let joined: string | null = null
+    // Rate-Limit-Schlüssel der Verbindung (rechtestes XFF-Element bzw. Socket-IP)
+    const ip = clientIp(req)
 
     function leave() {
       if (joined) store.get(joined)?.clients.delete(ws)
@@ -189,10 +202,15 @@ export function startServer(
         const msg = parseClientMsg(raw)
         if (!msg) return
 
+        // Limit überschritten: Verbindung schließen (1008 = Policy Violation).
+        // Legitime Clients heilen über den vorhandenen Reconnect mit Backoff.
+        const close = () => ws.close(1008)
+
         if (msg.t === 'ping') {
           // Uhr-Synchronisation: Clients messen ihren Versatz zur Server-Uhr
           ws.send(JSON.stringify({ t: 'pong', t0: msg.t0, ts: Date.now() }))
         } else if (msg.t === 'join') {
+          if (!wsEntryLimiter.allow(ip)) return close()
           leave()
           const session = store.get(msg.session)
           if (!session) {
@@ -203,15 +221,21 @@ export function startServer(
           session.clients.add(ws)
           ws.send(JSON.stringify({ t: 'doc', doc: session.doc }))
         } else if (msg.t === 'seed') {
-          leave()
+          if (!wsEntryLimiter.allow(ip)) return close()
+          // Volle Struktur-Validierung vor dem Speichern (Befund 4/5)
+          if (!validateSessionDoc(msg.doc)) return
           const existing = store.get(msg.session)
           const session = store.create(msg.session, msg.doc)
+          // Store voll (MAX_SESSIONS): Seed verweigern, Client bleibt wo er war
+          if (!session) return
+          leave()
           joined = msg.session
           session.clients.add(ws)
           // Session existierte schon: Client bekommt den bestehenden Stand statt zu überschreiben
           if (existing) ws.send(JSON.stringify({ t: 'doc', doc: session.doc }))
         } else if (msg.t === 'patch') {
           if (!joined) return
+          if (!wsPatchLimiter.allow(ip)) return close()
           if (!store.applyPatch(joined, msg.path, msg.value)) return
           const session = store.get(joined)!
           const frame = JSON.stringify({ t: 'patch', path: msg.path, value: msg.value })
@@ -225,6 +249,10 @@ export function startServer(
         // Nachricht verwerfen; Verbindung und Prozess laufen weiter.
       }
     })
+
+    // Empfangsfehler (z. B. maxPayload-Überschreitung) sind verbindungslokal und enden
+    // ohnehin im close — ohne Listener würde das 'error'-Event als Exception geworfen.
+    ws.on('error', () => {})
 
     ws.on('close', leave)
   })

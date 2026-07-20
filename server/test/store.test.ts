@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createStore } from '../src/store.ts'
+import { createStore, validateSessionDoc, MAX_SESSIONS, SESSION_DOC_LIMITS } from '../src/store.ts'
 import type { SessionDoc, TimerDoc } from '../src/types.ts'
 
 function makeTimer(overrides: Partial<TimerDoc> = {}): TimerDoc {
@@ -55,7 +55,17 @@ describe('create', () => {
     other.videoUrl = 'https://youtu.be/xyz'
     const second = store.create('abc123', other)
     expect(second).toBe(first)
-    expect(second.doc.videoUrl).toBe('')
+    expect(second!.doc.videoUrl).toBe('')
+  })
+
+  it('verweigert neue Sessions oberhalb von MAX_SESSIONS (Befund 4)', () => {
+    const store = createStore()
+    for (let i = 0; i < MAX_SESSIONS; i++) {
+      expect(store.create(`s${i}`, makeDoc()), `Session ${i}`).not.toBeNull()
+    }
+    expect(store.create('eine-zu-viel', makeDoc())).toBeNull()
+    // Existierende Sessions bleiben erreichbar
+    expect(store.create('s0', makeDoc())).not.toBeNull()
   })
 })
 
@@ -150,13 +160,47 @@ describe('applyPatch', () => {
 
   it('übersteht ein per seed eingeschleustes kaputtes Doc ohne Exception', () => {
     const store = createStore()
-    const s = store.create('s1', makeDoc())
+    const s = store.create('s1', makeDoc())!
     s.doc = { ...s.doc, workouts: null } as unknown as SessionDoc
     expect(store.applyPatch('s1', 'workouts/activeTab', 0, 2)).toBe(false)
     expect(store.applyPatch('s1', 'tab/aaa111/content', 'x', 2)).toBe(false)
     // Andere Pfade funktionieren weiter
     expect(store.applyPatch('s1', 'timer', makeTimer(), 2)).toBe(true)
     expect(store.applyPatch('s1', 'videoUrl', 'https://youtu.be/abc', 2)).toBe(true)
+  })
+
+  it('erzwingt die Feldlimits auch auf Patch-Ebene (Befund 4)', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    const before = JSON.stringify(store.get('s1')!.doc)
+    expect(store.applyPatch('s1', 'tab/aaa111/content', 'x'.repeat(SESSION_DOC_LIMITS.maxTabContentChars + 1), 2)).toBe(false)
+    expect(store.applyPatch('s1', 'tab/aaa111/title', 't'.repeat(SESSION_DOC_LIMITS.maxTabTitleChars + 1), 2)).toBe(false)
+    expect(store.applyPatch('s1', 'videoUrl', `https://youtu.be/${'a'.repeat(SESSION_DOC_LIMITS.maxVideoUrlChars)}`, 2)).toBe(false)
+    expect(JSON.stringify(store.get('s1')!.doc)).toBe(before)
+    // Grenzwerte selbst sind erlaubt
+    expect(store.applyPatch('s1', 'tab/aaa111/content', 'x'.repeat(SESSION_DOC_LIMITS.maxTabContentChars), 2)).toBe(true)
+    expect(store.applyPatch('s1', 'videoUrl', `https://youtu.be/${'a'.repeat(SESSION_DOC_LIMITS.maxVideoUrlChars - 19)}`, 2)).toBe(true)
+  })
+})
+
+describe('validateSessionDoc', () => {
+  it('akzeptiert ein vollständiges Doc', () => {
+    expect(validateSessionDoc(makeDoc())).toBe(true)
+  })
+
+  it('weist kaputte oder überlange Strukturen ab (Befund 4/5)', () => {
+    const doc = makeDoc()
+    expect(validateSessionDoc(null)).toBe(false)
+    expect(validateSessionDoc({ ...doc, workouts: null })).toBe(false)
+    expect(validateSessionDoc({ ...doc, timer: { mode: 'clock' } })).toBe(false)
+    expect(validateSessionDoc({ ...doc, videoLoop: undefined })).toBe(false)
+    expect(validateSessionDoc({ ...doc, videoUrl: 'x'.repeat(SESSION_DOC_LIMITS.maxVideoUrlChars + 1) })).toBe(false)
+    // Zu viele Tabs
+    const manyTabs = { tabs: Array.from({ length: SESSION_DOC_LIMITS.maxTabs + 1 }, (_, i) => ({ id: `t${i}`, title: 'T', content: '' })), activeTab: 0 }
+    expect(validateSessionDoc({ ...doc, workouts: manyTabs })).toBe(false)
+    // Überlanger Tab-Inhalt
+    const longTab = { tabs: [{ id: 't', title: 'T', content: 'x'.repeat(SESSION_DOC_LIMITS.maxTabContentChars + 1) }], activeTab: 0 }
+    expect(validateSessionDoc({ ...doc, workouts: longTab })).toBe(false)
   })
 })
 

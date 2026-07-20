@@ -16,17 +16,22 @@ function makeDoc(): SessionDoc {
     },
     video: { isPlaying: false, startedAt: null, accumulatedSeconds: 0 },
     videoUrl: '',
+    videoLoop: false,
     workouts: { tabs: [{ id: 't1', title: 'Workout 1', content: '' }], activeTab: 0 },
     updatedAt: Date.now(),
   }
 }
 
-function connect(): Promise<WebSocket> {
+function connect(target: string = url): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(url)
+    const ws = new WebSocket(target)
     ws.once('open', () => resolve(ws))
     ws.once('error', reject)
   })
+}
+
+function closed(ws: WebSocket): Promise<number> {
+  return new Promise((resolve) => ws.once('close', (code) => resolve(code)))
 }
 
 function nextMsg(ws: WebSocket): Promise<any> {
@@ -194,5 +199,55 @@ describe('Eingangs-Validierung (Befund 1)', () => {
     await new Promise((r) => setTimeout(r, 50))
     expect(received).toEqual([])
     a.close(); b.close()
+  })
+})
+
+// Eigener Server: diese Tests verbrauchen absichtlich die pro-IP-Budgets und
+// dürfen die anderen Tests nicht beeinflussen.
+describe('Missbrauch-Limits (Befund 3/4)', () => {
+  let abuseServer: Awaited<ReturnType<typeof startServer>>
+  let abuseUrl: string
+
+  beforeAll(async () => {
+    abuseServer = await startServer(0)
+    abuseUrl = `ws://127.0.0.1:${abuseServer.port}/ws`
+  })
+
+  afterAll(async () => {
+    await abuseServer.close()
+  })
+
+  it('verwirft strukturell kaputte Seed-Dokumente', async () => {
+    const ws = await connect(abuseUrl)
+    const doc = makeDoc()
+    send(ws, { t: 'seed', session: 'bad1', doc: { ...doc, workouts: null } })
+    send(ws, { t: 'seed', session: 'bad2', doc: { ...doc, timer: { mode: 'x' } } })
+    send(ws, { t: 'join', session: 'bad1' })
+    expect(await nextMsg(ws)).toEqual({ t: 'missing' })
+    send(ws, { t: 'join', session: 'bad2' })
+    expect(await nextMsg(ws)).toEqual({ t: 'missing' })
+    ws.close()
+  })
+
+  it('schließt die Verbindung bei Patch-Flut (1008)', async () => {
+    const ws = await connect(abuseUrl)
+    send(ws, { t: 'seed', session: 'flood', doc: makeDoc() })
+    const onClose = closed(ws)
+    for (let i = 0; i < 301; i++) send(ws, { t: 'patch', path: 'videoUrl', value: 'x' })
+    expect(await onClose).toBe(1008)
+  })
+
+  it('schließt die Verbindung bei join/seed-Flut (1008)', async () => {
+    const ws = await connect(abuseUrl)
+    const onClose = closed(ws)
+    for (let i = 0; i < 40; i++) send(ws, { t: 'join', session: `enum-${i}` })
+    expect(await onClose).toBe(1008)
+  })
+
+  it('terminiert Verbindungen mit Frames über 64 KiB (1009)', async () => {
+    const ws = await connect(abuseUrl)
+    const onClose = closed(ws)
+    ws.send(JSON.stringify({ t: 'patch', path: 'tab/x/content', value: 'y'.repeat(70_000) }))
+    expect(await onClose).toBe(1009)
   })
 })
