@@ -21,7 +21,7 @@ Weil es keine Nutzerdaten/PII, keine Passwörter und keine Persistenz gibt, vers
 | 3 | ~~**Hoch**~~ ✅ behoben (Editor-Token optional offen) | Autorisierung / IDOR | Keinerlei Auth auf Sessions; kurze, aufzählbare IDs; **kein Rate-Limit auf WebSocket** → Session-Enumeration, fremde Sessions lesen **und** überschreiben | [server/src/index.ts:212-235](server/src/index.ts#L212-L235), [frontend/src/lib/sync/session.svelte.ts:147](frontend/src/lib/sync/session.svelte.ts#L147) |
 | 4 | ~~**Mittel**~~ ✅ behoben | DoS / Ressourcen | Kein `maxPayload` am WebSocket, `seed`-Dokument ohne Größenlimit, In-Memory-Store ohne Obergrenze → Speichererschöpfung | [server/src/index.ts:180](server/src/index.ts#L180), [server/src/store.ts:5-19](server/src/store.ts#L5-L19) |
 | 5 | **Mittel** — serverseitig geschlossen, clientseitig offen | Client-DoS | Ungetypte Casts in `applyPatch` propagieren beliebige Strukturen an Mitnutzer → Absturz anderer Clients derselben Session | [server/src/store.ts:131-176](server/src/store.ts#L131-L176), [frontend/src/lib/sync/session.svelte.ts:110-133](frontend/src/lib/sync/session.svelte.ts#L110-L133) |
-| 6 | **Mittel** | Transport / Header | Kein TLS/HSTS in K8s-Ingress, keine Security-Header (CSP, X-Frame-Options, X-Content-Type-Options) in Nginx | [k8s/deployment.yaml:107-165](k8s/deployment.yaml#L107-L165), [frontend/nginx.conf](frontend/nginx.conf) |
+| 6 | ~~**Mittel**~~ ✅ behoben (Cloudflare Tunnel) | Transport / Header | Kein TLS/HSTS in K8s-Ingress, keine Security-Header (CSP, X-Frame-Options, X-Content-Type-Options) in Nginx | [frontend/nginx.conf](frontend/nginx.conf) (Security-Header); TLS/HSTS extern via Cloudflare Tunnel |
 | 7 | **Niedrig** | WebSocket / CSWSH | Kein Origin-Check bei `WebSocketServer` (Impact begrenzt, da keine Cookie-Auth) | [server/src/index.ts:180](server/src/index.ts#L180) |
 | 8 | **Niedrig** | Container-Hardening | Beide Container laufen als `root` (kein `USER`) | [server/Dockerfile](server/Dockerfile), [frontend/Dockerfile](frontend/Dockerfile) |
 | 9 | ~~**Niedrig**~~ ✅ mitigiert | Information Disclosure | `join` unterscheidet `missing`/`doc` → Existenz-Orakel für Session-IDs | [server/src/index.ts:212-222](server/src/index.ts#L212-L222) |
@@ -107,16 +107,13 @@ Keine Befunde in dieser Kategorie.
 
 ### 5. Daten & Transport
 
-#### Befund 6 (Mittel) — Kein erzwungenes TLS/HSTS, keine Security-Header
+#### Befund 6 (Mittel) — Kein erzwungenes TLS/HSTS, keine Security-Header — ✅ Security-Header behoben, TLS/HSTS extern via Cloudflare Tunnel (2026-07-20)
 
-- Der K8s-Ingress ([k8s/deployment.yaml:107-165](k8s/deployment.yaml#L107-L165)) enthält **keinen `tls:`-Block** und keine cert-manager-Annotation. Sofern TLS nicht an einer vorgelagerten LB terminiert (nicht im Repo ersichtlich), laufen HTTP und `ws://` im Klartext — inkl. Workout-Inhalten und Video-URLs.
-- Nginx ([frontend/nginx.conf](frontend/nginx.conf)) setzt **keine** `Strict-Transport-Security`, `Content-Security-Policy`, `X-Frame-Options`/`frame-ancestors` oder `X-Content-Type-Options`. Ohne `X-Frame-Options`/CSP ist Clickjacking möglich; ohne CSP fehlt die Defense-in-Depth gegen das `{@html}` in [ShareModal.svelte:27](frontend/src/lib/components/ShareModal.svelte#L27).
+*Ursprünglicher Befund:* Der K8s-Ingress enthielt keinen `tls:`-Block und keine cert-manager-Annotation; Nginx setzte keine `Strict-Transport-Security`, `Content-Security-Policy`, `X-Frame-Options` oder `X-Content-Type-Options`.
 
-**Sensible Daten:** Es werden keine Passwörter/Tokens verarbeitet oder geloggt (kein `console.log` von Nutzerdaten im Server; einziges Log ist die Startmeldung, [index.ts:288](server/src/index.ts#L288)). Positiv.
-
-**Empfehlung (nicht implementiert):**
-- Ingress um `tls:` (cert-manager) erweitern und HTTP→HTTPS-Redirect erzwingen.
-- Nginx-Security-Header ergänzen: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` bzw. eine CSP mit `frame-ancestors 'none'`, `script-src 'self' https://www.youtube.com`, `frame-src https://www.youtube.com` (der YouTube-IFrame-API-Loader in [youtube.ts:96-108](frontend/src/lib/video/youtube.ts#L96-L108) muss erlaubt bleiben).
+**Umsetzung (implementiert):**
+- **Security-Header in `frontend/nginx.conf`**: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, CSP mit `default-src 'self'; script-src 'self' https://www.youtube.com; frame-src https://www.youtube.com; frame-ancestors 'none'`. Aufgrund der nginx-`add_header`-Erasure-Regel in allen drei Location-Blöcken wiederholt ([nginx.conf](frontend/nginx.conf)).
+- **TLS/HSTS extern:** HTTPS-Terminierung und HSTS werden über **Cloudflare Tunnel** abgedeckt — kein Zertifikats-Management im Cluster nötig. In der Cloudflare-Dashboard-Konfiguration sollte HSTS aktiviert sein („HTTP Strict Transport Security“ unter SSL/TLS → Edge Certificates).
 
 ---
 

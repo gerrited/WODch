@@ -8,12 +8,6 @@ import type { SessionDoc, TimerDoc, VideoDoc, WorkoutsDoc } from '../types'
 
 const DEBOUNCE_MS = 500
 
-// Legacy-Format: alte geteilte Links nutzen #session=<id>
-export function extractSessionId(hash: string): string | null {
-  const match = hash.match(/[#&]session=([A-Za-z0-9_-]+)/)
-  return match ? match[1] : null
-}
-
 export function extractSessionIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/([A-Za-z0-9_-]+)\/?$/)
   return match ? match[1] : null
@@ -169,11 +163,8 @@ export class SessionState {
   }
 
   joinFromLocation(): void {
-    const pathId = extractSessionIdFromPath(window.location.pathname)
-    const id = pathId ?? extractSessionId(window.location.hash)
+    const id = extractSessionIdFromPath(window.location.pathname)
     if (!id || id === this.id) return
-    // Legacy-Hash-Links auf die Pfadform normalisieren, damit kopierte Links einheitlich sind
-    if (!pathId) history.replaceState(null, '', `/${id}`)
     this.joinSession(id)
   }
 

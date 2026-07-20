@@ -193,7 +193,6 @@ Da `startedAt` in **Server-Zeit** über das Netz geht, würden Geräte mit falsc
 ### Hidden Knowledge / historisch Gewachsenes
 
 - **Das Projekt ist ein bewusster Rewrite.** Die Grundlage steht in [docs/rewrite-requirements.md](docs/rewrite-requirements.md) und [docs/rewrite-stack-options.md](docs/rewrite-stack-options.md). Lies §6.2 der Stack-Doku, bevor du über Multi-Replica-Backend oder Redis nachdenkst — das ist der geplante (noch nicht gegangene) Ausbaupfad.
-- **Legacy-Link-Format:** Alte geteilte Links nutzten `#session=<id>` (Hash), neue nutzen `/<id>` (Pfad). [session.svelte.ts `joinFromLocation`](frontend/src/lib/sync/session.svelte.ts#L170-L177) normalisiert Legacy-Hash-Links per `history.replaceState` auf die Pfadform. Nicht wegrationalisieren.
 - **Der `.superpowers/`-Ordner** enthält KI-Workflow-Artefakte (Task-Briefs, Review-Diffs) aus der Entwicklung, kein Produktivcode.
 
 ### Lokaler Setup / Build / Test
@@ -223,15 +222,16 @@ Frontend-`build` läuft `svelte-check` (Typprüfung) **vor** `vite build` — Ty
 
 > Kein Alarm — die Codebasis ist klein (~2.400 Zeilen Komponenten) und sauber. Aber diese Stellen solltest du kennen, bevor du dort anfasst.
 
-### ⚠️ Akuter Stolperstein: Offene Security-Befunde
+### ⚠️ Akuter Stolperstein: Verbleibende Security- & Code-Schulden
 
-Die [SECURITY_REVIEW.md](SECURITY_REVIEW.md) enthält Befunde mit konkreter Fix-Reihenfolge; die schweren serverseitigen Befunde (1–4, 9) sind behoben. **Offen sind nur noch Deployment-/Client-Themen (mittel bis niedrig):**
+Die serverseitigen und deployment-seitigen Security-Befunde (1–4, 6, 9) sind behoben. **Offene Punkte (alle niedrig priorisiert):**
 
-- **Kein TLS/HSTS im Ingress, keine Security-Header in Nginx (mittel):** ohne TLS-Terminierung laufen HTTP/`ws://` im Klartext; fehlende `X-Frame-Options`/CSP erlauben Clickjacking.
-- **Container laufen als root (niedrig):** kein `USER` in beiden Dockerfiles, kein `securityContext` im Deployment.
-- **Clients validieren Remote-Werte nicht defensiv (niedrig):** der Server ist inzwischen single source of truth für die Doc-Struktur; Guards im Frontend-`applyPatch` wären Defense-in-Depth.
+- **Container laufen als root (niedrig):** kein `USER` in den Dockerfiles, kein `securityContext` im Deployment.
+- **Clients validieren Remote-Werte nicht defensiv (niedrig):** der Server ist single source of truth; Guards im Frontend-`applyPatch` wären Defense-in-Depth.
+- **Origin-Check am WebSocket fehlt (niedrig):** `verifyClient`/`handleUpgrade` könnte Verbindungen auf die eigene Domain beschränken.
+- **Technische Schulden:** keine Tests für 4 UI-Komponenten, `WorkoutEditor.svelte` (577 Zeilen) God-Class, Redis-Ausbaupfad für Multi-Replica.
 
-Details und Fix-Reihenfolge: [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
+Details: [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
 
 ### Host-Namen (historischer Hinweis)
 

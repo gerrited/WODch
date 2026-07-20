@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { SessionState, extractSessionId, extractSessionIdFromPath } from './session.svelte'
+import { SessionState, extractSessionIdFromPath } from './session.svelte'
 import { TimerStore } from '../stores/timer.svelte'
 import { WorkoutStore } from '../stores/workouts.svelte'
 import { VideoStore } from '../stores/video.svelte'
@@ -27,18 +27,6 @@ class FakeClient implements SyncClient {
   simDoc(d: SessionDoc) { this.docCb?.(d) }
   simPatch(p: string, v: unknown) { this.patchCb?.(p, v) }
 }
-
-describe('extractSessionId', () => {
-  it('extrahiert die Session-ID aus dem Hash', () => {
-    expect(extractSessionId('#session=Xk9mQp')).toBe('Xk9mQp')
-    expect(extractSessionId('#foo=1&session=ab_c-1')).toBe('ab_c-1')
-  })
-
-  it('null ohne session im Hash', () => {
-    expect(extractSessionId('')).toBeNull()
-    expect(extractSessionId('#other=x')).toBeNull()
-  })
-})
 
 describe('extractSessionIdFromPath', () => {
   it('extrahiert die Session-ID aus dem Pfad', () => {
@@ -90,14 +78,6 @@ describe('SessionState', () => {
     session.joinFromLocation()
     expect(client.connected).toBe('Xk9mQp')
     expect(session.id).toBe('Xk9mQp')
-  })
-
-  it('joinFromLocation normalisiert Legacy-Hash-Links auf die Pfadform', () => {
-    history.replaceState(null, '', '/#session=abc123')
-    session.joinFromLocation()
-    expect(client.connected).toBe('abc123')
-    expect(window.location.pathname).toBe('/abc123')
-    expect(window.location.hash).toBe('')
   })
 
   it('joinFromLocation ohne Session-ID tut nichts', () => {
