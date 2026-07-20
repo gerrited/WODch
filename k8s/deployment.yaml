@@ -80,6 +80,9 @@ spec:
         - name: ghcr-secret
       securityContext:
         runAsNonRoot: true
+        # Numerische UID nötig: bei runAsNonRoot kann k8s einen Image-USER-Namen
+        # ("node") nicht als non-root verifizieren. node-Image: node = UID 1000.
+        runAsUser: 1000
         seccompProfile:
           type: RuntimeDefault
       containers:
