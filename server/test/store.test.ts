@@ -117,6 +117,47 @@ describe('applyPatch', () => {
     expect(store.applyPatch('s1', 'updatedAt', 1, 2)).toBe(false)
     expect(store.applyPatch('missing', 'timer', makeTimer(), 2)).toBe(false)
   })
+
+  it('weist falsch getypte Werte ab, Doc bleibt unverändert (Befund 1)', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    const before = JSON.stringify(store.get('s1')!.doc)
+    expect(store.applyPatch('s1', 123 as unknown as string, 'x', 2)).toBe(false)
+    expect(store.applyPatch('s1', 'timer', null, 2)).toBe(false)
+    expect(store.applyPatch('s1', 'timer', { mode: 'stopwatch' }, 2)).toBe(false)
+    expect(store.applyPatch('s1', 'timer', makeTimer({ mode: 'bogus' as never }), 2)).toBe(false)
+    expect(store.applyPatch('s1', 'timer', makeTimer({ preset: 'nope' as never }), 2)).toBe(false)
+    expect(store.applyPatch('s1', 'timer', makeTimer({ accumulatedMs: '5' as never }), 2)).toBe(false)
+    expect(store.applyPatch('s1', 'video', 'x', 2)).toBe(false)
+    expect(store.applyPatch('s1', 'video', { isPlaying: true }, 2)).toBe(false)
+    expect(store.applyPatch('s1', 'videoUrl', 42, 2)).toBe(false)
+    expect(store.applyPatch('s1', 'videoLoop', 'ja', 2)).toBe(false)
+    expect(store.applyPatch('s1', 'workouts', null, 2)).toBe(false)
+    expect(store.applyPatch('s1', 'workouts', { tabs: 'x', activeTab: 0 }, 2)).toBe(false)
+    expect(store.applyPatch('s1', 'workouts', { tabs: [{ id: 'a', title: 'T' }], activeTab: 0 }, 2)).toBe(false)
+    expect(store.applyPatch('s1', 'workouts/activeTab', '0', 2)).toBe(false)
+    expect(store.applyPatch('s1', 'tab/aaa111/content', 7, 2)).toBe(false)
+    expect(JSON.stringify(store.get('s1')!.doc)).toBe(before)
+  })
+
+  it('akzeptiert valide Ränder (custom-Preset, startedAt null)', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    expect(store.applyPatch('s1', 'timer', makeTimer({ preset: 'custom-3' }), 2)).toBe(true)
+    expect(store.applyPatch('s1', 'video', { isPlaying: false, startedAt: null, accumulatedSeconds: 0 }, 2)).toBe(true)
+    expect(store.applyPatch('s1', 'workouts', { tabs: [], activeTab: 0 }, 2)).toBe(true)
+  })
+
+  it('übersteht ein per seed eingeschleustes kaputtes Doc ohne Exception', () => {
+    const store = createStore()
+    const s = store.create('s1', makeDoc())
+    s.doc = { ...s.doc, workouts: null } as unknown as SessionDoc
+    expect(store.applyPatch('s1', 'workouts/activeTab', 0, 2)).toBe(false)
+    expect(store.applyPatch('s1', 'tab/aaa111/content', 'x', 2)).toBe(false)
+    // Andere Pfade funktionieren weiter
+    expect(store.applyPatch('s1', 'timer', makeTimer(), 2)).toBe(true)
+    expect(store.applyPatch('s1', 'videoUrl', 'https://youtu.be/abc', 2)).toBe(true)
+  })
 })
 
 describe('sweep', () => {

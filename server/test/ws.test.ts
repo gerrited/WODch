@@ -136,3 +136,63 @@ describe('sync protocol', () => {
     expect(res.status).toBe(200)
   })
 })
+
+describe('Eingangs-Validierung (Befund 1)', () => {
+  it('übersteht die Crash-Sequenz aus dem Security-Review; Doc bleibt intakt', async () => {
+    const a = await connect()
+    send(a, { t: 'seed', session: 'evil01', doc: makeDoc() })
+    // Typ-Verwirrung: workouts auf null setzen, dann verschachtelt patchen
+    send(a, { t: 'patch', path: 'workouts', value: null })
+    send(a, { t: 'patch', path: 'workouts/activeTab', value: 0 })
+    send(a, { t: 'patch', path: 'tab/t1/content', value: 'x' })
+    // Nicht-String-path
+    send(a, { t: 'patch', path: 123, value: 'x' })
+    // Verbindung und Server leben noch
+    send(a, { t: 'ping', t0: 1 })
+    expect((await nextMsg(a)).t).toBe('pong')
+    const res = await fetch(`http://127.0.0.1:${server.port}/healthz`)
+    expect(res.status).toBe(200)
+    // Ungültige Patches wurden nicht angewendet
+    const b = await connect()
+    send(b, { t: 'join', session: 'evil01' })
+    const msg = await nextMsg(b)
+    expect(msg.t).toBe('doc')
+    expect(msg.doc.workouts.tabs).toHaveLength(1)
+    a.close(); b.close()
+  })
+
+  it('verwirft Nachrichten, die nicht dem Protokoll entsprechen', async () => {
+    const ws = await connect()
+    ws.send('42') // valides JSON, aber kein Objekt
+    ws.send('null')
+    ws.send('[1,2]')
+    send(ws, { t: 'bogus' }) // unbekannter Nachrichtentyp
+    send(ws, { t: 'join', session: 123 }) // falscher Feldtyp
+    send(ws, { t: 'seed', session: 'x' }) // doc fehlt
+    send(ws, { t: 'seed', session: 'x', doc: 'kein objekt' })
+    send(ws, { t: 'patch', value: 1 }) // path fehlt
+    send(ws, { t: 'ping' }) // t0 fehlt
+    send(ws, { t: 'ping', t0: 'jetzt' })
+    // Erst die valide Nachricht darf eine Antwort auslösen
+    send(ws, { t: 'ping', t0: 7 })
+    const msg = await nextMsg(ws)
+    expect(msg).toMatchObject({ t: 'pong', t0: 7 })
+    ws.close()
+  })
+
+  it('ungültiger Patch wird nicht an andere Clients gebroadcastet', async () => {
+    const a = await connect()
+    send(a, { t: 'seed', session: 'evil02', doc: makeDoc() })
+    const b = await connect()
+    send(b, { t: 'join', session: 'evil02' })
+    await nextMsg(b) // doc
+
+    const received: any[] = []
+    b.on('message', (d) => received.push(JSON.parse(d.toString())))
+    send(a, { t: 'patch', path: 'timer', value: { kaputt: true } })
+    send(a, { t: 'patch', path: 'videoUrl', value: 42 })
+    await new Promise((r) => setTimeout(r, 50))
+    expect(received).toEqual([])
+    a.close(); b.close()
+  })
+})

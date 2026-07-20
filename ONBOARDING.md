@@ -140,7 +140,7 @@ sequenceDiagram
   Note over SRV: Session neu angelegt aus Client-Doc
 ```
 
-Jeder Client hält das **komplette Session-Dokument lokal**. Kennt der Server die Session nach Neustart nicht mehr (`missing`), seedet der erste Client seinen Stand einfach neu. Deshalb braucht es keine Datenbank und keine Persistenz — Sessions überleben Deploys und Pod-Neustarts. Logik: [client.ts:70-74](frontend/src/lib/sync/client.ts#L70-L74) und `seed`-Handling in [index.ts:161-168](server/src/index.ts#L161-L168).
+Jeder Client hält das **komplette Session-Dokument lokal**. Kennt der Server die Session nach Neustart nicht mehr (`missing`), seedet der erste Client seinen Stand einfach neu. Deshalb braucht es keine Datenbank und keine Persistenz — Sessions überleben Deploys und Pod-Neustarts. Logik: [client.ts:70-74](frontend/src/lib/sync/client.ts#L70-L74) und `seed`-Handling in [index.ts:191-198](server/src/index.ts#L191-L198).
 
 ### Uhr-Synchronisation
 
@@ -158,7 +158,7 @@ Da `startedAt` in **Server-Zeit** über das Netz geht, würden Geräte mit falsc
 |---|---|
 | **Auth** | **Es gibt keine.** Wer den Link hat, hat volle Kontrolle. Session-IDs sind 6-stellige `nanoid`s (bewusstes Trade-off: kurze teilbare Links vs. Erratbarkeit). |
 | **Logging** | Minimal — nur ein Startup-`console.log` im Server. Keine strukturierten Logs. |
-| **Error Handling** | Defensiv & still: ungültige WebSocket-Nachrichten werden verworfen ([index.ts:142-146](server/src/index.ts#L142-L146)), `try/catch` um `localStorage`, `clipboard`, JSON-Parsing. KI-Fehler → generische Fehlermeldung, nie Stacktrace an Client. |
+| **Error Handling** | Defensiv & still: eingehende WebSocket-Nachrichten werden schema-validiert und bei Abweichung verworfen ([index.ts:22-45](server/src/index.ts#L22-L45)), der Handler liegt komplett in `try/catch` ([index.ts:165-213](server/src/index.ts#L165-L213)), Patch-Werte validiert `applyPatch` strukturell. `try/catch` um `localStorage`, `clipboard`, JSON-Parsing. KI-Fehler → generische Fehlermeldung, nie Stacktrace an Client. |
 | **Config** | Fast keine. `PORT` (Default 8787) und `ANTHROPIC_API_KEY` per Env. Frontend hat gar keine Runtime-Config — WS-URL wird aus `location` abgeleitet ([session.svelte.ts:22-25](frontend/src/lib/sync/session.svelte.ts#L22-L25)). |
 | **Rate Limiting** | Nur für KI-Routen: 10 Anfragen/60 s pro IP, gleitendes Fenster ([rateLimit.ts](server/src/rateLimit.ts)). |
 
@@ -176,11 +176,11 @@ Da `startedAt` in **Server-Zeit** über das Netz geht, würden Geräte mit falsc
 
 4. **Der `onDocChange`/`applyingRemote`-Vertrag.** Stores feuern Callbacks (`onDocChange`, `onStructure`, `onTabField`, …) **nur bei lokalen Aktionen**, nie bei `applyRemote*()`. Der Session-Layer setzt beim Anwenden entfernter Patches `applyingRemote = true`. Verletzt du diese Trennung, baust du eine Sync-Endlosschleife. Zentrale Stelle: [session.svelte.ts:58-93](frontend/src/lib/sync/session.svelte.ts#L58-L93).
 
-5. **Feld-granulares, debounced Patchen von Workout-Text.** Tab-Inhalte werden pro Feld (`tab/<id>/content`) mit 500 ms Debounce gepatcht ([session.svelte.ts:70-83](frontend/src/lib/sync/session.svelte.ts#L70-L83)), damit sich parallel Tippende nicht gegenseitig überschreiben. Der Patch-Pfad ist eine kleine DSL — die erlaubten Pfade stehen zentral in [store.ts `applyPatch`](server/src/store.ts#L33-L70) und müssen mit dem Frontend-`applyPatch` übereinstimmen.
+5. **Feld-granulares, debounced Patchen von Workout-Text.** Tab-Inhalte werden pro Feld (`tab/<id>/content`) mit 500 ms Debounce gepatcht ([session.svelte.ts:70-83](frontend/src/lib/sync/session.svelte.ts#L70-L83)), damit sich parallel Tippende nicht gegenseitig überschreiben. Der Patch-Pfad ist eine kleine DSL — die erlaubten Pfade stehen zentral in [store.ts `applyPatch`](server/src/store.ts#L94-L140) und müssen mit dem Frontend-`applyPatch` übereinstimmen.
 
 6. **Video pausiert immer bei `startedAt`.** Video-Sync funktioniert wie der Timer über `startedAt`/`accumulatedSeconds`, nicht über gestreamte Positionen.
 
-7. **Dünne SDK-Wrapper bewusst nicht unit-getestet.** `generateWorkout`/`estimateDuration` machen echte API-Calls und sind absichtlich testfrei (Kommentar im Code). Getestet wird stattdessen die Handler-Logik (`handleGenerate`/`handleEstimate`) mit injizierten Deps — siehe Dependency-Injection über den `opts`-Parameter von `startServer` ([index.ts:28-38](server/src/index.ts#L28-L38)).
+7. **Dünne SDK-Wrapper bewusst nicht unit-getestet.** `generateWorkout`/`estimateDuration` machen echte API-Calls und sind absichtlich testfrei (Kommentar im Code). Getestet wird stattdessen die Handler-Logik (`handleGenerate`/`handleEstimate`) mit injizierten Deps — siehe Dependency-Injection über den `opts`-Parameter von `startServer` ([index.ts:53-63](server/src/index.ts#L53-L63)).
 
 ### Namens- & Code-Konventionen
 
@@ -225,10 +225,9 @@ Frontend-`build` läuft `svelte-check` (Typprüfung) **vor** `vite build` — Ty
 
 ### ⚠️ Akuter Stolperstein: Offene Security-Befunde
 
-Die [SECURITY_REVIEW.md](SECURITY_REVIEW.md) enthält Befunde mit konkreter Fix-Reihenfolge — **die empfohlenen Fixes sind noch nicht implementiert**. Die beiden dringendsten:
+Die [SECURITY_REVIEW.md](SECURITY_REVIEW.md) enthält Befunde mit konkreter Fix-Reihenfolge; der kritischste (unvalidierte WS-Nachrichten → Prozess-Crash) ist behoben, **der Rest ist offen**. Der dringendste:
 
-- **Rate-Limit-Bypass via `X-Forwarded-For` (hoch):** Die KI-Routen schlüsseln das Rate-Limit auf das **linkeste** XFF-Element ([index.ts:48](server/src/index.ts#L48), [index.ts:88](server/src/index.ts#L88)) — das ist client-kontrolliert, das Limit damit wirkungslos. `/generate` und `/estimate` rufen die **kostenpflichtige** Anthropic-API → unbegrenzte Kosten auf Betreiber-Rechnung möglich.
-- **Keine Validierung eingehender WS-Nachrichten (kritisch):** [index.ts:140-146](server/src/index.ts#L140-L146) verwirft nur ungültiges JSON — Struktur und Typen der Nachrichten werden nicht geprüft.
+- **Rate-Limit-Bypass via `X-Forwarded-For` (hoch):** Die KI-Routen schlüsseln das Rate-Limit auf das **linkeste** XFF-Element ([index.ts:72-74](server/src/index.ts#L72-L74), [index.ts:112-114](server/src/index.ts#L112-L114)) — das ist client-kontrolliert, das Limit damit wirkungslos. `/generate` und `/estimate` rufen die **kostenpflichtige** Anthropic-API → unbegrenzte Kosten auf Betreiber-Rechnung möglich.
 
 Arbeite die Fix-Reihenfolge in [SECURITY_REVIEW.md](SECURITY_REVIEW.md) ab, bevor du größere Features baust.
 

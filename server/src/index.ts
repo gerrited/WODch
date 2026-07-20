@@ -19,6 +19,31 @@ type ClientMsg =
   | { t: 'patch'; path: string; value: unknown }
   | { t: 'ping'; t0: number }
 
+// Schema-Validierung eingehender WS-Nachrichten: ein Frame, der nicht exakt dem
+// Protokoll entspricht, wird verworfen — bevor irgendetwas anderes ihn anfasst
+// (SECURITY_REVIEW Befund 1). Feld-Typen der Patch-Werte prüft store.applyPatch.
+function parseClientMsg(raw: unknown): ClientMsg | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null
+  const msg = raw as Record<string, unknown>
+  switch (msg.t) {
+    case 'ping':
+      return typeof msg.t0 === 'number' && Number.isFinite(msg.t0) ? { t: 'ping', t0: msg.t0 } : null
+    case 'join':
+      return typeof msg.session === 'string' ? { t: 'join', session: msg.session } : null
+    case 'seed':
+      return typeof msg.session === 'string' &&
+        typeof msg.doc === 'object' &&
+        msg.doc !== null &&
+        !Array.isArray(msg.doc)
+        ? { t: 'seed', session: msg.session, doc: msg.doc as SessionDoc }
+        : null
+    case 'patch':
+      return typeof msg.path === 'string' ? { t: 'patch', path: msg.path, value: msg.value } : null
+    default:
+      return null
+  }
+}
+
 export interface RunningServer {
   port: number
   store: Store
@@ -138,44 +163,52 @@ export function startServer(
     }
 
     ws.on('message', (data) => {
-      let msg: ClientMsg
+      // Sicherheitsnetz pro Verbindung: keine Exception aus der Verarbeitung darf
+      // den Prozess reißen (eine Replica → ein Crash legt alles lahm).
       try {
-        msg = JSON.parse(data.toString())
-      } catch {
-        return
-      }
-
-      if (msg.t === 'ping') {
-        // Uhr-Synchronisation: Clients messen ihren Versatz zur Server-Uhr
-        ws.send(JSON.stringify({ t: 'pong', t0: msg.t0, ts: Date.now() }))
-      } else if (msg.t === 'join') {
-        leave()
-        const session = store.get(msg.session)
-        if (!session) {
-          ws.send(JSON.stringify({ t: 'missing' }))
+        let raw: unknown
+        try {
+          raw = JSON.parse(data.toString())
+        } catch {
           return
         }
-        joined = msg.session
-        session.clients.add(ws)
-        ws.send(JSON.stringify({ t: 'doc', doc: session.doc }))
-      } else if (msg.t === 'seed') {
-        leave()
-        const existing = store.get(msg.session)
-        const session = store.create(msg.session, msg.doc)
-        joined = msg.session
-        session.clients.add(ws)
-        // Session existierte schon: Client bekommt den bestehenden Stand statt zu überschreiben
-        if (existing) ws.send(JSON.stringify({ t: 'doc', doc: session.doc }))
-      } else if (msg.t === 'patch') {
-        if (!joined) return
-        if (!store.applyPatch(joined, msg.path, msg.value)) return
-        const session = store.get(joined)!
-        const frame = JSON.stringify({ t: 'patch', path: msg.path, value: msg.value })
-        for (const client of session.clients) {
-          if (client !== ws && (client as WebSocket).readyState === WebSocket.OPEN) {
-            ;(client as WebSocket).send(frame)
+        const msg = parseClientMsg(raw)
+        if (!msg) return
+
+        if (msg.t === 'ping') {
+          // Uhr-Synchronisation: Clients messen ihren Versatz zur Server-Uhr
+          ws.send(JSON.stringify({ t: 'pong', t0: msg.t0, ts: Date.now() }))
+        } else if (msg.t === 'join') {
+          leave()
+          const session = store.get(msg.session)
+          if (!session) {
+            ws.send(JSON.stringify({ t: 'missing' }))
+            return
+          }
+          joined = msg.session
+          session.clients.add(ws)
+          ws.send(JSON.stringify({ t: 'doc', doc: session.doc }))
+        } else if (msg.t === 'seed') {
+          leave()
+          const existing = store.get(msg.session)
+          const session = store.create(msg.session, msg.doc)
+          joined = msg.session
+          session.clients.add(ws)
+          // Session existierte schon: Client bekommt den bestehenden Stand statt zu überschreiben
+          if (existing) ws.send(JSON.stringify({ t: 'doc', doc: session.doc }))
+        } else if (msg.t === 'patch') {
+          if (!joined) return
+          if (!store.applyPatch(joined, msg.path, msg.value)) return
+          const session = store.get(joined)!
+          const frame = JSON.stringify({ t: 'patch', path: msg.path, value: msg.value })
+          for (const client of session.clients) {
+            if (client !== ws && (client as WebSocket).readyState === WebSocket.OPEN) {
+              ;(client as WebSocket).send(frame)
+            }
           }
         }
+      } catch {
+        // Nachricht verwerfen; Verbindung und Prozess laufen weiter.
       }
     })
 
@@ -205,6 +238,9 @@ export function startServer(
 
 const isMain = process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('index.js')
 if (isMain) {
+  // Letztes Sicherheitsnetz zusätzlich zur Validierung: loggen statt crashen.
+  process.on('uncaughtException', (err) => console.error('uncaughtException:', err))
+  process.on('unhandledRejection', (err) => console.error('unhandledRejection:', err))
   const port = Number(process.env.PORT ?? 8787)
   startServer(port).then(({ port: p }) => {
     console.log(`wodch-backend listening on :${p} (ws path /ws)`)

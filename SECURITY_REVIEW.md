@@ -16,15 +16,15 @@ Weil es keine Nutzerdaten/PII, keine Passwörter und keine Persistenz gibt, vers
 
 | # | Schweregrad | Kategorie | Kurzbeschreibung | Ort |
 |---|-------------|-----------|------------------|-----|
-| 1 | **Kritisch** | DoS / Input-Validierung | Unvalidierte WebSocket-`patch`/`seed`-Nachrichten lösen unabgefangene Exceptions aus → **gesamter Backend-Prozess stürzt ab** (alle Sessions gleichzeitig) | [server/src/index.ts:169-179](server/src/index.ts#L169-L179), [server/src/store.ts:33-70](server/src/store.ts#L33-L70) |
-| 2 | **Hoch** | Rate-Limiting / Kosten-DoS | Rate-Limit-Schlüssel basiert auf **fälschbarem** `X-Forwarded-For` → unbegrenzte, kostenpflichtige Anthropic-API-Aufrufe | [server/src/index.ts:47-49](server/src/index.ts#L47-L49), [server/src/index.ts:87-89](server/src/index.ts#L87-L89) |
-| 3 | **Hoch** | Autorisierung / IDOR | Keinerlei Auth auf Sessions; kurze, aufzählbare IDs; **kein Rate-Limit auf WebSocket** → Session-Enumeration, fremde Sessions lesen **und** überschreiben | [server/src/index.ts:151-179](server/src/index.ts#L151-L179), [frontend/src/lib/sync/session.svelte.ts:147](frontend/src/lib/sync/session.svelte.ts#L147) |
-| 4 | **Mittel** | DoS / Ressourcen | Kein `maxPayload` am WebSocket, `seed`-Dokument ohne Größenlimit, In-Memory-Store ohne Obergrenze → Speichererschöpfung | [server/src/index.ts:130](server/src/index.ts#L130), [server/src/index.ts:161-168](server/src/index.ts#L161-L168) |
-| 5 | **Mittel** | Client-DoS | Ungetypte Casts in `applyPatch` propagieren beliebige Strukturen an Mitnutzer → Absturz anderer Clients derselben Session | [server/src/store.ts:40-66](server/src/store.ts#L40-L66), [frontend/src/lib/sync/session.svelte.ts:110-133](frontend/src/lib/sync/session.svelte.ts#L110-L133) |
+| 1 | ~~**Kritisch**~~ ✅ behoben | DoS / Input-Validierung | Unvalidierte WebSocket-`patch`/`seed`-Nachrichten lösen unabgefangene Exceptions aus → **gesamter Backend-Prozess stürzt ab** (alle Sessions gleichzeitig) | [server/src/index.ts:199-209](server/src/index.ts#L199-L209), [server/src/store.ts:94-140](server/src/store.ts#L94-L140) |
+| 2 | **Hoch** | Rate-Limiting / Kosten-DoS | Rate-Limit-Schlüssel basiert auf **fälschbarem** `X-Forwarded-For` → unbegrenzte, kostenpflichtige Anthropic-API-Aufrufe | [server/src/index.ts:72-74](server/src/index.ts#L72-L74), [server/src/index.ts:112-114](server/src/index.ts#L112-L114) |
+| 3 | **Hoch** | Autorisierung / IDOR | Keinerlei Auth auf Sessions; kurze, aufzählbare IDs; **kein Rate-Limit auf WebSocket** → Session-Enumeration, fremde Sessions lesen **und** überschreiben | [server/src/index.ts:181-209](server/src/index.ts#L181-L209), [frontend/src/lib/sync/session.svelte.ts:147](frontend/src/lib/sync/session.svelte.ts#L147) |
+| 4 | **Mittel** | DoS / Ressourcen | Kein `maxPayload` am WebSocket, `seed`-Dokument ohne Größenlimit, In-Memory-Store ohne Obergrenze → Speichererschöpfung | [server/src/index.ts:155](server/src/index.ts#L155), [server/src/index.ts:191-198](server/src/index.ts#L191-L198) |
+| 5 | **Mittel** — serverseitig entschärft | Client-DoS | Ungetypte Casts in `applyPatch` propagieren beliebige Strukturen an Mitnutzer → Absturz anderer Clients derselben Session | [server/src/store.ts:94-140](server/src/store.ts#L94-L140), [frontend/src/lib/sync/session.svelte.ts:110-133](frontend/src/lib/sync/session.svelte.ts#L110-L133) |
 | 6 | **Mittel** | Transport / Header | Kein TLS/HSTS in K8s-Ingress, keine Security-Header (CSP, X-Frame-Options, X-Content-Type-Options) in Nginx | [k8s/deployment.yaml:107-165](k8s/deployment.yaml#L107-L165), [frontend/nginx.conf](frontend/nginx.conf) |
-| 7 | **Niedrig** | WebSocket / CSWSH | Kein Origin-Check bei `WebSocketServer` (Impact begrenzt, da keine Cookie-Auth) | [server/src/index.ts:130](server/src/index.ts#L130) |
+| 7 | **Niedrig** | WebSocket / CSWSH | Kein Origin-Check bei `WebSocketServer` (Impact begrenzt, da keine Cookie-Auth) | [server/src/index.ts:155](server/src/index.ts#L155) |
 | 8 | **Niedrig** | Container-Hardening | Beide Container laufen als `root` (kein `USER`) | [server/Dockerfile](server/Dockerfile), [frontend/Dockerfile](frontend/Dockerfile) |
-| 9 | **Niedrig** | Information Disclosure | `join` unterscheidet `missing`/`doc` → Existenz-Orakel für Session-IDs | [server/src/index.ts:153-160](server/src/index.ts#L153-L160) |
+| 9 | **Niedrig** | Information Disclosure | `join` unterscheidet `missing`/`doc` → Existenz-Orakel für Session-IDs | [server/src/index.ts:181-190](server/src/index.ts#L181-L190) |
 
 ### Was gut gelöst ist (bewusst festgehalten)
 
@@ -45,7 +45,7 @@ Es gibt **kein** Login/Session-Management im klassischen Sinn, kein JWT, keine C
 
 #### Befund 3 (Hoch) — Fehlende Autorisierung + aufzählbare Session-IDs + kein WS-Rate-Limit
 
-Jeder WebSocket-Client kann per `{ t: 'join', session: <id> }` ([index.ts:151-160](server/src/index.ts#L151-L160)) **jede beliebige** existierende Session betreten, das komplette Dokument empfangen und anschließend per `patch` **verändern** ([index.ts:169-179](server/src/index.ts#L169-L179)). Es gibt keine Prüfung, ob der Client zu dieser Session berechtigt ist — klassisches IDOR, hier by-design als „kein Host-Konzept, volle Kontrolle für alle mit Link".
+Jeder WebSocket-Client kann per `{ t: 'join', session: <id> }` ([index.ts:181-190](server/src/index.ts#L181-L190)) **jede beliebige** existierende Session betreten, das komplette Dokument empfangen und anschließend per `patch` **verändern** ([index.ts:199-209](server/src/index.ts#L199-L209)). Es gibt keine Prüfung, ob der Client zu dieser Session berechtigt ist — klassisches IDOR, hier by-design als „kein Host-Konzept, volle Kontrolle für alle mit Link".
 
 Verschärfend:
 - Die ID-Länge ist nur **6 Zeichen** (Alphabet 64) → Raum ~6,9·10¹⁰. Für Bearer-Tokens grenzwertig, aber vor allem:
@@ -64,30 +64,30 @@ Verschärfend:
 
 Keine SQL-/Command-Injection möglich (siehe „gut gelöst"). Das zentrale Problem ist **fehlende Validierung der WebSocket-Nachrichten**.
 
-#### Befund 1 (Kritisch) — Unabgefangene Exceptions crashen den gesamten Server
+#### Befund 1 (Kritisch) — Unabgefangene Exceptions crashen den gesamten Server — ✅ behoben (2026-07-20)
 
-Der Nachrichten-Handler parst JSON in einem `try/catch` ([index.ts:142-146](server/src/index.ts#L142-L146)), castet danach aber blind auf `ClientMsg` und ruft `store.applyPatch(joined, msg.path, msg.value)` **außerhalb jeder Fehlerbehandlung** auf ([index.ts:169-179](server/src/index.ts#L169-L179)). Es gibt weder Feld-Validierung noch einen globalen `process.on('uncaughtException', …)`.
+*Ursprünglicher Befund:* Der Nachrichten-Handler parste JSON in einem `try/catch`, castete danach aber blind auf `ClientMsg` und rief `store.applyPatch(joined, msg.path, msg.value)` außerhalb jeder Fehlerbehandlung auf. In [store.ts](server/src/store.ts) wurde `path` als String vorausgesetzt und `doc.workouts.tabs.find(...)` ohne Guards aufgerufen. Trivial erreichbare Absturzpfade:
 
-In [store.ts](server/src/store.ts) wird `path` als String vorausgesetzt und `doc.workouts.tabs.find(...)` aufgerufen ([store.ts:60-62](server/src/store.ts#L60-L62)). Mehrere trivial erreichbare Absturzpfade:
+- **Nicht-String-`path`:** `{ t: 'patch', path: 123 }` → `path.split('/')` wirft `TypeError`.
+- **Typ-Verwirrung im Dokument:** Erst `{ t: 'patch', path: 'workouts', value: null }` setzt `doc.workouts = null`, dann `{ t: 'patch', path: 'workouts/activeTab', value: 0 }` → Schreibzugriff auf `null` wirft. Analog für `tab/<id>/content` gegen ein `workouts` ohne `.tabs`.
 
-- **Nicht-String-`path`:** `{ t: 'patch', path: 123 }` → `path.split('/')` wirft `TypeError` ([store.ts:37](server/src/store.ts#L37)).
-- **Typ-Verwirrung im Dokument:** Erst `{ t: 'patch', path: 'workouts', value: null }` setzt `doc.workouts = null` ([store.ts:53-55](server/src/store.ts#L53-L55)), dann `{ t: 'patch', path: 'workouts/activeTab', value: 0 }` → `doc.workouts.activeTab = …` wirft auf `null` ([store.ts:58](server/src/store.ts#L58)). Analog für `tab/<id>/content` gegen ein `workouts` ohne `.tabs`.
+Ein `patch` erfordert ein gesetztes `joined`, das `seed` bedingungslos liefert: ein einzelner unauthentifizierter Client konnte den Prozess in Schleife zum Absturz bringen — bei `replicas: 1` und `strategy: Recreate` ([k8s/deployment.yaml:48-50](k8s/deployment.yaml#L48-L50)) ein wiederholbarer Totalausfall.
 
-Ein `patch` erfordert vorher ein gesetztes `joined`. Das liefert `seed` bedingungslos ([index.ts:161-168](server/src/index.ts#L161-L168)): der Angreifer erzeugt eine eigene Session und sendet dann die zwei Crash-Patches. Eine geworfene Exception in einem `'message'`-Listener wird zu `uncaughtException` → **der Node-Prozess beendet sich**. Wegen `replicas: 1` und `strategy: Recreate` ([k8s/deployment.yaml:48-50](k8s/deployment.yaml#L48-L50)) reißt **ein einzelner unauthentifizierter Client alle laufenden Sessions gleichzeitig ab** und kann das in Schleife wiederholen.
+**Umsetzung (implementiert):**
+- Eingehende Nachrichten werden schema-validiert, bevor irgendetwas sie anfasst: `parseClientMsg` prüft `t` und die Feld-Typen je Nachrichtentyp ([index.ts:22-45](server/src/index.ts#L22-L45), Aufruf [index.ts:175-176](server/src/index.ts#L175-L176)).
+- `applyPatch` ist defensiv: `path` muss String sein; jeder Wert wird gegen die Struktur des Zielpfads validiert (`isTimerDoc`/`isVideoDoc`/`isWorkoutsDoc`, [store.ts:7-64](server/src/store.ts#L7-L64)); Zugriffe auf `doc.workouts`/`.tabs` laufen über Guards; ungültige Werte → `return false`, kein Broadcast ([store.ts:94-140](server/src/store.ts#L94-L140)).
+- Der gesamte `ws.on('message')`-Body liegt in `try/catch` — eine Exception verwirft die Nachricht, Verbindung und Prozess laufen weiter ([index.ts:165-213](server/src/index.ts#L165-L213)).
+- Sicherheitsnetz im Prozess-Einstieg: `process.on('uncaughtException')`/`unhandledRejection` loggen statt zu crashen ([index.ts:242-243](server/src/index.ts#L242-L243)).
+- Regressionstests decken die ursprünglichen Absturzpfade ab: [ws.test.ts](server/test/ws.test.ts) („Eingangs-Validierung") und [store.test.ts](server/test/store.test.ts) (defensive `applyPatch`).
 
-**Impact:** Vollständiger, wiederholbarer Denial-of-Service des Backends durch eine Handvoll Bytes. Höchste Priorität.
+#### Befund 5 (Mittel) — Ungetypte Patch-Werte crashen Mitnutzer (Client-DoS) — serverseitig entschärft
 
-**Empfehlung (nicht implementiert):**
-- Eingehende Nachrichten schema-validieren (`t` prüfen, `path` muss String sein, `value` gegen erwarteten Typ des Zielpfads validieren) **bevor** `applyPatch` aufgerufen wird.
-- `applyPatch` defensiv machen: `typeof value` je Pfad prüfen; `doc.workouts?.tabs` mit Guards; bei ungültigen Werten `return false`.
-- Den gesamten `ws.on('message')`-Body in `try/catch` kapseln und Fehler pro Verbindung isolieren (Verbindung ggf. schließen, Prozess nie).
-- Als Sicherheitsnetz zusätzlich `process.on('uncaughtException')`/`unhandledRejection` (loggen, nicht crashen) — aber **nicht** als Ersatz für die Validierung.
+Der Server validiert seit dem Fix zu Befund 1 die Struktur pro Pfad als single source of truth ([store.ts:7-64](server/src/store.ts#L7-L64)); falsch strukturierte Patch-Werte werden abgewiesen und **nicht** mehr an andere Clients gebroadcastet. Zwei Restrisiken bleiben:
 
-#### Befund 5 (Mittel) — Ungetypte Patch-Werte crashen Mitnutzer (Client-DoS)
+- Das `seed`-Dokument wird nur flach validiert (muss Objekt sein, [index.ts:33-39](server/src/index.ts#L33-L39)) — ein Angreifer kann beim Erstellen einer Session ein strukturell kaputtes Dokument hinterlegen, das später beitretende Clients empfangen.
+- Clients behandeln Remote-Werte weiterhin nicht defensiv: der empfangende Client ruft `applyRemote(value as TimerDoc)` ohne Feldprüfung auf ([session.svelte.ts:114-116](frontend/src/lib/sync/session.svelte.ts#L114-L116)).
 
-Selbst mit server-seitigem Fix propagiert der Server valide-aussehende, aber strukturell falsche Werte an andere Clients. Beispiel: `applyPatch` akzeptiert `doc.timer = value as TimerDoc` ohne Feldprüfung ([store.ts:41-43](server/src/store.ts#L41-L43)); der empfangende Client ruft `applyRemote(value as TimerDoc)` ([session.svelte.ts:114-116](frontend/src/lib/sync/session.svelte.ts#L114-L116)). Ein Angreifer in derselben Session kann so gezielt fehlerhafte Timer-/Workout-Strukturen senden und die App der anderen Teilnehmer zum Absturz bringen.
-
-**Empfehlung:** Server validiert Struktur pro Pfad (single source of truth), Clients behandeln Remote-Werte defensiv.
+**Empfehlung (teilweise offen):** `seed`-Dokumente gegen das `SessionDoc`-Schema validieren; Clients behandeln Remote-Werte defensiv.
 
 ---
 
@@ -118,7 +118,7 @@ Keine Befunde in dieser Kategorie.
 - Der K8s-Ingress ([k8s/deployment.yaml:107-165](k8s/deployment.yaml#L107-L165)) enthält **keinen `tls:`-Block** und keine cert-manager-Annotation. Sofern TLS nicht an einer vorgelagerten LB terminiert (nicht im Repo ersichtlich), laufen HTTP und `ws://` im Klartext — inkl. Workout-Inhalten und Video-URLs.
 - Nginx ([frontend/nginx.conf](frontend/nginx.conf)) setzt **keine** `Strict-Transport-Security`, `Content-Security-Policy`, `X-Frame-Options`/`frame-ancestors` oder `X-Content-Type-Options`. Ohne `X-Frame-Options`/CSP ist Clickjacking möglich; ohne CSP fehlt die Defense-in-Depth gegen das `{@html}` in [ShareModal.svelte:27](frontend/src/lib/components/ShareModal.svelte#L27).
 
-**Sensible Daten:** Es werden keine Passwörter/Tokens verarbeitet oder geloggt (kein `console.log` von Nutzerdaten im Server; einziges Log ist die Startmeldung, [index.ts:210](server/src/index.ts#L210)). Positiv.
+**Sensible Daten:** Es werden keine Passwörter/Tokens verarbeitet oder geloggt (kein `console.log` von Nutzerdaten im Server; einziges Log ist die Startmeldung, [index.ts:246](server/src/index.ts#L246)). Positiv.
 
 **Empfehlung (nicht implementiert):**
 - Ingress um `tls:` (cert-manager) erweitern und HTTP→HTTPS-Redirect erzwingen.
@@ -132,7 +132,7 @@ Keine Befunde in dieser Kategorie.
 
 #### Befund 9 (Niedrig) — Session-Existenz-Orakel
 
-`join` antwortet mit `{ t: 'doc' }` bei existierender und `{ t: 'missing' }` bei nicht existierender Session ([index.ts:153-160](server/src/index.ts#L153-L160)). In Kombination mit fehlendem WS-Rate-Limit (Befund 3) erlaubt das effiziente Aufzählung gültiger Session-IDs. Für die Funktion (Re-Seed) notwendig, aber ohne Rate-Limit missbrauchbar. Mitigierung = Rate-Limit + längere IDs aus Befund 3.
+`join` antwortet mit `{ t: 'doc' }` bei existierender und `{ t: 'missing' }` bei nicht existierender Session ([index.ts:181-190](server/src/index.ts#L181-L190)). In Kombination mit fehlendem WS-Rate-Limit (Befund 3) erlaubt das effiziente Aufzählung gültiger Session-IDs. Für die Funktion (Re-Seed) notwendig, aber ohne Rate-Limit missbrauchbar. Mitigierung = Rate-Limit + längere IDs aus Befund 3.
 
 ---
 
@@ -140,9 +140,9 @@ Keine Befunde in dieser Kategorie.
 
 #### Befund 2 (Hoch) — Rate-Limit-Bypass via `X-Forwarded-For` → Kosten-DoS auf die KI-API
 
-Der Rate-Limiter (10 Anfragen / 60 s) wird nach IP geschlüsselt, wobei die IP aus dem **client-kontrollierten** `X-Forwarded-For` gewonnen wird — genommen wird das **linkeste** Element ([index.ts:47-49](server/src/index.ts#L47-L49) für `/generate`, identisch [index.ts:87-89](server/src/index.ts#L87-L89) für `/estimate`). Ein Angreifer sendet je Request ein zufälliges `X-Forwarded-For: <random>` und landet jedes Mal in einem frischen Bucket → **das Limit ist wirkungslos**.
+Der Rate-Limiter (10 Anfragen / 60 s) wird nach IP geschlüsselt, wobei die IP aus dem **client-kontrollierten** `X-Forwarded-For` gewonnen wird — genommen wird das **linkeste** Element ([index.ts:72-74](server/src/index.ts#L72-L74) für `/generate`, identisch [index.ts:112-114](server/src/index.ts#L112-L114) für `/estimate`). Ein Angreifer sendet je Request ein zufälliges `X-Forwarded-For: <random>` und landet jedes Mal in einem frischen Bucket → **das Limit ist wirkungslos**.
 
-Da `/generate` und `/estimate` die **kostenpflichtige** Anthropic-API aufrufen ([generate.ts:90-103](server/src/generate.ts#L90-L103), [estimate.ts:114-127](server/src/estimate.ts#L114-L127)), bedeutet das unbegrenzte Kosten auf Kosten des Betreibers (das 500-/2000-Zeichen-Cap begrenzt nur die Kosten *pro* Aufruf, nicht die Aufrufzahl). Zusätzlich Body-Limit-Prüfung vorhanden ([index.ts:56-59](server/src/index.ts#L56-L59)), aber das adressiert nur Größe, nicht Frequenz.
+Da `/generate` und `/estimate` die **kostenpflichtige** Anthropic-API aufrufen ([generate.ts:90-103](server/src/generate.ts#L90-L103), [estimate.ts:114-127](server/src/estimate.ts#L114-L127)), bedeutet das unbegrenzte Kosten auf Kosten des Betreibers (das 500-/2000-Zeichen-Cap begrenzt nur die Kosten *pro* Aufruf, nicht die Aufrufzahl). Zusätzlich Body-Limit-Prüfung vorhanden ([index.ts:80-84](server/src/index.ts#L80-L84)), aber das adressiert nur Größe, nicht Frequenz.
 
 **Empfehlung (nicht implementiert):**
 - Hinter dem Ingress der **rechtesten vertrauenswürdigen** XFF-Position vertrauen oder eine bekannte Anzahl Proxies überspringen — nicht `[0]`. Besser: am Ingress `X-Forwarded-For` normalisieren/überschreiben und serverseitig nur die vom Ingress gesetzte, vertrauenswürdige Client-IP verwenden.
@@ -150,9 +150,9 @@ Da `/generate` und `/estimate` die **kostenpflichtige** Anthropic-API aufrufen (
 
 #### Befund 4 (Mittel) — Speichererschöpfung (Payload/Seed/Store unbegrenzt)
 
-- `new WebSocketServer({ server: http, path: '/ws' })` setzt **kein `maxPayload`** ([index.ts:130](server/src/index.ts#L130)) → Default 100 MiB pro Frame.
-- `seed` übernimmt das gelieferte Dokument ungeprüft in den Store ([index.ts:161-168](server/src/index.ts#L161-L168), [store.ts:25-31](server/src/store.ts#L25-L31)); Größe/Anzahl Tabs unbegrenzt.
-- Der In-Memory-Store hat kein Gesamt-Limit; der TTL-Sweep greift nur bei `clients.size === 0` ([store.ts:72-81](server/src/store.ts#L72-L81)) — ein Angreifer, der Verbindungen offen hält, verhindert die Bereinigung.
+- `new WebSocketServer({ server: http, path: '/ws' })` setzt **kein `maxPayload`** ([index.ts:155](server/src/index.ts#L155)) → Default 100 MiB pro Frame.
+- `seed` übernimmt das gelieferte Dokument abgesehen von der Objekt-Prüfung unvalidiert in den Store ([index.ts:191-198](server/src/index.ts#L191-L198), [store.ts:86-92](server/src/store.ts#L86-L92)); Größe/Anzahl Tabs unbegrenzt.
+- Der In-Memory-Store hat kein Gesamt-Limit; der TTL-Sweep greift nur bei `clients.size === 0` ([store.ts:142-151](server/src/store.ts#L142-L151)) — ein Angreifer, der Verbindungen offen hält, verhindert die Bereinigung.
 
 **Impact:** Ein Client kann durch große/viele Seeds und offen gehaltene Verbindungen den Server-Speicher füllen (Limit 64 Mi im Deployment, [k8s/deployment.yaml:93-94](k8s/deployment.yaml#L93-L94)) → OOM-Kill.
 
@@ -160,7 +160,7 @@ Da `/generate` und `/estimate` die **kostenpflichtige** Anthropic-API aufrufen (
 
 #### Befund 7 (Niedrig) — Kein Origin-Check am WebSocket (CSWSH)
 
-Der `WebSocketServer` akzeptiert Verbindungen von jedem Origin ([index.ts:130](server/src/index.ts#L130)). Cross-Site-WebSocket-Hijacking ist theoretisch möglich, praktisch aber **kaum ausnutzbar**, weil es keine Cookie-/Ambient-Auth gibt — die Session-ID ist ein Bearer-Token in der URL, das eine fremde Seite nicht kennt. Trotzdem sinnvoll: Origin-Allowlist (`verifyClient`/`handleUpgrade`) als Defense-in-Depth.
+Der `WebSocketServer` akzeptiert Verbindungen von jedem Origin ([index.ts:155](server/src/index.ts#L155)). Cross-Site-WebSocket-Hijacking ist theoretisch möglich, praktisch aber **kaum ausnutzbar**, weil es keine Cookie-/Ambient-Auth gibt — die Session-ID ist ein Bearer-Token in der URL, das eine fremde Seite nicht kennt. Trotzdem sinnvoll: Origin-Allowlist (`verifyClient`/`handleUpgrade`) als Defense-in-Depth.
 
 **CSRF:** Klassischer CSRF-Schutz ist nicht nötig, da keine Cookie-Sessions existieren. `/generate` und `/estimate` verlangen `content-type: application/json` → Browser-Preflight, kein einfacher Cross-Origin-Missbrauch aus dem Browser (direkte HTTP-Clients umgehen das ohnehin — siehe Befund 2).
 
@@ -174,9 +174,9 @@ Weder [server/Dockerfile](server/Dockerfile) noch [frontend/Dockerfile](frontend
 
 ## Konkrete Fix-Reihenfolge (Empfehlung)
 
-1. **Befund 1** — WebSocket-Nachrichten validieren + `applyPatch` defensiv machen + Handler in `try/catch`. (Kritisch, kleiner Aufwand, verhindert Totalausfall.)
+1. ~~**Befund 1** — WebSocket-Nachrichten validieren + `applyPatch` defensiv machen + Handler in `try/catch`.~~ ✅ **Implementiert** (2026-07-20): Schema-Validierung, defensive `applyPatch`, Handler-`try/catch`, Prozess-Sicherheitsnetz, Regressionstests.
 2. **Befund 2** — XFF-Vertrauen korrigieren + Budget-Limit für KI-Endpunkte. (Direkter finanzieller Schaden.)
 3. **Befund 3/4** — WS-Rate-Limit, längere IDs, `maxPayload`, Seed-/Store-Limits.
 4. **Befund 6/8** — TLS/HSTS + Security-Header + Container-Hardening.
 
-*Hinweis: Alle Empfehlungen sind bewusst nicht implementiert, sondern nur dokumentiert.*
+*Hinweis: Empfehlungen sind bewusst zunächst nur dokumentiert gewesen; der Umsetzungsstand ist oben je Befund markiert.*
