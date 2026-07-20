@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { RateLimiter } from './rateLimit.js'
+import { GLOBAL_BUDGET_KEY, type RateLimiter } from './rateLimit.js'
 
 export const GENERATE_CONFIG = {
   model: 'claude-haiku-4-5',
@@ -51,6 +51,7 @@ export function parsePhases(raw: string): Phase[] {
 
 export interface GenerateDeps {
   rateLimiter: RateLimiter
+  globalBudget: RateLimiter
   hasApiKey: () => boolean
   generateWorkout: (prompt: string) => Promise<string>
 }
@@ -68,6 +69,11 @@ export async function handleGenerate(
     return { status: 503, body: { error: 'AI-Generierung ist nicht konfiguriert.' } }
   }
   if (!deps.rateLimiter.allow(input.ip)) {
+    return { status: 429, body: { error: 'Zu viele Anfragen. Bitte kurz warten.' } }
+  }
+  // Erst pro-IP, dann global: eine per-IP abgewiesene Flut darf das Gesamtbudget
+  // nicht für alle anderen aufzehren (Circuit Breaker, Befund 2).
+  if (!deps.globalBudget.allow(GLOBAL_BUDGET_KEY)) {
     return { status: 429, body: { error: 'Zu viele Anfragen. Bitte kurz warten.' } }
   }
   const prompt = typeof input.prompt === 'string' ? input.prompt.trim() : ''

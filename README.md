@@ -61,7 +61,7 @@ docker build -t wodch-backend:local ./server
 
 ### Kubernetes
 
-`k8s/deployment.yaml`: Frontend-Deployment + Service, Sync-Deployment (`replicas: 1`, `strategy: Recreate`, `/healthz`-Probes) + Service, ein Ingress (`wodch.com` / `www.wodch.com`) mit `/ws`, `/generate`, `/estimate` → Backend und `/` → Frontend (WebSocket-Timeouts via Annotations).
+`k8s/deployment.yaml`: Frontend-Deployment + Service, Sync-Deployment (`replicas: 1`, `strategy: Recreate`, `/healthz`-Probes) + Service, ein Ingress (`wodch.com` / `www.wodch.com`) mit `/ws`, `/generate`, `/estimate` → Backend und `/` → Frontend (WebSocket-Timeouts und `X-Forwarded-For`-Normalisierung via Annotations).
 
 Der Sync-Dienst hält Sessions im Arbeitsspeicher — bewusst eine Replica. Ausbaupfad für mehrere Replicas (Redis als Backing Store + Pub/Sub): siehe [docs/rewrite-stack-options.md](docs/rewrite-stack-options.md), Abschnitt 6.2.
 

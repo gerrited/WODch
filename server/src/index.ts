@@ -1,4 +1,4 @@
-import { createServer } from 'node:http'
+import { createServer, type IncomingMessage } from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createStore, type Store } from './store.js'
 import type { SessionDoc } from './types.js'
@@ -12,6 +12,12 @@ import {
 } from './estimate.js'
 
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000
+
+// Pro-IP-Limit und globales Gesamtbudget (Circuit Breaker) für die
+// kostenpflichtigen KI-Routen (SECURITY_REVIEW Befund 2).
+const AI_RATE_LIMIT_PER_IP = 10
+const AI_BUDGET_GLOBAL = 30
+const AI_RATE_WINDOW_MS = 60_000
 
 type ClientMsg =
   | { t: 'join'; session: string }
@@ -44,6 +50,17 @@ function parseClientMsg(raw: unknown): ClientMsg | null {
   }
 }
 
+// Rate-Limit-Schlüssel: das rechteste XFF-Element stammt vom letzten Proxy vor dem
+// Server (Ingress) und spiegelt die echte Verbindungs-IP — alle Elemente links davon
+// sind client-kontrolliert und frei fälschbar (SECURITY_REVIEW Befund 2). Der Ingress
+// überschreibt XFF zusätzlich komplett (k8s/deployment.yaml), sodass hier genau ein
+// vertrauenswürdiger Wert ankommt.
+function clientIp(req: IncomingMessage): string {
+  const xff = req.headers['x-forwarded-for'] as string | undefined
+  const last = xff?.split(',').at(-1)?.trim()
+  return last || req.socket.remoteAddress || 'unknown'
+}
+
 export interface RunningServer {
   port: number
   store: Store
@@ -58,7 +75,10 @@ export function startServer(
   } = {},
 ): Promise<RunningServer> {
   const store = createStore()
-  const rateLimiter = createRateLimiter(10, 60_000)
+  const rateLimiter = createRateLimiter(AI_RATE_LIMIT_PER_IP, AI_RATE_WINDOW_MS)
+  // Ein Budget über beide KI-Routen: Deckelt die Anthropic-Kosten auch dann,
+  // wenn viele verschiedene IPs gleichzeitig anfragen.
+  const globalAiBudget = createRateLimiter(AI_BUDGET_GLOBAL, AI_RATE_WINDOW_MS)
   const generateWorkout = opts.generateWorkout ?? defaultGenerateWorkout
   const estimateDuration = opts.estimateDuration ?? defaultEstimateDuration
 
@@ -69,10 +89,7 @@ export function startServer(
       return
     }
     if (req.url === '/generate' && req.method === 'POST') {
-      const ip =
-        (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
-        req.socket.remoteAddress ||
-        'unknown'
+      const ip = clientIp(req)
       let raw = ''
       let tooLarge = false
       req.on('data', (chunk) => {
@@ -100,7 +117,7 @@ export function startServer(
           }
           const result = await handleGenerate(
             { prompt, ip },
-            { rateLimiter, hasApiKey, generateWorkout },
+            { rateLimiter, globalBudget: globalAiBudget, hasApiKey, generateWorkout },
           )
           res.writeHead(result.status, { 'content-type': 'application/json' })
           res.end(JSON.stringify(result.body))
@@ -109,10 +126,7 @@ export function startServer(
       return
     }
     if (req.url === '/estimate' && req.method === 'POST') {
-      const ip =
-        (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
-        req.socket.remoteAddress ||
-        'unknown'
+      const ip = clientIp(req)
       let raw = ''
       let tooLarge = false
       req.on('data', (chunk) => {
@@ -140,7 +154,7 @@ export function startServer(
           }
           const result = await handleEstimate(
             { tabs, ip },
-            { rateLimiter, hasApiKey, estimateDuration },
+            { rateLimiter, globalBudget: globalAiBudget, hasApiKey, estimateDuration },
           )
           res.writeHead(result.status, { 'content-type': 'application/json' })
           res.end(JSON.stringify(result.body))

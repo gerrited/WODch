@@ -47,4 +47,16 @@ describe('POST /estimate', () => {
     })
     expect(res.status).toBe(400)
   })
+
+  it('zufällige linke XFF-Elemente hebeln das Limit nicht aus (Befund 2)', async () => {
+    // Rechtestes Element (vom Ingress gesetzt) konstant → ein gemeinsames Bucket
+    const postEstimate = (i: number) =>
+      fetch(`${base}/estimate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-forwarded-for': `10.0.0.${i}, 203.0.113.42` },
+        body: JSON.stringify({ tabs: [{ title: 'MetCon', content: 'Fran' }] }),
+      })
+    for (let i = 0; i < 10; i++) expect((await postEstimate(i)).status).toBe(200)
+    expect((await postEstimate(99)).status).toBe(429)
+  })
 })

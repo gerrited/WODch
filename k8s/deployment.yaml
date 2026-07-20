@@ -112,6 +112,12 @@ metadata:
     # WebSocket-Verbindungen lange offen halten
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # X-Forwarded-For komplett überschreiben statt anzuhängen: Clients können dem
+    # Header sonst beliebige Einträge voranstellen und das IP-Rate-Limit der
+    # KI-Routen aushebeln (SECURITY_REVIEW Befund 2). Setzt voraus, dass dieser
+    # Ingress der einzige Proxy vor dem Backend ist (kein CDN/LB davor).
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Forwarded-For $remote_addr;
 spec:
   rules:
     - host: wodch.com

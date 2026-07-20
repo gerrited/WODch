@@ -46,3 +46,27 @@ describe('POST /generate', () => {
     expect(res.status).toBe(400)
   })
 })
+
+describe('POST /generate — Rate-Limit-Schlüssel (Befund 2)', () => {
+  function postGenerate(xff: string) {
+    return fetch(`${base}/generate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': xff },
+      body: JSON.stringify({ prompt: 'Beine' }),
+    })
+  }
+
+  it('zufällige linke XFF-Elemente hebeln das Limit nicht aus', async () => {
+    // Rechtestes Element (vom Ingress gesetzt) konstant → ein gemeinsames Bucket
+    for (let i = 0; i < 10; i++) {
+      expect((await postGenerate(`10.0.0.${i}, 203.0.113.7`)).status).toBe(200)
+    }
+    expect((await postGenerate('10.9.9.9, 203.0.113.7')).status).toBe(429)
+  })
+
+  it('verschiedene rechteste XFF-Elemente teilen sich kein Bucket', async () => {
+    for (let i = 0; i < 11; i++) {
+      expect((await postGenerate(`198.51.100.99, 203.0.113.${100 + i}`)).status).toBe(200)
+    }
+  })
+})

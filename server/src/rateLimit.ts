@@ -2,6 +2,10 @@ export interface RateLimiter {
   allow(key: string): boolean
 }
 
+// Fester Schlüssel für das globale KI-Budget (Circuit Breaker über alle IPs —
+// SECURITY_REVIEW Befund 2).
+export const GLOBAL_BUDGET_KEY = '__global__'
+
 // Gleitendes Zeitfenster pro Schlüssel. Timestamps werden faul beim Zugriff bereinigt.
 export function createRateLimiter(
   limit: number,

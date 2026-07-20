@@ -5,6 +5,7 @@ import { createRateLimiter } from '../src/rateLimit.ts'
 function deps(overrides: Partial<GenerateDeps> = {}): GenerateDeps {
   return {
     rateLimiter: createRateLimiter(10, 60000),
+    globalBudget: createRateLimiter(10, 60000),
     hasApiKey: () => true,
     generateWorkout: async () => 'FÜR ZEIT\n21-15-9\nThruster\nPull-up',
     ...overrides,
@@ -58,6 +59,24 @@ describe('handleGenerate', () => {
     const second = await handleGenerate({ prompt: 'x', ip: '9.9.9.9' }, d)
     expect(first.status).toBe(200)
     expect(second.status).toBe(429)
+  })
+
+  it('liefert 429 bei erschöpftem globalem Budget, auch über IPs hinweg', async () => {
+    const d = deps({ globalBudget: createRateLimiter(2, 60000) })
+    expect((await handleGenerate({ prompt: 'x', ip: '1.1.1.1' }, d)).status).toBe(200)
+    expect((await handleGenerate({ prompt: 'x', ip: '2.2.2.2' }, d)).status).toBe(200)
+    expect((await handleGenerate({ prompt: 'x', ip: '3.3.3.3' }, d)).status).toBe(429)
+  })
+
+  it('per-IP-Abweisung verbraucht kein globales Budget', async () => {
+    const d = deps({
+      rateLimiter: createRateLimiter(1, 60000),
+      globalBudget: createRateLimiter(2, 60000),
+    })
+    expect((await handleGenerate({ prompt: 'x', ip: '1.1.1.1' }, d)).status).toBe(200)
+    // Zweite Anfrage derselben IP: per-IP abgewiesen, darf global nichts kosten
+    expect((await handleGenerate({ prompt: 'x', ip: '1.1.1.1' }, d)).status).toBe(429)
+    expect((await handleGenerate({ prompt: 'x', ip: '2.2.2.2' }, d)).status).toBe(200)
   })
 
   it('liefert 500 wenn der Anthropic-Call wirft', async () => {

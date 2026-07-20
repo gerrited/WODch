@@ -14,6 +14,7 @@ const OK_ESTIMATE = { totalMinutes: 18, segments: [{ label: 'Warmup', minutes: 4
 function deps(overrides: Partial<EstimateDeps> = {}): EstimateDeps {
   return {
     rateLimiter: createRateLimiter(10, 60000),
+    globalBudget: createRateLimiter(10, 60000),
     hasApiKey: () => true,
     estimateDuration: async () => OK_ESTIMATE,
     ...overrides,
@@ -76,6 +77,24 @@ describe('handleEstimate', () => {
     const second = await handleEstimate({ tabs, ip: '9.9.9.9' }, d)
     expect(first.status).toBe(200)
     expect(second.status).toBe(429)
+  })
+
+  it('liefert 429 bei erschöpftem globalem Budget, auch über IPs hinweg', async () => {
+    const d = deps({ globalBudget: createRateLimiter(2, 60000) })
+    expect((await handleEstimate({ tabs, ip: '1.1.1.1' }, d)).status).toBe(200)
+    expect((await handleEstimate({ tabs, ip: '2.2.2.2' }, d)).status).toBe(200)
+    expect((await handleEstimate({ tabs, ip: '3.3.3.3' }, d)).status).toBe(429)
+  })
+
+  it('per-IP-Abweisung verbraucht kein globales Budget', async () => {
+    const d = deps({
+      rateLimiter: createRateLimiter(1, 60000),
+      globalBudget: createRateLimiter(2, 60000),
+    })
+    expect((await handleEstimate({ tabs, ip: '1.1.1.1' }, d)).status).toBe(200)
+    // Zweite Anfrage derselben IP: per-IP abgewiesen, darf global nichts kosten
+    expect((await handleEstimate({ tabs, ip: '1.1.1.1' }, d)).status).toBe(429)
+    expect((await handleEstimate({ tabs, ip: '2.2.2.2' }, d)).status).toBe(200)
   })
 
   it('liefert 500 wenn estimateDuration wirft', async () => {

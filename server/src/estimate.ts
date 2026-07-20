@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { RateLimiter } from './rateLimit.js'
+import { GLOBAL_BUDGET_KEY, type RateLimiter } from './rateLimit.js'
 
 export const ESTIMATE_CONFIG = {
   model: 'claude-haiku-4-5',
@@ -38,6 +38,7 @@ export interface DurationEstimate {
 
 export interface EstimateDeps {
   rateLimiter: RateLimiter
+  globalBudget: RateLimiter
   hasApiKey: () => boolean
   estimateDuration: (tabs: EstimateTab[]) => Promise<DurationEstimate>
 }
@@ -69,6 +70,11 @@ export async function handleEstimate(
     return { status: 503, body: { error: 'Schätzung ist nicht konfiguriert.' } }
   }
   if (!deps.rateLimiter.allow(input.ip)) {
+    return { status: 429, body: { error: 'Zu viele Anfragen. Bitte kurz warten.' } }
+  }
+  // Erst pro-IP, dann global: eine per-IP abgewiesene Flut darf das Gesamtbudget
+  // nicht für alle anderen aufzehren (Circuit Breaker, Befund 2).
+  if (!deps.globalBudget.allow(GLOBAL_BUDGET_KEY)) {
     return { status: 429, body: { error: 'Zu viele Anfragen. Bitte kurz warten.' } }
   }
   const tabs = validateTabs(input.tabs)

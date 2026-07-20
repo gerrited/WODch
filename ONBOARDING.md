@@ -140,7 +140,7 @@ sequenceDiagram
   Note over SRV: Session neu angelegt aus Client-Doc
 ```
 
-Jeder Client hält das **komplette Session-Dokument lokal**. Kennt der Server die Session nach Neustart nicht mehr (`missing`), seedet der erste Client seinen Stand einfach neu. Deshalb braucht es keine Datenbank und keine Persistenz — Sessions überleben Deploys und Pod-Neustarts. Logik: [client.ts:70-74](frontend/src/lib/sync/client.ts#L70-L74) und `seed`-Handling in [index.ts:191-198](server/src/index.ts#L191-L198).
+Jeder Client hält das **komplette Session-Dokument lokal**. Kennt der Server die Session nach Neustart nicht mehr (`missing`), seedet der erste Client seinen Stand einfach neu. Deshalb braucht es keine Datenbank und keine Persistenz — Sessions überleben Deploys und Pod-Neustarts. Logik: [client.ts:70-74](frontend/src/lib/sync/client.ts#L70-L74) und `seed`-Handling in [index.ts:205-212](server/src/index.ts#L205-L212).
 
 ### Uhr-Synchronisation
 
@@ -158,9 +158,9 @@ Da `startedAt` in **Server-Zeit** über das Netz geht, würden Geräte mit falsc
 |---|---|
 | **Auth** | **Es gibt keine.** Wer den Link hat, hat volle Kontrolle. Session-IDs sind 6-stellige `nanoid`s (bewusstes Trade-off: kurze teilbare Links vs. Erratbarkeit). |
 | **Logging** | Minimal — nur ein Startup-`console.log` im Server. Keine strukturierten Logs. |
-| **Error Handling** | Defensiv & still: eingehende WebSocket-Nachrichten werden schema-validiert und bei Abweichung verworfen ([index.ts:22-45](server/src/index.ts#L22-L45)), der Handler liegt komplett in `try/catch` ([index.ts:165-213](server/src/index.ts#L165-L213)), Patch-Werte validiert `applyPatch` strukturell. `try/catch` um `localStorage`, `clipboard`, JSON-Parsing. KI-Fehler → generische Fehlermeldung, nie Stacktrace an Client. |
+| **Error Handling** | Defensiv & still: eingehende WebSocket-Nachrichten werden schema-validiert und bei Abweichung verworfen ([index.ts:28-51](server/src/index.ts#L28-L51)), der Handler liegt komplett in `try/catch` ([index.ts:179-227](server/src/index.ts#L179-L227)), Patch-Werte validiert `applyPatch` strukturell. `try/catch` um `localStorage`, `clipboard`, JSON-Parsing. KI-Fehler → generische Fehlermeldung, nie Stacktrace an Client. |
 | **Config** | Fast keine. `PORT` (Default 8787) und `ANTHROPIC_API_KEY` per Env. Frontend hat gar keine Runtime-Config — WS-URL wird aus `location` abgeleitet ([session.svelte.ts:22-25](frontend/src/lib/sync/session.svelte.ts#L22-L25)). |
-| **Rate Limiting** | Nur für KI-Routen: 10 Anfragen/60 s pro IP, gleitendes Fenster ([rateLimit.ts](server/src/rateLimit.ts)). |
+| **Rate Limiting** | Nur für KI-Routen: 10 Anfragen/60 s pro IP plus globalem Gesamtbudget 30/60 s als Circuit Breaker, gleitendes Fenster ([rateLimit.ts](server/src/rateLimit.ts)). IP-Schlüssel ist das rechteste XFF-Element (`clientIp`, [index.ts:53-61](server/src/index.ts#L53-L61)); der Ingress überschreibt XFF komplett. |
 
 ---
 
@@ -225,9 +225,10 @@ Frontend-`build` läuft `svelte-check` (Typprüfung) **vor** `vite build` — Ty
 
 ### ⚠️ Akuter Stolperstein: Offene Security-Befunde
 
-Die [SECURITY_REVIEW.md](SECURITY_REVIEW.md) enthält Befunde mit konkreter Fix-Reihenfolge; der kritischste (unvalidierte WS-Nachrichten → Prozess-Crash) ist behoben, **der Rest ist offen**. Der dringendste:
+Die [SECURITY_REVIEW.md](SECURITY_REVIEW.md) enthält Befunde mit konkreter Fix-Reihenfolge; die beiden schwersten (WS-Validierung, XFF-Rate-Limit-Bypass) sind behoben, **der Rest ist offen**. Die nächsten:
 
-- **Rate-Limit-Bypass via `X-Forwarded-For` (hoch):** Die KI-Routen schlüsseln das Rate-Limit auf das **linkeste** XFF-Element ([index.ts:72-74](server/src/index.ts#L72-L74), [index.ts:112-114](server/src/index.ts#L112-L114)) — das ist client-kontrolliert, das Limit damit wirkungslos. `/generate` und `/estimate` rufen die **kostenpflichtige** Anthropic-API → unbegrenzte Kosten auf Betreiber-Rechnung möglich.
+- **Kein Rate-Limit auf dem WebSocket + aufzählbare 6-stellige Session-IDs (hoch):** `join` lässt sich ohne Limit durchprobieren → fremde Sessions aufzählen, lesen und überschreiben (volle Kontrolle ist by design, Erratbarkeit nicht).
+- **Unbegrenzte Ressourcen (mittel):** kein `maxPayload` am `WebSocketServer`, `seed`-Dokument und In-Memory-Store ohne Größenlimit → Speichererschöpfung bis zum OOM-Kill möglich.
 
 Arbeite die Fix-Reihenfolge in [SECURITY_REVIEW.md](SECURITY_REVIEW.md) ab, bevor du größere Features baust.
 
@@ -272,7 +273,7 @@ Solide bei reiner Logik (Timer-Engine, Store-Klassen, Sync-Client, Server-Handle
 
 Am besten etwas Kleines, klar Umrissenes, das dich durch **einen kompletten Client-Server-Pfad** führt, ohne die riskante `WorkoutEditor`-Komponente:
 
-- **Idealer Einstieg (und ohnehin nötig): einen Security-Fix aus [SECURITY_REVIEW.md](SECURITY_REVIEW.md) umsetzen** (§4) — z. B. den XFF-Fix am Rate-Limiter plus Budget-Limit für die KI-Endpunkte. Führt durch Route → Handler → [rateLimit.ts](server/src/rateLimit.ts) → Server-Tests und macht dich mit dem dringendsten offenen Befund vertraut.
+- **Idealer Einstieg (und ohnehin nötig): einen Security-Fix aus [SECURITY_REVIEW.md](SECURITY_REVIEW.md) umsetzen** (§4) — z. B. Befund 4: `maxPayload` am `WebSocketServer` plus Größenlimits für `seed`-Dokument und Store. Führt durch WebSocket-Handler → [store.ts](server/src/store.ts) → Server-Tests und macht dich mit dem Sync-Herz vertraut.
 - **Alternativ zum Warmwerden:** einen Charakterisierungs-Test für eine bisher untestete Komponente schreiben (z. B. [ShareButton.svelte](frontend/src/lib/components/ShareButton.svelte) — klein und überschaubar). Zeigt dir das Test-Setup (jsdom, `test-setup.ts`) und Svelte-5-Komponententests.
 
 ### Faustregeln
