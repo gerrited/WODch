@@ -84,7 +84,7 @@ flowchart LR
   end
 
   subgraph Ingress["k8s Ingress"]
-    ING["/ws, /generate → Backend<br>/ → Frontend"]
+    ING["/ws, /generate, /estimate → Backend<br>/ → Frontend"]
   end
 
   FE["Frontend<br>(Nginx, statisches SPA)"]
@@ -202,11 +202,11 @@ Da `startedAt` in **Server-Zeit** über das Netz geht, würden Geräte mit falsc
 # Terminal 1 — Sync-Dienst (Port 8787)
 cd server && npm install && npm run dev      # tsx watch
 
-# Terminal 2 — Frontend (Port 5173, proxied /ws & /generate → 8787)
+# Terminal 2 — Frontend (Port 5173, proxied /ws, /generate & /estimate → 8787)
 cd frontend && npm install && npm run dev    # vite
 ```
 
-Der Vite-Dev-Server proxied `/ws` und `/generate` auf `localhost:8787` ([vite.config.ts](frontend/vite.config.ts)). Für KI-Features brauchst du `ANTHROPIC_API_KEY` in der Server-Umgebung — ohne ihn liefern die Routen 503, der Rest läuft.
+Der Vite-Dev-Server proxied `/ws`, `/generate` und `/estimate` auf `localhost:8787` ([vite.config.ts](frontend/vite.config.ts)). Für KI-Features brauchst du `ANTHROPIC_API_KEY` in der Server-Umgebung — ohne ihn liefern die Routen 503, der Rest läuft.
 
 Tests (in **beiden** Paketen separat):
 
@@ -223,9 +223,14 @@ Frontend-`build` läuft `svelte-check` (Typprüfung) **vor** `vite build` — Ty
 
 > Kein Alarm — die Codebasis ist klein (~2.400 Zeilen Komponenten) und sauber. Aber diese Stellen solltest du kennen, bevor du dort anfasst.
 
-### ⚠️ Akuter Stolperstein: `/estimate` fehlt im Ingress
+### ⚠️ Akuter Stolperstein: Offene Security-Befunde
 
-Der aktuelle Branch `feat/workout-dauer-schaetzung` fügt die Route **`/estimate`** hinzu ([index.ts:86-125](server/src/index.ts#L86-L125)). Der k8s-Ingress in [k8s/deployment.yaml](k8s/deployment.yaml) routet aber nur `/ws` und `/generate` aufs Backend — **`/estimate` ist nicht eingetragen**. In Produktion fällt `/estimate` damit auf `/` (Frontend-Nginx) und liefert `index.html` statt JSON → die Dauerschätzung schlägt fehl. **Vor dem Merge muss `/estimate` als Ingress-Pfad ergänzt werden** (analog zu `/generate`, an beiden Hosts). Prüfe das als Erstes.
+Die [SECURITY_REVIEW.md](SECURITY_REVIEW.md) enthält Befunde mit konkreter Fix-Reihenfolge — **die empfohlenen Fixes sind noch nicht implementiert**. Die beiden dringendsten:
+
+- **Rate-Limit-Bypass via `X-Forwarded-For` (hoch):** Die KI-Routen schlüsseln das Rate-Limit auf das **linkeste** XFF-Element ([index.ts:48](server/src/index.ts#L48), [index.ts:88](server/src/index.ts#L88)) — das ist client-kontrolliert, das Limit damit wirkungslos. `/generate` und `/estimate` rufen die **kostenpflichtige** Anthropic-API → unbegrenzte Kosten auf Betreiber-Rechnung möglich.
+- **Keine Validierung eingehender WS-Nachrichten (kritisch):** [index.ts:140-146](server/src/index.ts#L140-L146) verwirft nur ungültiges JSON — Struktur und Typen der Nachrichten werden nicht geprüft.
+
+Arbeite die Fix-Reihenfolge in [SECURITY_REVIEW.md](SECURITY_REVIEW.md) ab, bevor du größere Features baust.
 
 ### Host-Namen (historischer Hinweis)
 
@@ -266,9 +271,9 @@ Solide bei reiner Logik (Timer-Engine, Store-Klassen, Sync-Client, Server-Handle
 
 ### Sinnvoller erster Task
 
-Am besten etwas, das dich durch **einen kompletten Sync-Pfad** führt, ohne die riskante `WorkoutEditor`-Komponente:
+Am besten etwas Kleines, klar Umrissenes, das dich durch **einen kompletten Client-Server-Pfad** führt, ohne die riskante `WorkoutEditor`-Komponente:
 
-- **Idealer Einstieg (und ohnehin nötig): `/estimate` im Ingress ergänzen** (§4). Kleiner, klar umrissener Fix, der dich zwingt, den Weg Frontend-Client → Route → Handler → Anthropic → Ingress nachzuvollziehen. Danach die Route auch lokal über den Vite-Proxy testen (Proxy-Eintrag für `/estimate` in [vite.config.ts](frontend/vite.config.ts) fehlt derzeit ebenfalls — es ist nur `/ws` und `/generate` eingetragen).
+- **Idealer Einstieg (und ohnehin nötig): einen Security-Fix aus [SECURITY_REVIEW.md](SECURITY_REVIEW.md) umsetzen** (§4) — z. B. den XFF-Fix am Rate-Limiter plus Budget-Limit für die KI-Endpunkte. Führt durch Route → Handler → [rateLimit.ts](server/src/rateLimit.ts) → Server-Tests und macht dich mit dem dringendsten offenen Befund vertraut.
 - **Alternativ zum Warmwerden:** einen Charakterisierungs-Test für eine bisher untestete Komponente schreiben (z. B. [ShareButton.svelte](frontend/src/lib/components/ShareButton.svelte) — klein und überschaubar). Zeigt dir das Test-Setup (jsdom, `test-setup.ts`) und Svelte-5-Komponententests.
 
 ### Faustregeln
