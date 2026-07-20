@@ -23,7 +23,7 @@ Weil es keine Nutzerdaten/PII, keine Passwörter und keine Persistenz gibt, vers
 | 5 | **Mittel** — serverseitig geschlossen, clientseitig offen | Client-DoS | Ungetypte Casts in `applyPatch` propagieren beliebige Strukturen an Mitnutzer → Absturz anderer Clients derselben Session | [server/src/store.ts:131-176](server/src/store.ts#L131-L176), [frontend/src/lib/sync/session.svelte.ts:110-133](frontend/src/lib/sync/session.svelte.ts#L110-L133) |
 | 6 | ~~**Mittel**~~ ✅ behoben (Cloudflare Tunnel) | Transport / Header | Kein TLS/HSTS in K8s-Ingress, keine Security-Header (CSP, X-Frame-Options, X-Content-Type-Options) in Nginx | [frontend/nginx.conf](frontend/nginx.conf) (Security-Header); TLS/HSTS extern via Cloudflare Tunnel |
 | 7 | **Niedrig** | WebSocket / CSWSH | Kein Origin-Check bei `WebSocketServer` (Impact begrenzt, da keine Cookie-Auth) | [server/src/index.ts:180](server/src/index.ts#L180) |
-| 8 | **Niedrig** | Container-Hardening | Beide Container laufen als `root` (kein `USER`) | [server/Dockerfile](server/Dockerfile), [frontend/Dockerfile](frontend/Dockerfile) |
+| 8 | ~~**Niedrig**~~ ✅ behoben | Container-Hardening | Beide Container laufen als `root` (kein `USER`) | [server/Dockerfile](server/Dockerfile), [frontend/Dockerfile](frontend/Dockerfile) |
 | 9 | ~~**Niedrig**~~ ✅ mitigiert | Information Disclosure | `join` unterscheidet `missing`/`doc` → Existenz-Orakel für Session-IDs | [server/src/index.ts:212-222](server/src/index.ts#L212-L222) |
 
 ### Was gut gelöst ist (bewusst festgehalten)
@@ -157,9 +157,16 @@ Der `WebSocketServer` akzeptiert Verbindungen von jedem Origin ([index.ts:180](s
 
 **File-Uploads:** Keine vorhanden — keine Angriffsfläche.
 
-#### Befund 8 (Niedrig) — Container laufen als root
+#### Befund 8 (Niedrig) — Container laufen als root — ✅ behoben (2026-07-20)
 
-Weder [server/Dockerfile](server/Dockerfile) noch [frontend/Dockerfile](frontend/Dockerfile) enthalten eine `USER`-Direktive; die Prozesse laufen als `root`. **Empfehlung:** `USER node` (Server) bzw. unprivilegierten Nginx-User verwenden und `readOnlyRootFilesystem`/`runAsNonRoot` im K8s-`securityContext` setzen.
+*Ursprünglicher Befund:* Weder [server/Dockerfile](server/Dockerfile) noch [frontend/Dockerfile](frontend/Dockerfile) enthalten eine `USER`-Direktive; die Prozesse laufen als `root`.
+
+*Umgesetzt:*
+- **Server:** `USER node` (UID 1000) in [server/Dockerfile](server/Dockerfile).
+- **Frontend:** Base-Image auf `nginxinc/nginx-unprivileged:alpine` (UID 101, lauscht auf 8080, pid-File in `/tmp`) in [frontend/Dockerfile](frontend/Dockerfile); `listen 8080` in [frontend/nginx.conf](frontend/nginx.conf).
+- **K8s** ([k8s/deployment.yaml](k8s/deployment.yaml)): beide Deployments mit `runAsNonRoot: true`, `seccompProfile: RuntimeDefault`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true` und `capabilities.drop: [ALL]`. Beschreibbare `emptyDir`-Mounts nur für die zwingend nötigen Pfade (`/tmp`; beim Frontend zusätzlich `/var/cache/nginx`). Frontend-Service `targetPort` auf 8080 nachgezogen.
+
+*Verifiziert:* Beide Images gebaut und mit `--read-only --tmpfs /tmp` (Frontend zusätzlich `--tmpfs /var/cache/nginx`) als non-root gestartet — Backend `/healthz` und Frontend `/` liefern HTTP 200, Security-Header bleiben intakt.
 
 ---
 
@@ -168,6 +175,6 @@ Weder [server/Dockerfile](server/Dockerfile) noch [frontend/Dockerfile](frontend
 1. ~~**Befund 1** — WebSocket-Nachrichten validieren + `applyPatch` defensiv machen + Handler in `try/catch`.~~ ✅ **Implementiert** (2026-07-20): Schema-Validierung, defensive `applyPatch`, Handler-`try/catch`, Prozess-Sicherheitsnetz, Regressionstests.
 2. ~~**Befund 2** — XFF-Vertrauen korrigieren + Budget-Limit für KI-Endpunkte.~~ ✅ **Implementiert** (2026-07-20): rechtestes XFF-Element, Ingress-Normalisierung, globales Budget 30/60 s.
 3. ~~**Befund 3/4** — WS-Rate-Limit, längere IDs, `maxPayload`, Seed-/Store-Limits.~~ ✅ **Implementiert** (2026-07-20): `nanoid(16)`, Pro-IP-Limits auf `join`/`seed`/`patch`, `maxPayload` 64 KiB, Seed-Schema + Feldlimits, `MAX_SESSIONS`. (Offen: optionales Editor-Token aus Befund 3.)
-4. **Befund 6/8** — TLS/HSTS + Security-Header + Container-Hardening.
+4. ~~**Befund 6/8** — TLS/HSTS + Security-Header + Container-Hardening.~~ ✅ **Implementiert** (2026-07-20): Security-Header in nginx (Befund 6, TLS/HSTS extern via Cloudflare), `USER node` + `nginx-unprivileged` + K8s-`securityContext` mit `readOnlyRootFilesystem`/`runAsNonRoot`/`drop ALL` (Befund 8).
 
 *Hinweis: Empfehlungen sind bewusst zunächst nur dokumentiert gewesen; der Umsetzungsstand ist oben je Befund markiert.*

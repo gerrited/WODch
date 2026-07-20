@@ -224,9 +224,8 @@ Frontend-`build` läuft `svelte-check` (Typprüfung) **vor** `vite build` — Ty
 
 ### ⚠️ Akuter Stolperstein: Verbleibende Security- & Code-Schulden
 
-Die serverseitigen und deployment-seitigen Security-Befunde (1–4, 6, 9) sind behoben. **Offene Punkte (alle niedrig priorisiert):**
+Die serverseitigen und deployment-seitigen Security-Befunde (1–4, 6, 8, 9) sind behoben. **Offene Punkte (alle niedrig priorisiert):**
 
-- **Container laufen als root (niedrig):** kein `USER` in den Dockerfiles, kein `securityContext` im Deployment.
 - **Clients validieren Remote-Werte nicht defensiv (niedrig):** der Server ist single source of truth; Guards im Frontend-`applyPatch` wären Defense-in-Depth.
 - **Origin-Check am WebSocket fehlt (niedrig):** `verifyClient`/`handleUpgrade` könnte Verbindungen auf die eigene Domain beschränken.
 - **Technische Schulden:** keine Tests für 4 UI-Komponenten, `WorkoutEditor.svelte` (577 Zeilen) God-Class, Redis-Ausbaupfad für Multi-Replica.
