@@ -47,6 +47,11 @@ export const desktopSteps: TourStep[] = [
     body: 'Der ✨-Button öffnet einen kleinen Dialog: Beschreibe kurz, was du willst — die AI erstellt daraus ein Workout und schreibt es in den aktiven Tab.',
   },
   {
+    target: 'estimate',
+    title: 'Dauer schätzen',
+    body: 'Der Stoppuhr-Button schätzt per AI, wie lange dein Workout dauert — Gesamtzeit und Aufteilung nach Abschnitten. Aktiv, sobald ein Workout Text enthält.',
+  },
+  {
     target: 'video',
     title: 'Video',
     body: 'YouTube-URL einfügen und das Video läuft — mit ∞-Loop und ±10s-Buttons.',
@@ -92,6 +97,12 @@ export const mobileSteps: TourStep[] = [
     tab: 0,
     title: 'Workout per AI',
     body: 'Der ✨-Button öffnet einen kleinen Dialog: Beschreibe kurz, was du willst — die AI erstellt daraus ein Workout und schreibt es in den aktiven Tab.',
+  },
+  {
+    target: 'estimate',
+    tab: 0,
+    title: 'Dauer schätzen',
+    body: 'Der Stoppuhr-Button schätzt per AI, wie lange dein Workout dauert — Gesamtzeit und Aufteilung nach Abschnitten. Aktiv, sobald ein Workout Text enthält.',
   },
   {
     target: 'video',
