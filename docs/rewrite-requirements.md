@@ -40,10 +40,9 @@ Web-App für Gym-Trainings: kombiniert einen vollwertigen Trainings-Timer, einen
 | Fight Gone Bad 1 | 5 × (5 min Work + 1 min Rest) |
 | Fight Gone Bad 2 | 3 × (5 min Work + 1 min Rest) |
 | EMOM | Intervall frei (Min/Sek), Runden 1–99, kein Rest (Rest = 0 ⇒ direkter Work→Work-Übergang) |
-| Custom 1–10 | 10 benannte Slots: Name (max. 20 Zeichen), Runden 1–99, Work- und Rest-Dauer; Rest = 0 erlaubt |
+| Custom | Frei konfigurierbar: Runden 1–99, Work- und Rest-Dauer; Rest = 0 erlaubt. Ein einziges Programm, kein Name |
 
-- Custom-Programme werden **lokal persistiert** (aktuell `localStorage`, Key `wodch-custom-intervals`) — die einzigen lokal persistierten Daten der App. Korrupte Daten werden still ignoriert.
-- Preset-Labels zeigen den gespeicherten Custom-Namen, sonst „Custom N".
+- Das Custom-Programm wird **lokal persistiert** (aktuell `localStorage`, Key `wodch-custom-interval`) — die einzigen lokal persistierten Daten der App. Korrupte oder unvollständige Daten werden still ignoriert.
 
 ### 3.4 Ablauflogik Intervall
 
@@ -66,9 +65,9 @@ Web-App für Gym-Trainings: kombiniert einen vollwertigen Trainings-Timer, einen
 
 ### 3.7 Einstellungs-Modal
 
-- Modus-Auswahl (Radio); kontextabhängige Konfiguration: Countdown-Zielzeit, Count-Up-Startzeit, Uhrformat, Intervall-Preset-Auswahl, EMOM-Felder, Custom-Felder (Name/Runden/Work/Rest), Warmup-Toggle + Dauer.
+- Modus-Auswahl (Radio); kontextabhängige Konfiguration: Countdown-Zielzeit, Count-Up-Startzeit, Uhrformat, Intervall-Preset-Auswahl, EMOM-Felder, Custom-Felder (Runden/Work/Rest), Warmup-Toggle + Dauer.
 - Buttons: Start / Pause (nur aktiv wenn laufend) / Reset.
-- „Start" übernimmt die Konfiguration (speichert Custom-Slot), resettet, startet und **schließt das Modal automatisch**. Schließen per ✕, Klick auf Overlay oder `M`.
+- „Start" übernimmt die Konfiguration (speichert das Custom-Programm), resettet, startet und **schließt das Modal automatisch**. Schließen per ✕, Klick auf Overlay oder `M`.
 
 ## 4. Workout-Editor
 
@@ -100,8 +99,10 @@ Web-App für Gym-Trainings: kombiniert einen vollwertigen Trainings-Timer, einen
 ```
 session
 ├── timer: kompletter Timer-State inkl. mode, preset, phase, isRunning,
-│          startedAt, accumulatedMs, alle Dauern/Runden, clock12h,
-│          customIntervals  (elapsed wird NIE übertragen)
+│          startedAt, accumulatedMs, alle Dauern/Runden, clock12h
+│          (elapsed wird NIE übertragen; das lokal gespeicherte
+│          Custom-Programm ebenfalls nicht — synchronisiert werden nur
+│          seine aufgelösten Werte in workDuration/restDuration/totalRounds)
 ├── video: { isPlaying, startedAt, accumulatedSeconds }
 ├── videoUrl: string
 ├── workouts: { tabs: [{id, title, content}], activeTab }

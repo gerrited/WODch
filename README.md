@@ -6,7 +6,7 @@ Gym-Training-Web-App: vollwertiger Intervall-Timer, Multi-Tab-Workout-Editor und
 
 ## Features
 
-- **Timer** — 5 Modi: Uhrzeit (12h/24h), Stoppuhr (1/100s), Count-Down, Count-Up, Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, 10 Custom-Slots) und optionalem Warmup. Phase und Runde werden deterministisch aus Startzeitpunkt + Konfiguration abgeleitet.
+- **Timer** — 5 Modi: Uhrzeit (12h/24h), Stoppuhr (1/100s), Count-Down, Count-Up, Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, Custom) und optionalem Warmup. Phase und Runde werden deterministisch aus Startzeitpunkt + Konfiguration abgeleitet.
 - **Workout-Editor** — mehrere Tabs (umbenennen per Doppelklick, sortieren per Drag & Drop), zentrierter Monospace-Text.
 - **Video-Player** — YouTube-URL einfügen (`watch?v=`/`youtu.be`), ∞-Loop, ±10s-Buttons.
 - **Landing-Page** — `/` zeigt eine Marketing-Seite mit den drei Kernfeatures (Timer, KI-Workouts, Fernsteuerung per Link) inkl. Demo-Videos; der CTA-Button erzeugt direkt eine neue Session und öffnet die App.
