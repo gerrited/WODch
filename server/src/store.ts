@@ -30,13 +30,17 @@ function isFiniteNumber(v: unknown): v is number {
 }
 
 const TIMER_MODES = new Set(['clock', 'stopwatch', 'countdown', 'countup', 'interval'])
-const INTERVAL_PRESETS = new Set(['tabata', 'fgb1', 'fgb2', 'emom'])
+const INTERVAL_PRESETS = new Set(['tabata', 'fgb1', 'fgb2', 'emom', 'custom'])
 
 function isTimerDoc(v: unknown): v is TimerDoc {
   if (!isRecord(v)) return false
   return (
     typeof v.mode === 'string' &&
     TIMER_MODES.has(v.mode) &&
+    // /^custom-\d+$/ ist die Legacy-Form vor der Umstellung auf ein einziges
+    // Custom-Intervall. Sie bleibt gültig, damit Patches von noch offenen alten
+    // Tabs nicht still verworfen werden; entfernbar, sobald keine alten Clients
+    // mehr laufen.
     (v.preset === null ||
       (typeof v.preset === 'string' && (INTERVAL_PRESETS.has(v.preset) || /^custom-\d+$/.test(v.preset)))) &&
     typeof v.isRunning === 'boolean' &&
