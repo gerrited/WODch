@@ -8,12 +8,13 @@ import {
 import { elapsedNow, derivePhase, displayTime, displayRound, type Derived } from '../timer/engine'
 import { clockOffset, syncedNow } from '../sync/clock'
 
-export const CUSTOM_KEY = 'wodch-custom-intervals'
+export const CUSTOM_KEY = 'wodch-custom-interval'
+export const LEGACY_CUSTOM_KEY = 'wodch-custom-intervals'
 
 export class TimerStore {
   doc = $state<TimerDoc>(defaultTimerDoc())
   now = $state(Date.now())
-  customIntervals = $state<CustomInterval[]>([])
+  customInterval = $state<CustomInterval | null>(null)
 
   // Vom Session-Layer gesetzt; feuert nach jeder lokalen Aktion (nie bei applyRemote)
   onDocChange?: (doc: TimerDoc) => void
@@ -27,7 +28,7 @@ export class TimerStore {
   displayRound = $derived(displayRound(this.doc, this.elapsed))
 
   constructor() {
-    this.loadCustomIntervals()
+    this.loadCustomInterval()
   }
 
   private commit(changes: Partial<TimerDoc>) {
@@ -79,33 +80,33 @@ export class TimerStore {
       this.commit({ ...base, workDuration: 300_000, restDuration: 60_000, totalRounds: 3 })
     } else if (preset === 'emom') {
       this.commit({ ...base, workDuration: this.doc.emomInterval, restDuration: 0, totalRounds: this.doc.emomRounds })
-    } else if (preset.startsWith('custom-')) {
-      const slot = parseInt(preset.replace('custom-', ''), 10)
-      const ci = Number.isFinite(slot) ? this.customIntervals[slot] : undefined
+    } else if (preset === 'custom') {
+      const ci = this.customInterval
       if (!ci) return
       this.commit({ ...base, workDuration: ci.workDuration, restDuration: ci.restDuration, totalRounds: ci.rounds })
     }
   }
 
-  loadCustomIntervals() {
+  loadCustomInterval() {
+    localStorage.removeItem(LEGACY_CUSTOM_KEY)
     try {
       const raw = localStorage.getItem(CUSTOM_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) this.customIntervals = parsed
+      if (!raw) return
+      const p = JSON.parse(raw)
+      if (
+        typeof p === 'object' && p !== null && !Array.isArray(p) &&
+        Number.isFinite(p.rounds) && Number.isFinite(p.workDuration) && Number.isFinite(p.restDuration)
+      ) {
+        this.customInterval = { rounds: p.rounds, workDuration: p.workDuration, restDuration: p.restDuration }
       }
     } catch {
       // korrupte Daten ignorieren
     }
   }
 
-  saveCustomInterval(slot: number, interval: CustomInterval) {
-    const empty: CustomInterval = { name: '', rounds: 1, workDuration: 60_000, restDuration: 0 }
-    const list = [...this.customIntervals]
-    while (list.length <= slot) list.push({ ...empty })
-    list[slot] = interval
-    this.customIntervals = list
-    localStorage.setItem(CUSTOM_KEY, JSON.stringify(list))
+  saveCustomInterval(interval: CustomInterval) {
+    this.customInterval = interval
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify(interval))
   }
 
   applyRemote(doc: TimerDoc) {
