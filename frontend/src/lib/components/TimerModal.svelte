@@ -13,16 +13,13 @@
     { value: 'interval', label: 'Intervall' },
   ]
 
-  const presets = $derived([
-    { value: 'tabata' as IntervalPreset, label: 'Tabata (20s/10s × 8)' },
-    { value: 'fgb1' as IntervalPreset, label: 'Fight Gone Bad 1 (5×5min)' },
-    { value: 'fgb2' as IntervalPreset, label: 'Fight Gone Bad 2 (3×5min)' },
-    { value: 'emom' as IntervalPreset, label: 'EMOM' },
-    ...Array.from({ length: 10 }, (_, i) => ({
-      value: `custom-${i}` as IntervalPreset,
-      label: timer.customIntervals[i]?.name || `Custom ${i + 1}`,
-    })),
-  ])
+  const presets: { value: IntervalPreset; label: string }[] = [
+    { value: 'tabata', label: 'Tabata (20s/10s × 8)' },
+    { value: 'fgb1', label: 'Fight Gone Bad 1 (5×5min)' },
+    { value: 'fgb2', label: 'Fight Gone Bad 2 (3×5min)' },
+    { value: 'emom', label: 'EMOM' },
+    { value: 'custom', label: 'Custom' },
+  ]
 
   let selectedMode = $state(timer.doc.mode)
   let selectedPreset = $state<IntervalPreset | null>(timer.doc.preset)
@@ -43,25 +40,14 @@
   let clock12h = $state(timer.doc.clock12h)
   let warmupEnabled = $state(timer.doc.warmupEnabled)
 
-  const customSlot = $derived(
-    selectedPreset?.startsWith('custom-') ? parseInt(selectedPreset.replace('custom-', ''), 10) : -1,
-  )
-  let customName = $state('')
-  let customRounds = $state(5)
-  let customWorkMin = $state(5)
-  let customWorkSec = $state(0)
-  let customRestMin = $state(1)
-  let customRestSec = $state(0)
-
-  // Beim Wechsel des Custom-Slots dessen gespeicherte Werte laden
-  $effect(() => {
-    if (customSlot < 0) return
-    const ci = timer.customIntervals[customSlot]
-    customName = ci?.name ?? ''
-    customRounds = ci?.rounds ?? 5
-    ;[customWorkMin, customWorkSec] = splitMs(ci?.workDuration ?? 300_000)
-    ;[customRestMin, customRestSec] = splitMs(ci?.restDuration ?? 60_000)
-  })
+  // Das Modal wird pro Öffnen neu gemountet (App.svelte: {#if showModal}),
+  // deshalb genügt eine Initialisierung aus den gespeicherten Werten.
+  const ci = timer.customInterval
+  let customRounds = $state(ci?.rounds ?? 5)
+  let customWorkMin = $state(splitMs(ci?.workDuration ?? 300_000)[0])
+  let customWorkSec = $state(splitMs(ci?.workDuration ?? 300_000)[1])
+  let customRestMin = $state(splitMs(ci?.restDuration ?? 60_000)[0])
+  let customRestSec = $state(splitMs(ci?.restDuration ?? 60_000)[1])
 
   function onModeChange() {
     timer.setMode(selectedMode)
@@ -69,7 +55,7 @@
   }
 
   function onPresetChange() {
-    if (selectedPreset && !selectedPreset.startsWith('custom-')) timer.applyPreset(selectedPreset)
+    if (selectedPreset && selectedPreset !== 'custom') timer.applyPreset(selectedPreset)
   }
 
   function buildForm(): ModalForm {
@@ -80,7 +66,7 @@
       countupMin, countupSec,
       emomMin, emomSec,
       warmupMin, warmupSec,
-      customName, customRounds,
+      customRounds,
       customWorkMin, customWorkSec,
       customRestMin, customRestSec,
     }
@@ -182,13 +168,9 @@
       </section>
     {/if}
 
-    {#if selectedPreset?.startsWith('custom-')}
+    {#if selectedPreset === 'custom'}
       <section class="section">
         <div class="label">CUSTOM INTERVAL</div>
-        <div class="config-row">
-          <span>Name</span>
-          <input type="text" bind:value={customName} class="text-input" maxlength="20" />
-        </div>
         <div class="config-row">
           <span>Runden</span>
           <input type="number" bind:value={customRounds} min="1" max="99" class="time-input" />
@@ -310,15 +292,6 @@
     color: #fff;
     font-size: 14px;
     text-align: center;
-  }
-  .text-input {
-    flex: 1;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 4px 8px;
-    color: #fff;
-    font-size: 13px;
   }
   .config-row {
     display: flex;
