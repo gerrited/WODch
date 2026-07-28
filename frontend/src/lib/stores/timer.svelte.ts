@@ -88,19 +88,21 @@ export class TimerStore {
   }
 
   loadCustomInterval() {
-    localStorage.removeItem(LEGACY_CUSTOM_KEY)
     try {
+      // Aufräumen des alten Listen-Keys — kann nach ein paar Wochen entfernt werden.
+      localStorage.removeItem(LEGACY_CUSTOM_KEY)
       const raw = localStorage.getItem(CUSTOM_KEY)
       if (!raw) return
       const p = JSON.parse(raw)
-      if (
-        typeof p === 'object' && p !== null && !Array.isArray(p) &&
+      const isObject = typeof p === 'object' && p !== null && !Array.isArray(p)
+      const hasNumericFields =
+        isObject &&
         Number.isFinite(p.rounds) && Number.isFinite(p.workDuration) && Number.isFinite(p.restDuration)
-      ) {
+      if (hasNumericFields) {
         this.customInterval = { rounds: p.rounds, workDuration: p.workDuration, restDuration: p.restDuration }
       }
     } catch {
-      // korrupte Daten ignorieren
+      // localStorage nicht verfügbar oder korrupte Daten — ignorieren
     }
   }
 

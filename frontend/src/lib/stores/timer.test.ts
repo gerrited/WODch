@@ -91,8 +91,11 @@ describe('TimerStore', () => {
 
   it('applyPreset(custom) ohne gespeicherte Werte ändert nichts', () => {
     const before = { ...store.doc }
+    const spy = vi.fn()
+    store.onDocChange = spy
     store.applyPreset('custom')
     expect(store.doc).toEqual(before)
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('korrupte localStorage-Daten werden ignoriert', () => {

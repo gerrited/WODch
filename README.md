@@ -66,6 +66,8 @@ docker build -t wodch-backend:local ./server
 
 Der Sync-Dienst hält Sessions im Arbeitsspeicher — bewusst eine Replica. Ausbaupfad für mehrere Replicas (Redis als Backing Store + Pub/Sub): siehe [docs/rewrite-stack-options.md](docs/rewrite-stack-options.md), Abschnitt 6.2.
 
+Für dieses Release wichtig: Beim Rollout zuerst das Backend neu starten, dann das Frontend — ein älteres Backend verwirft `preset: 'custom'` sonst still.
+
 ## Docs
 
 - [docs/rewrite-requirements.md](docs/rewrite-requirements.md) — vollständige Anforderungen (Grundlage des Rewrites)

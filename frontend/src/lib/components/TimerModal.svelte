@@ -42,12 +42,12 @@
 
   // Das Modal wird pro Öffnen neu gemountet (App.svelte: {#if showModal}),
   // deshalb genügt eine Initialisierung aus den gespeicherten Werten.
-  const ci = timer.customInterval
-  let customRounds = $state(ci?.rounds ?? 5)
-  let customWorkMin = $state(splitMs(ci?.workDuration ?? 300_000)[0])
-  let customWorkSec = $state(splitMs(ci?.workDuration ?? 300_000)[1])
-  let customRestMin = $state(splitMs(ci?.restDuration ?? 60_000)[0])
-  let customRestSec = $state(splitMs(ci?.restDuration ?? 60_000)[1])
+  const storedCustom = timer.customInterval
+  let customRounds = $state(storedCustom?.rounds ?? 5)
+  let customWorkMin = $state(splitMs(storedCustom?.workDuration ?? 300_000)[0])
+  let customWorkSec = $state(splitMs(storedCustom?.workDuration ?? 300_000)[1])
+  let customRestMin = $state(splitMs(storedCustom?.restDuration ?? 60_000)[0])
+  let customRestSec = $state(splitMs(storedCustom?.restDuration ?? 60_000)[1])
 
   function onModeChange() {
     timer.setMode(selectedMode)

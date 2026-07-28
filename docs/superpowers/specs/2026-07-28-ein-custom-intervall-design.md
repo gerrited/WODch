@@ -88,10 +88,11 @@ Neuer Key mit neuer Form (Objekt statt Liste). Die alten 10 Slots werden nicht
 übernommen: welcher davon der „richtige" wäre, ist willkürlich, und die Werte
 sind in Sekunden neu eingegeben.
 
-Der Key-Wechsel macht beide Richtungen kollisionsfrei — falls in einem anderen
-Tab noch alter Code läuft, liest der weiter seinen Listen-Key, während neuer
-Code nur den Objekt-Key liest. Ein `if (Array.isArray(parsed))` bzw. eine
-Objekt-Prüfung fängt die jeweils fremde Form still ab.
+Der Key-Wechsel macht beide Formen kollisionsfrei — ein Objekt wird nie als
+Liste gelesen und umgekehrt. Der alte Key wird jedoch bei jedem Laden
+unbedingt gelöscht: Ein Tab mit noch altem Code verliert dadurch seine
+gespeicherten Slots, sobald ein Tab mit neuem Code geöffnet wird. Das ist
+beabsichtigt — die alten Daten werden ohnehin nicht migriert.
 
 ### 4. UI — `frontend/src/lib/components/TimerModal.svelte`
 
