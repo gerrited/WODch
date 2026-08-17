@@ -29,14 +29,17 @@ class FakeClient implements SyncClient {
 }
 
 describe('extractSessionIdFromPath', () => {
-  it('extrahiert die Session-ID aus dem Pfad', () => {
-    expect(extractSessionIdFromPath('/Xk9mQp')).toBe('Xk9mQp')
-    expect(extractSessionIdFromPath('/ab_c-1/')).toBe('ab_c-1')
+  it('extrahiert die Session-ID aus dem /l/-Pfad', () => {
+    expect(extractSessionIdFromPath('/l/Xk9mQp')).toBe('Xk9mQp')
+    expect(extractSessionIdFromPath('/l/ab_c-1/')).toBe('ab_c-1')
   })
 
-  it('null bei Root und verschachtelten Pfaden', () => {
+  it('null bei Root, Landing-Pfad ohne ID und fremden Pfaden', () => {
     expect(extractSessionIdFromPath('/')).toBeNull()
     expect(extractSessionIdFromPath('')).toBeNull()
+    expect(extractSessionIdFromPath('/l')).toBeNull()
+    expect(extractSessionIdFromPath('/l/')).toBeNull()
+    expect(extractSessionIdFromPath('/Xk9mQp')).toBeNull()
     expect(extractSessionIdFromPath('/assets/app.js')).toBeNull()
   })
 })
@@ -66,7 +69,7 @@ describe('SessionState', () => {
   it('create verbindet mit nanoid(16), setzt Pfad-URL und liefert komplettes Doc als Seed', async () => {
     await session.create()
     expect(client.connected).toMatch(/^[A-Za-z0-9_-]{16}$/)
-    expect(window.location.pathname).toBe(`/${client.connected}`)
+    expect(window.location.pathname).toBe(`/l/${client.connected}`)
     const doc = client.localDoc!()
     expect(doc.timer.mode).toBe('clock')
     expect(doc.workouts.tabs).toHaveLength(1)
@@ -74,7 +77,7 @@ describe('SessionState', () => {
   })
 
   it('joinFromLocation joint anhand des Pfads', () => {
-    history.replaceState(null, '', '/Xk9mQp')
+    history.replaceState(null, '', '/l/Xk9mQp')
     session.joinFromLocation()
     expect(client.connected).toBe('Xk9mQp')
     expect(session.id).toBe('Xk9mQp')
