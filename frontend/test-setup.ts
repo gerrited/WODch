@@ -32,3 +32,8 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   }
   globalThis.ResizeObserver = ResizeObserverShim as unknown as typeof ResizeObserver
 }
+
+// jsdom implementiert scrollIntoView nicht — LandingPage scrollt zur Video-Bühne. No-op-Shim.
+if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoView !== 'function') {
+  Element.prototype.scrollIntoView = function () {}
+}

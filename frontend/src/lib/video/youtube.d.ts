@@ -26,6 +26,7 @@ declare global {
       videoId?: string
       width?: string | number
       height?: string | number
+      host?: string
       playerVars?: Record<string, string | number>
       events?: {
         onReady?: (e: { target: Player }) => void

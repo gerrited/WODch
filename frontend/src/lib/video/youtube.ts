@@ -128,6 +128,10 @@ export async function initPlayer(el: HTMLElement, videoId: string): Promise<bool
     videoId,
     width: '100%',
     height: '100%',
+    // Der Player-IFrame läuft auf youtube-nocookie.com — YouTube setzt dort erst
+    // beim Abspielen Cookies. Das API-Skript selbst kommt weiter von www.youtube.com,
+    // die nocookie-Domain liefert kein iframe_api aus.
+    host: 'https://www.youtube-nocookie.com',
     playerVars: { controls: 1, rel: 0 },
     events: {
       onReady: () => {

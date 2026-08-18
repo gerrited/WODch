@@ -112,7 +112,7 @@ Keine Befunde in dieser Kategorie.
 *Ursprünglicher Befund:* Der K8s-Ingress enthielt keinen `tls:`-Block und keine cert-manager-Annotation; Nginx setzte keine `Strict-Transport-Security`, `Content-Security-Policy`, `X-Frame-Options` oder `X-Content-Type-Options`.
 
 **Umsetzung (implementiert):**
-- **Security-Header in `frontend/nginx.conf`**: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, CSP mit `default-src 'self'; script-src 'self' https://www.youtube.com; frame-src https://www.youtube.com; frame-ancestors 'none'`. Aufgrund der nginx-`add_header`-Erasure-Regel in allen drei Location-Blöcken wiederholt ([nginx.conf](frontend/nginx.conf)).
+- **Security-Header in `frontend/nginx.conf`**: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, CSP mit `default-src 'self'; script-src 'self' https://www.youtube.com; frame-src https://www.youtube-nocookie.com https://www.youtube.com; frame-ancestors 'none'` (Player-IFrames laufen auf der nocookie-Domain, das `iframe_api`-Skript liegt nur auf `www.youtube.com`). Aufgrund der nginx-`add_header`-Erasure-Regel in allen drei Location-Blöcken wiederholt ([nginx.conf](frontend/nginx.conf)).
 - **TLS/HSTS extern:** HTTPS-Terminierung und HSTS werden über **Cloudflare Tunnel** abgedeckt — kein Zertifikats-Management im Cluster nötig. In der Cloudflare-Dashboard-Konfiguration sollte HSTS aktiviert sein („HTTP Strict Transport Security“ unter SSL/TLS → Edge Certificates).
 
 ---
