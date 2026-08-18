@@ -12,7 +12,7 @@ Willkommen im WODch-Team! Dieses Dokument bringt dich in den ersten Tagen auf St
 
 WODch ("WOD" = *Workout of the Day*, CrossFit-Jargon) ist ein Werkzeug fürs Training im Gym. Drei Funktionsblöcke in einem frei anpassbaren Layout:
 
-- **Timer** — 5 Modi: Uhrzeit, Stoppuhr, Count-Down, Count-Up und Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, 10 Custom-Slots) plus optionalem Warmup.
+- **Timer** — 5 Modi: Uhrzeit, Stoppuhr, Count-Down, Count-Up und Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, Custom) plus optionalem Warmup.
 - **Workout-Editor** — mehrere Tabs mit zentriertem Monospace-Text; umbenennen per Doppelklick, sortieren per Drag & Drop; optional per KI generierbar und mit KI-Dauerschätzung.
 - **Video-Player** — YouTube-URL einfügen, ∞-Loop, ±10 s-Buttons.
 

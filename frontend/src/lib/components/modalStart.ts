@@ -12,7 +12,6 @@ export interface ModalForm {
   emomSec: number
   warmupMin: number
   warmupSec: number
-  customName: string
   customRounds: number
   customWorkMin: number
   customWorkSec: number
@@ -33,17 +32,13 @@ export function applyModalStart(timer: TimerStore, form: ModalForm): void {
   } else if (form.mode === 'interval' && form.preset === 'emom') {
     timer.setConfig({ emomInterval: ms(form.emomMin, form.emomSec) })
     timer.applyPreset('emom')
-  } else if (form.mode === 'interval' && form.preset?.startsWith('custom-')) {
-    const slot = parseInt(form.preset.replace('custom-', ''), 10)
-    if (Number.isFinite(slot) && slot >= 0) {
-      timer.saveCustomInterval(slot, {
-        name: form.customName || `Custom ${slot + 1}`,
-        rounds: form.customRounds,
-        workDuration: ms(form.customWorkMin, form.customWorkSec),
-        restDuration: ms(form.customRestMin, form.customRestSec),
-      })
-      timer.applyPreset(form.preset)
-    }
+  } else if (form.mode === 'interval' && form.preset === 'custom') {
+    timer.saveCustomInterval({
+      rounds: form.customRounds,
+      workDuration: ms(form.customWorkMin, form.customWorkSec),
+      restDuration: ms(form.customRestMin, form.customRestSec),
+    })
+    timer.applyPreset('custom')
   }
   const warmupEnabled = timer.doc.warmupEnabled && form.mode !== 'clock'
   if (warmupEnabled) {

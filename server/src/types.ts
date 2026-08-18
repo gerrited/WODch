@@ -1,5 +1,5 @@
 export type TimerMode = 'clock' | 'stopwatch' | 'countdown' | 'countup' | 'interval'
-export type IntervalPreset = 'tabata' | 'fgb1' | 'fgb2' | 'emom' | `custom-${number}`
+export type IntervalPreset = 'tabata' | 'fgb1' | 'fgb2' | 'emom' | 'custom'
 
 export interface TimerDoc {
   mode: TimerMode

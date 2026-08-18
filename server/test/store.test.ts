@@ -153,9 +153,15 @@ describe('applyPatch', () => {
   it('akzeptiert valide Ränder (custom-Preset, startedAt null)', () => {
     const store = createStore()
     store.create('s1', makeDoc())
-    expect(store.applyPatch('s1', 'timer', makeTimer({ preset: 'custom-3' }), 2)).toBe(true)
-    expect(store.applyPatch('s1', 'video', { isPlaying: false, startedAt: null, accumulatedSeconds: 0 }, 2)).toBe(true)
-    expect(store.applyPatch('s1', 'workouts', { tabs: [], activeTab: 0 }, 2)).toBe(true)
+    expect(store.applyPatch('s1', 'timer', makeTimer({ preset: 'custom' }), 2)).toBe(true)
+    expect(store.applyPatch('s1', 'video', { isPlaying: false, startedAt: null, accumulatedSeconds: 0 }, 3)).toBe(true)
+    expect(store.applyPatch('s1', 'workouts', { tabs: [], activeTab: 0 }, 4)).toBe(true)
+  })
+
+  it('akzeptiert weiterhin das Legacy-Preset custom-<n> alter Clients', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    expect(store.applyPatch('s1', 'timer', makeTimer({ preset: 'custom-3' as never }), 2)).toBe(true)
   })
 
   it('übersteht ein per seed eingeschleustes kaputtes Doc ohne Exception', () => {

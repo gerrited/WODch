@@ -6,7 +6,7 @@ Gym-Training-Web-App: vollwertiger Intervall-Timer, Multi-Tab-Workout-Editor und
 
 ## Features
 
-- **Timer** — 5 Modi: Uhrzeit (12h/24h), Stoppuhr (1/100s), Count-Down, Count-Up, Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, 10 Custom-Slots) und optionalem Warmup. Phase und Runde werden deterministisch aus Startzeitpunkt + Konfiguration abgeleitet.
+- **Timer** — 5 Modi: Uhrzeit (12h/24h), Stoppuhr (1/100s), Count-Down, Count-Up, Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, Custom) und optionalem Warmup. Phase und Runde werden deterministisch aus Startzeitpunkt + Konfiguration abgeleitet.
 - **Workout-Editor** — mehrere Tabs (umbenennen per Doppelklick, sortieren per Drag & Drop), zentrierter Monospace-Text.
 - **Video-Player** — YouTube-URL einfügen (`watch?v=`/`youtu.be`), ∞-Loop, ±10s-Buttons.
 - **Landing-Page** — `/` zeigt eine Marketing-Seite mit den drei Kernfeatures (Timer, KI-Workouts, Fernsteuerung per Link) inkl. Demo-Videos; der CTA-Button erzeugt direkt eine neue Session und öffnet die App.
@@ -65,6 +65,8 @@ docker build -t wodch-backend:local ./server
 `k8s/deployment.yaml`: Frontend-Deployment + Service, Sync-Deployment (`replicas: 1`, `strategy: Recreate`, `/healthz`-Probes) + Service, ein Ingress (`wodch.com` / `www.wodch.com`) mit `/ws`, `/generate`, `/estimate` → Backend und `/` → Frontend (TLS/HSTS, WebSocket-Timeouts und `X-Forwarded-For`-Normalisierung via Annotations).
 
 Der Sync-Dienst hält Sessions im Arbeitsspeicher — bewusst eine Replica. Ausbaupfad für mehrere Replicas (Redis als Backing Store + Pub/Sub): siehe [docs/rewrite-stack-options.md](docs/rewrite-stack-options.md), Abschnitt 6.2.
+
+Für dieses Release wichtig: Beim Rollout zuerst das Backend neu starten, dann das Frontend — ein älteres Backend verwirft `preset: 'custom'` sonst still.
 
 ## Docs
 

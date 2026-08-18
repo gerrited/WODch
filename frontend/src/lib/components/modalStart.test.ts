@@ -14,7 +14,6 @@ function form(overrides: Partial<ModalForm> = {}): ModalForm {
     emomSec: 0,
     warmupMin: 0,
     warmupSec: 10,
-    customName: '',
     customRounds: 5,
     customWorkMin: 5,
     customWorkSec: 0,
@@ -51,11 +50,11 @@ describe('applyModalStart', () => {
     expect(timer.doc).toMatchObject({ preset: 'emom', workDuration: 45_000, restDuration: 0, totalRounds: 12, isRunning: true })
   })
 
-  it('custom: speichert Slot mit Fallback-Namen und startet', () => {
+  it('custom: speichert Werte und startet', () => {
     timer.setMode('interval')
-    applyModalStart(timer, form({ mode: 'interval', preset: 'custom-3', customRounds: 4, customWorkMin: 0, customWorkSec: 40, customRestMin: 0, customRestSec: 20 }))
-    expect(timer.customIntervals[3]).toEqual({ name: 'Custom 4', rounds: 4, workDuration: 40_000, restDuration: 20_000 })
-    expect(timer.doc).toMatchObject({ preset: 'custom-3', workDuration: 40_000, totalRounds: 4, isRunning: true })
+    applyModalStart(timer, form({ mode: 'interval', preset: 'custom', customRounds: 4, customWorkMin: 0, customWorkSec: 40, customRestMin: 0, customRestSec: 20 }))
+    expect(timer.customInterval).toEqual({ rounds: 4, workDuration: 40_000, restDuration: 20_000 })
+    expect(timer.doc).toMatchObject({ preset: 'custom', workDuration: 40_000, totalRounds: 4, isRunning: true })
   })
 
   it('warmup: übernimmt Dauer wenn aktiviert', () => {

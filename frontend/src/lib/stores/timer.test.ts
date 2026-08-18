@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { TimerStore, CUSTOM_KEY } from './timer.svelte'
+import { TimerStore, CUSTOM_KEY, LEGACY_CUSTOM_KEY } from './timer.svelte'
 import { setClockOffset } from '../sync/clock'
 import type { TimerDoc } from '../types'
 
@@ -82,16 +82,44 @@ describe('TimerStore', () => {
   })
 
   it('custom interval: speichern, laden, anwenden', () => {
-    store.saveCustomInterval(2, { name: 'Murph', rounds: 4, workDuration: 3 * MIN, restDuration: 30 * SEC })
+    store.saveCustomInterval({ rounds: 4, workDuration: 3 * MIN, restDuration: 30 * SEC })
     const fresh = new TimerStore()
-    expect(fresh.customIntervals[2]?.name).toBe('Murph')
-    fresh.applyPreset('custom-2')
-    expect(fresh.doc).toMatchObject({ preset: 'custom-2', workDuration: 3 * MIN, restDuration: 30 * SEC, totalRounds: 4 })
+    expect(fresh.customInterval).toEqual({ rounds: 4, workDuration: 3 * MIN, restDuration: 30 * SEC })
+    fresh.applyPreset('custom')
+    expect(fresh.doc).toMatchObject({ preset: 'custom', workDuration: 3 * MIN, restDuration: 30 * SEC, totalRounds: 4 })
+  })
+
+  it('applyPreset(custom) ohne gespeicherte Werte ändert nichts', () => {
+    const before = { ...store.doc }
+    const spy = vi.fn()
+    store.onDocChange = spy
+    store.applyPreset('custom')
+    expect(store.doc).toEqual(before)
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('korrupte localStorage-Daten werden ignoriert', () => {
     localStorage.setItem(CUSTOM_KEY, '{{{nope')
-    expect(new TimerStore().customIntervals).toEqual([])
+    expect(new TimerStore().customInterval).toBeNull()
+  })
+
+  it('unvollständige gespeicherte Werte werden ignoriert', () => {
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify({ rounds: 4, workDuration: 60_000 }))
+    expect(new TimerStore().customInterval).toBeNull()
+  })
+
+  it('eine Liste unter dem neuen Key wird ignoriert', () => {
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify([{ rounds: 4, workDuration: 60_000, restDuration: 0 }]))
+    expect(new TimerStore().customInterval).toBeNull()
+  })
+
+  it('alte Slot-Liste wird nicht migriert und der Legacy-Key gelöscht', () => {
+    localStorage.setItem(
+      LEGACY_CUSTOM_KEY,
+      JSON.stringify([{ name: 'Murph', rounds: 4, workDuration: 60_000, restDuration: 0 }]),
+    )
+    expect(new TimerStore().customInterval).toBeNull()
+    expect(localStorage.getItem(LEGACY_CUSTOM_KEY)).toBeNull()
   })
 
   it('onDocChange feuert bei Aktionen, nicht bei applyRemote', () => {
