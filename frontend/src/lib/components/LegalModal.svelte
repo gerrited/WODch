@@ -8,7 +8,7 @@
     name: 'Gerrit Edzards',
     strasse: 'Bussardweg 86',
     ort: '26133 Oldenburg',
-    email: 'gerrit.edzards@gmail.com',
+    email: 'hi@wodch.com',
     webseite: 'www.wodch.com',
   }
 
