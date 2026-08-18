@@ -9,7 +9,7 @@ import type { SessionDoc, TimerDoc, VideoDoc, WorkoutsDoc } from '../types'
 const DEBOUNCE_MS = 500
 
 export function extractSessionIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/([A-Za-z0-9_-]+)\/?$/)
+  const match = pathname.match(/^\/l\/([A-Za-z0-9_-]+)\/?$/)
   return match ? match[1] : null
 }
 
@@ -141,7 +141,7 @@ export class SessionState {
     // 16 Zeichen: Session-IDs sind Bearer-Tokens; 6 wären per WS enumerierbar (Befund 3)
     const id = nanoid(16)
     this.joinSession(id)
-    history.replaceState(null, '', `/${id}`)
+    history.replaceState(null, '', `/l/${id}`)
     try {
       await navigator.clipboard.writeText(window.location.href)
     } catch {
