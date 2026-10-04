@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage } from 'node:http'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createStore, validateSessionDoc, type Store } from './store.js'
 import type { SessionDoc } from './types.js'
@@ -10,6 +10,7 @@ import {
   type EstimateTab,
   type DurationEstimate,
 } from './estimate.js'
+import { handleTimerize, suggestTimer as defaultSuggestTimer, type TimerSuggestion } from './timerize.js'
 
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000
 
@@ -70,6 +71,44 @@ function clientIp(req: IncomingMessage): string {
   return last || req.socket.remoteAddress || 'unknown'
 }
 
+function sendJson(res: ServerResponse, status: number, body: unknown) {
+  res.writeHead(status, { 'content-type': 'application/json' })
+  res.end(JSON.stringify(body))
+}
+
+// Liest einen JSON-Body mit harter Größengrenze und reicht das geparste Objekt weiter.
+// Übergroße Bodies und kaputtes JSON werden mit 400 beantwortet, ohne den Handler zu rufen.
+function readJsonBody(
+  req: IncomingMessage,
+  res: ServerResponse,
+  maxBytes: number,
+  handle: (body: Record<string, unknown>) => Promise<void>,
+) {
+  let raw = ''
+  let tooLarge = false
+  req.on('data', (chunk) => {
+    raw += chunk
+    if (raw.length > maxBytes) {
+      tooLarge = true
+      req.destroy()
+    }
+  })
+  req.on('end', () => {
+    void (async () => {
+      if (tooLarge) return sendJson(res, 400, { error: 'Anfrage zu groß.' })
+      let body: unknown
+      try {
+        body = JSON.parse(raw)
+      } catch {
+        return sendJson(res, 400, { error: 'Ungültiges JSON.' })
+      }
+      // null/Arrays/Primitive wie leere Objekte behandeln — die Handler validieren ihre Felder selbst
+      const record = typeof body === 'object' && body !== null && !Array.isArray(body) ? body : {}
+      await handle(record as Record<string, unknown>)
+    })()
+  })
+}
+
 export interface RunningServer {
   port: number
   store: Store
@@ -81,6 +120,7 @@ export function startServer(
   opts: {
     generateWorkout?: (prompt: string) => Promise<string>
     estimateDuration?: (tabs: EstimateTab[]) => Promise<DurationEstimate>
+    suggestTimer?: (content: string) => Promise<TimerSuggestion | null>
   } = {},
 ): Promise<RunningServer> {
   const store = createStore()
@@ -92,6 +132,7 @@ export function startServer(
   const wsPatchLimiter = createRateLimiter(WS_PATCH_LIMIT, WS_RATE_WINDOW_MS)
   const generateWorkout = opts.generateWorkout ?? defaultGenerateWorkout
   const estimateDuration = opts.estimateDuration ?? defaultEstimateDuration
+  const suggestTimer = opts.suggestTimer ?? defaultSuggestTimer
 
   const http = createServer((req, res) => {
     if (req.url === '/healthz') {
@@ -101,75 +142,37 @@ export function startServer(
     }
     if (req.url === '/generate' && req.method === 'POST') {
       const ip = clientIp(req)
-      let raw = ''
-      let tooLarge = false
-      req.on('data', (chunk) => {
-        raw += chunk
-        // Harte Obergrenze gegen übergroße Bodies (Prompt-Cap ist 500 Zeichen).
-        if (raw.length > 4096) {
-          tooLarge = true
-          req.destroy()
-        }
-      })
-      req.on('end', () => {
-        void (async () => {
-          if (tooLarge) {
-            res.writeHead(400, { 'content-type': 'application/json' })
-            res.end(JSON.stringify({ error: 'Anfrage zu groß.' }))
-            return
-          }
-          let prompt: unknown
-          try {
-            prompt = JSON.parse(raw).prompt
-          } catch {
-            res.writeHead(400, { 'content-type': 'application/json' })
-            res.end(JSON.stringify({ error: 'Ungültiges JSON.' }))
-            return
-          }
-          const result = await handleGenerate(
-            { prompt, ip },
-            { rateLimiter, globalBudget: globalAiBudget, hasApiKey, generateWorkout },
-          )
-          res.writeHead(result.status, { 'content-type': 'application/json' })
-          res.end(JSON.stringify(result.body))
-        })()
+      // Harte Obergrenze gegen übergroße Bodies (Prompt-Cap ist 500 Zeichen).
+      readJsonBody(req, res, 4096, async (body) => {
+        const result = await handleGenerate(
+          { prompt: body.prompt, ip },
+          { rateLimiter, globalBudget: globalAiBudget, hasApiKey, generateWorkout },
+        )
+        sendJson(res, result.status, result.body)
       })
       return
     }
     if (req.url === '/estimate' && req.method === 'POST') {
       const ip = clientIp(req)
-      let raw = ''
-      let tooLarge = false
-      req.on('data', (chunk) => {
-        raw += chunk
-        // Höheres Limit als bei /generate, da mehrere Tabs kombiniert werden.
-        if (raw.length > 16384) {
-          tooLarge = true
-          req.destroy()
-        }
+      // Höheres Limit als bei /generate, da mehrere Tabs kombiniert werden.
+      readJsonBody(req, res, 16384, async (body) => {
+        const result = await handleEstimate(
+          { tabs: body.tabs, ip },
+          { rateLimiter, globalBudget: globalAiBudget, hasApiKey, estimateDuration },
+        )
+        sendJson(res, result.status, result.body)
       })
-      req.on('end', () => {
-        void (async () => {
-          if (tooLarge) {
-            res.writeHead(400, { 'content-type': 'application/json' })
-            res.end(JSON.stringify({ error: 'Anfrage zu groß.' }))
-            return
-          }
-          let tabs: unknown
-          try {
-            tabs = JSON.parse(raw).tabs
-          } catch {
-            res.writeHead(400, { 'content-type': 'application/json' })
-            res.end(JSON.stringify({ error: 'Ungültiges JSON.' }))
-            return
-          }
-          const result = await handleEstimate(
-            { tabs, ip },
-            { rateLimiter, globalBudget: globalAiBudget, hasApiKey, estimateDuration },
-          )
-          res.writeHead(result.status, { 'content-type': 'application/json' })
-          res.end(JSON.stringify(result.body))
-        })()
+      return
+    }
+    if (req.url === '/timerize' && req.method === 'POST') {
+      const ip = clientIp(req)
+      // Ein Tab-Inhalt (≤ 2000 Zeichen) plus JSON-Hülle und Escapes
+      readJsonBody(req, res, 8192, async (body) => {
+        const result = await handleTimerize(
+          { content: body.content, ip },
+          { rateLimiter, globalBudget: globalAiBudget, hasApiKey, suggestTimer },
+        )
+        sendJson(res, result.status, result.body)
       })
       return
     }
@@ -179,14 +182,28 @@ export function startServer(
 
   const wss = new WebSocketServer({ server: http, path: '/ws', maxPayload: WS_MAX_PAYLOAD })
 
+  // Anzahl verbundener Geräte an alle Clients einer Session — reine Laufzeit-Info,
+  // landet nie im Session-Doc (wird also auch nicht re-geseedet).
+  function broadcastPresence(sessionId: string) {
+    const session = store.get(sessionId)
+    if (!session) return
+    const frame = JSON.stringify({ t: 'presence', count: session.clients.size })
+    for (const client of session.clients) {
+      if ((client as WebSocket).readyState === WebSocket.OPEN) (client as WebSocket).send(frame)
+    }
+  }
+
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     let joined: string | null = null
     // Rate-Limit-Schlüssel der Verbindung (rechtestes XFF-Element bzw. Socket-IP)
     const ip = clientIp(req)
 
     function leave() {
-      if (joined) store.get(joined)?.clients.delete(ws)
+      const prev = joined
       joined = null
+      if (!prev) return
+      store.get(prev)?.clients.delete(ws)
+      broadcastPresence(prev)
     }
 
     ws.on('message', (data) => {
@@ -220,6 +237,7 @@ export function startServer(
           joined = msg.session
           session.clients.add(ws)
           ws.send(JSON.stringify({ t: 'doc', doc: session.doc }))
+          broadcastPresence(msg.session)
         } else if (msg.t === 'seed') {
           if (!wsEntryLimiter.allow(ip)) return close()
           // Volle Struktur-Validierung vor dem Speichern (Befund 4/5)
@@ -233,6 +251,7 @@ export function startServer(
           session.clients.add(ws)
           // Session existierte schon: Client bekommt den bestehenden Stand statt zu überschreiben
           if (existing) ws.send(JSON.stringify({ t: 'doc', doc: session.doc }))
+          broadcastPresence(msg.session)
         } else if (msg.t === 'patch') {
           if (!joined) return
           if (!wsPatchLimiter.allow(ip)) return close()

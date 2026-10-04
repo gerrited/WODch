@@ -1,5 +1,7 @@
 <script lang="ts">
   import { timer } from '../stores/timer.svelte'
+  import { counter } from '../stores/counter.svelte'
+  import { sound } from '../audio/beeps.svelte'
   import { applyModalStart, type ModalForm } from './modalStart'
   import type { IntervalPreset, TimerMode } from '../types'
 
@@ -75,7 +77,14 @@
   function handleStart() {
     timer.setConfig({ clock12h, warmupEnabled, emomRounds })
     applyModalStart(timer, buildForm())
+    // Neuer Durchgang → Rundenzähler von vorn
+    counter.reset()
     onClose()
+  }
+
+  function handleReset() {
+    timer.reset()
+    counter.reset()
   }
 
   // Events enden am Overlay — die UI dahinter darf nicht reagieren
@@ -209,10 +218,30 @@
       </section>
     {/if}
 
+    {#if sound.canSpeak || sound.canVibrate}
+      <section class="section">
+        <div class="label">DIESES GERÄT</div>
+        <div class="radio-group">
+          {#if sound.canSpeak}
+            <label class="radio-label">
+              <input type="checkbox" checked={sound.voice} onchange={(e) => sound.setVoice(e.currentTarget.checked)} />
+              Sprachansagen
+            </label>
+          {/if}
+          {#if sound.canVibrate}
+            <label class="radio-label">
+              <input type="checkbox" checked={sound.vibrate} onchange={(e) => sound.setVibrate(e.currentTarget.checked)} />
+              Vibration
+            </label>
+          {/if}
+        </div>
+      </section>
+    {/if}
+
     <div class="controls">
       <button class="btn btn-primary" onclick={handleStart}>▶ Start</button>
       <button class="btn" onclick={() => timer.pause()} disabled={!timer.doc.isRunning}>⏸ Pause</button>
-      <button class="btn" onclick={() => timer.reset()}>↺ Reset</button>
+      <button class="btn" onclick={handleReset}>↺ Reset</button>
     </div>
   </div>
 </div>

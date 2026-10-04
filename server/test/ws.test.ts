@@ -34,9 +34,30 @@ function closed(ws: WebSocket): Promise<number> {
   return new Promise((resolve) => ws.once('close', (code) => resolve(code)))
 }
 
+// Nächste Protokoll-Nachricht; presence-Frames (Geräteanzahl) werden übersprungen,
+// damit Tests, die sie nicht betreffen, nicht von der Join-Reihenfolge abhängen.
 function nextMsg(ws: WebSocket): Promise<any> {
   return new Promise((resolve) => {
-    ws.once('message', (data) => resolve(JSON.parse(data.toString())))
+    const onMsg = (data: unknown) => {
+      const msg = JSON.parse(String(data))
+      if (msg.t === 'presence') return
+      ws.off('message', onMsg)
+      resolve(msg)
+    }
+    ws.on('message', onMsg)
+  })
+}
+
+// Wartet auf den nächsten presence-Frame und liefert die gemeldete Geräteanzahl.
+function nextPresence(ws: WebSocket): Promise<number> {
+  return new Promise((resolve) => {
+    const onMsg = (data: unknown) => {
+      const msg = JSON.parse(String(data))
+      if (msg.t !== 'presence') return
+      ws.off('message', onMsg)
+      resolve(msg.count)
+    }
+    ws.on('message', onMsg)
   })
 }
 
@@ -81,7 +102,10 @@ describe('sync protocol', () => {
     await nextMsg(b) // doc
 
     const received: any[] = []
-    a.on('message', (d) => received.push(JSON.parse(d.toString())))
+    a.on('message', (d) => {
+      const msg = JSON.parse(d.toString())
+      if (msg.t !== 'presence') received.push(msg)
+    })
     const bMsg = nextMsg(b)
     send(a, { t: 'patch', path: 'videoUrl', value: 'https://youtu.be/abc' })
     expect(await bMsg).toEqual({ t: 'patch', path: 'videoUrl', value: 'https://youtu.be/abc' })
@@ -134,6 +158,38 @@ describe('sync protocol', () => {
     expect(msg.ts).toBeGreaterThanOrEqual(before)
     expect(msg.ts).toBeLessThanOrEqual(after)
     ws.close()
+  })
+
+  it('roundCounter-Patch wird übernommen und gebroadcastet', async () => {
+    const a = await connect()
+    send(a, { t: 'seed', session: 'sessRc', doc: { ...makeDoc(), roundCounter: 2 } })
+    const b = await connect()
+    send(b, { t: 'join', session: 'sessRc' })
+    expect((await nextMsg(b)).doc.roundCounter).toBe(2)
+    const bMsg = nextMsg(b)
+    send(a, { t: 'patch', path: 'roundCounter', value: 3 })
+    expect(await bMsg).toEqual({ t: 'patch', path: 'roundCounter', value: 3 })
+    expect(server.store.get('sessRc')!.doc.roundCounter).toBe(3)
+    a.close(); b.close()
+  })
+
+  it('presence meldet allen Clients die Geräteanzahl bei join und disconnect', async () => {
+    const a = await connect()
+    const aFirst = nextPresence(a)
+    send(a, { t: 'seed', session: 'sessPr', doc: makeDoc() })
+    expect(await aFirst).toBe(1)
+
+    const b = await connect()
+    const aSecond = nextPresence(a)
+    const bFirst = nextPresence(b)
+    send(b, { t: 'join', session: 'sessPr' })
+    expect(await aSecond).toBe(2)
+    expect(await bFirst).toBe(2)
+
+    const aThird = nextPresence(a)
+    b.close()
+    expect(await aThird).toBe(1)
+    a.close()
   })
 
   it('healthz antwortet 200', async () => {

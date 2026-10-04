@@ -189,6 +189,33 @@ describe('applyPatch', () => {
   })
 })
 
+describe('roundCounter', () => {
+  it('patcht roundCounter mit ganzzahligen Werten im Limit', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    expect(store.applyPatch('s1', 'roundCounter', 0, 2000)).toBe(true)
+    expect(store.applyPatch('s1', 'roundCounter', SESSION_DOC_LIMITS.maxRoundCounter, 2000)).toBe(true)
+    expect(store.get('s1')!.doc.roundCounter).toBe(SESSION_DOC_LIMITS.maxRoundCounter)
+    expect(store.get('s1')!.doc.updatedAt).toBe(2000)
+  })
+
+  it('weist negative, gebrochene, zu große und falsch getypte Werte ab', () => {
+    const store = createStore()
+    store.create('s1', { ...makeDoc(), roundCounter: 4 })
+    for (const v of [-1, 1.5, SESSION_DOC_LIMITS.maxRoundCounter + 1, '5', null, NaN]) {
+      expect(store.applyPatch('s1', 'roundCounter', v)).toBe(false)
+    }
+    expect(store.get('s1')!.doc.roundCounter).toBe(4)
+  })
+
+  it('Seeds ohne roundCounter (ältere Clients) bleiben gültig, kaputte Werte nicht', () => {
+    expect(validateSessionDoc(makeDoc())).toBe(true)
+    expect(validateSessionDoc({ ...makeDoc(), roundCounter: 7 })).toBe(true)
+    expect(validateSessionDoc({ ...makeDoc(), roundCounter: -1 })).toBe(false)
+    expect(validateSessionDoc({ ...makeDoc(), roundCounter: 'x' })).toBe(false)
+  })
+})
+
 describe('validateSessionDoc', () => {
   it('akzeptiert ein vollständiges Doc', () => {
     expect(validateSessionDoc(makeDoc())).toBe(true)

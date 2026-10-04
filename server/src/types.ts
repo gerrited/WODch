@@ -42,5 +42,7 @@ export interface SessionDoc {
   videoUrl: string
   videoLoop: boolean
   workouts: WorkoutsDoc
+  // Gemeinsamer Rundenzähler. Optional, weil ältere Clients ihn beim Re-Seed nicht mitsenden.
+  roundCounter?: number
   updatedAt: number
 }

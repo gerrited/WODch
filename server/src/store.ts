@@ -9,6 +9,7 @@ export const SESSION_DOC_LIMITS = {
   maxTabTitleChars: 200,
   maxTabContentChars: 10_000,
   maxVideoUrlChars: 500,
+  maxRoundCounter: 9999,
 } as const
 
 // Harte Obergrenze der Session-Anzahl gegen Speichererschöpfung durch Seed-Flut.
@@ -86,6 +87,10 @@ function isWorkoutsDoc(v: unknown): v is WorkoutsDoc {
   )
 }
 
+function isRoundCounter(v: unknown): v is number {
+  return Number.isInteger(v) && (v as number) >= 0 && (v as number) <= SESSION_DOC_LIMITS.maxRoundCounter
+}
+
 // Volle Struktur-Validierung für Seeds (Befund 4/5): ein kaputtes Seed-Doc darf
 // weder gespeichert noch an beitretende Clients weitergereicht werden.
 export function validateSessionDoc(v: unknown): v is SessionDoc {
@@ -97,6 +102,8 @@ export function validateSessionDoc(v: unknown): v is SessionDoc {
     v.videoUrl.length <= SESSION_DOC_LIMITS.maxVideoUrlChars &&
     typeof v.videoLoop === 'boolean' &&
     isWorkoutsDoc(v.workouts) &&
+    // fehlt bei Seeds älterer Clients — die dürfen nicht abgewiesen werden
+    (v.roundCounter === undefined || isRoundCounter(v.roundCounter)) &&
     isFiniteNumber(v.updatedAt)
   )
 }
@@ -158,6 +165,9 @@ export function createStore(): Store {
           applied = true
         } else if (path === 'workouts' && isWorkoutsDoc(value)) {
           doc.workouts = value
+          applied = true
+        } else if (path === 'roundCounter' && isRoundCounter(value)) {
+          doc.roundCounter = value
           applied = true
         }
       } else if (parts.length === 2 && parts[0] === 'workouts' && parts[1] === 'activeTab') {

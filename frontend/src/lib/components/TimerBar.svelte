@@ -5,6 +5,7 @@
   import Logo from './Logo.svelte'
   import ShareButton from './ShareButton.svelte'
   import { sound } from '../audio/beeps.svelte'
+  import { counter } from '../stores/counter.svelte'
 
   let { onOpenModal, onStartTour }: { onOpenModal: () => void; onStartTour: () => void } = $props()
 
@@ -32,6 +33,13 @@
     sound.toggleMuted()
   }
 
+  // Zähler-Buttons liegen auf der Timer-Leiste — Klicks dürfen nicht Start/Pause auslösen
+  function handleCount(e: MouseEvent, delta: 1 | -1) {
+    e.stopPropagation()
+    if (delta === 1) counter.increment()
+    else counter.decrement()
+  }
+
   function handleHelp(e: MouseEvent) {
     e.stopPropagation()
     onStartTour()
@@ -42,6 +50,16 @@
   <div class="brand">
     <Logo />
     <span class="connection-dot {dotClass}"></span>
+    {#if session.peers > 1}
+      <span class="peers" title="{session.peers} Geräte verbunden" aria-label="{session.peers} Geräte verbunden">
+        {session.peers}
+      </span>
+    {/if}
+    <div class="counter" title="Runden zählen (+/−) — gilt für alle Geräte der Session">
+      <button class="count-btn" onclick={(e) => handleCount(e, -1)} disabled={counter.count === 0} aria-label="Runde abziehen">−</button>
+      <span class="count" aria-label="Gezählte Runden">R {counter.count}</span>
+      <button class="count-btn" onclick={(e) => handleCount(e, 1)} aria-label="Runde zählen">+</button>
+    </div>
   </div>
   <div class="timer-center">
     {#if timer.displayRound}
@@ -186,6 +204,48 @@
   }
   .dot-error {
     background: #e63946;
+  }
+  .peers {
+    margin-left: -6px;
+    color: #4caf50;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .counter {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 6px;
+    font-family: monospace;
+  }
+  .count {
+    color: #888;
+    font-size: 16px;
+    font-weight: 700;
+    min-width: 44px;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  .count-btn {
+    background: none;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #888;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    font-family: monospace;
+    font-size: 16px;
+    line-height: 1;
+  }
+  .count-btn:hover:not(:disabled) {
+    color: #fff;
+    background: #222;
+  }
+  .count-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
   }
   /* Hoher Container (mobiles Vollbild-Panel): Logo/Buttons nach oben, Runde über der Zeit */
   @container (max-aspect-ratio: 3/2) {

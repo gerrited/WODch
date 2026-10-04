@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { SoundStore, MUTE_KEY } from './beeps.svelte'
+import { SoundStore, MUTE_KEY, VOICE_KEY, VIBRATE_KEY } from './beeps.svelte'
 
 class FakeAudioParam {
   setValueAtTime(_value: number, _time: number) {
@@ -128,5 +128,74 @@ describe('SoundStore Beep-Scheduling mit gefaktem AudioContext', () => {
     expect(fakeCtx.state).toBe('suspended')
     s.beepShort()
     expect(fakeCtx.oscillatorCount).toBe(0)
+  })
+})
+
+describe('SoundStore Sprachansagen und Vibration', () => {
+  let spoken: { text: string; lang: string }[]
+  let vibrations: number[]
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    localStorage.clear()
+    spoken = []
+    vibrations = []
+    class FakeUtterance {
+      lang = ''
+      constructor(public text: string) {}
+    }
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance)
+    vi.stubGlobal('speechSynthesis', {
+      speak: (u: FakeUtterance) => spoken.push({ text: u.text, lang: u.lang }),
+      cancel: () => {},
+    })
+    vi.stubGlobal('navigator', { vibrate: (ms: number) => (vibrations.push(ms), true) })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+
+  it('Standard: Sprache und Vibration aus — nichts passiert', () => {
+    const s = new SoundStore()
+    s.speak('Los')
+    s.buzz(100)
+    vi.runAllTimers()
+    expect(spoken).toEqual([])
+    expect(vibrations).toEqual([])
+  })
+
+  it('Einstellungen werden persistiert und geladen', () => {
+    const s = new SoundStore()
+    s.setVoice(true)
+    s.setVibrate(true)
+    expect(localStorage.getItem(VOICE_KEY)).toBe('1')
+    expect(localStorage.getItem(VIBRATE_KEY)).toBe('1')
+    const reloaded = new SoundStore()
+    expect(reloaded.voice).toBe(true)
+    expect(reloaded.vibrate).toBe(true)
+  })
+
+  it('spricht deutsch nach dem Beep; Einschalten entsperrt einmalig mit leerer Äußerung', () => {
+    const s = new SoundStore()
+    s.setVoice(true)
+    expect(spoken).toEqual([{ text: '', lang: '' }])
+    s.speak('Runde 2')
+    expect(spoken).toHaveLength(1)
+    vi.advanceTimersByTime(700)
+    expect(spoken[1]).toEqual({ text: 'Runde 2', lang: 'de-DE' })
+  })
+
+  it('stumm unterdrückt auch Sprache, aber nicht die Vibration', () => {
+    const s = new SoundStore()
+    s.setVoice(true)
+    s.setVibrate(true)
+    s.toggleMuted()
+    s.speak('Los')
+    s.buzz(400)
+    vi.runAllTimers()
+    expect(spoken.map((u) => u.text)).toEqual([''])
+    expect(vibrations).toEqual([400])
   })
 })

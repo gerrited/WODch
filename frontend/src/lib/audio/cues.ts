@@ -45,3 +45,26 @@ export function detectCue(prev: CueSnapshot | null, next: CueSnapshot | null): C
   if (next.secondsLeft <= 3) return 'short'
   return null
 }
+
+// Sprachansage zum Tick-Übergang. Gleiche Regel wie detectCue: nur natürliche
+// Übergänge (Phasenwechsel aus Sekunde 1 heraus, Sekunde für Sekunde) — Sync-Sprünge
+// und der Start aus idle bleiben stumm.
+export function announcement(prev: CueSnapshot | null, next: CueSnapshot | null, totalRounds: number): string | null {
+  if (!prev || !next) return null
+  if (!prev.isRunning || !next.isRunning) return null
+  if (prev.phase !== next.phase || prev.round !== next.round) {
+    if (prev.secondsLeft !== 1) return null
+    if (next.phase === 'work') {
+      if (next.round <= 1) return 'Los'
+      return next.round === totalRounds ? 'Letzte Runde' : `Runde ${next.round}`
+    }
+    if (next.phase === 'rest') return 'Pause'
+    if (next.phase === 'done') return 'Fertig'
+    return null
+  }
+  if (prev.secondsLeft - next.secondsLeft !== 1) return null
+  if (next.phase === 'countdown' && next.secondsLeft === 0) return 'Fertig'
+  // Erreicht die Phase 10 s Rest per natürlichem Tick, war sie lang genug für die Ansage
+  if ((next.phase === 'work' || next.phase === 'countdown') && next.secondsLeft === 10) return 'Noch zehn Sekunden'
+  return null
+}

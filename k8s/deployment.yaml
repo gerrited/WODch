@@ -182,6 +182,13 @@ spec:
                 name: wodch-backend
                 port:
                   number: 8787
+          - path: /timerize
+            pathType: Prefix
+            backend:
+              service:
+                name: wodch-backend
+                port:
+                  number: 8787
           - path: /
             pathType: Prefix
             backend:
@@ -207,6 +214,13 @@ spec:
                 port:
                   number: 8787
           - path: /estimate
+            pathType: Prefix
+            backend:
+              service:
+                name: wodch-backend
+                port:
+                  number: 8787
+          - path: /timerize
             pathType: Prefix
             backend:
               service:

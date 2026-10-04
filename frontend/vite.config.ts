@@ -17,6 +17,9 @@ export default defineConfig(({ mode }) => ({
       '/estimate': {
         target: 'http://localhost:8787',
       },
+      '/timerize': {
+        target: 'http://localhost:8787',
+      },
     },
   },
   test: {

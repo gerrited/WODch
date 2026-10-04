@@ -4,6 +4,7 @@ import { setClockOffset } from './clock'
 import { timer as timerSingleton, type TimerStore } from '../stores/timer.svelte'
 import { workouts as workoutsSingleton, type WorkoutStore } from '../stores/workouts.svelte'
 import { video as videoSingleton, type VideoStore } from '../stores/video.svelte'
+import { counter as counterSingleton, type CounterStore } from '../stores/counter.svelte'
 import type { SessionDoc, TimerDoc, VideoDoc, WorkoutsDoc } from '../types'
 
 const DEBOUNCE_MS = 500
@@ -22,11 +23,14 @@ interface Stores {
   timer: TimerStore
   workouts: WorkoutStore
   video: VideoStore
+  counter: CounterStore
 }
 
 export class SessionState {
   id = $state<string | null>(null)
   status = $state<SyncStatus>('off')
+  // Verbundene Geräte laut Server (0 = unbekannt/keine Session)
+  peers = $state(0)
 
   private applyingRemote = false
   // Letzter bekannter Video-Sync-Stand — Quelle für buildDoc (Re-Seed)
@@ -38,10 +42,16 @@ export class SessionState {
     private client: SyncClient,
     private stores: Stores,
   ) {
-    const { timer, workouts, video } = stores
+    const { timer, workouts, video, counter } = stores
 
     client.onStatus((s) => {
       this.status = s
+      // Ohne Verbindung ist die letzte Zahl veraltet — erst der nächste presence-Frame zählt
+      if (s !== 'connected') this.peers = 0
+    })
+
+    client.onPresence((count) => {
+      this.peers = count
     })
 
     client.onClockOffset((offset) => setClockOffset(offset))
@@ -85,6 +95,10 @@ export class SessionState {
       if (this.applyingRemote) return
       this.client.send('videoLoop', loop)
     }
+    counter.onChange = (count) => {
+      if (this.applyingRemote) return
+      this.client.send('roundCounter', count)
+    }
   }
 
   private applyDoc(doc: SessionDoc) {
@@ -94,6 +108,7 @@ export class SessionState {
       this.stores.workouts.applyRemote(doc.workouts)
       this.stores.video.applyRemoteUrl(doc.videoUrl)
       this.stores.video.applyRemoteLoop(doc.videoLoop)
+      this.stores.counter.applyRemote(doc.roundCounter)
       this.videoDoc = doc.video
       this.applyRemoteVideoCb?.(doc.video)
     } finally {
@@ -116,6 +131,8 @@ export class SessionState {
         this.stores.video.applyRemoteLoop(value as boolean)
       } else if (path === 'workouts') {
         this.stores.workouts.applyRemote(value as WorkoutsDoc)
+      } else if (path === 'roundCounter') {
+        this.stores.counter.applyRemote(value as number)
       } else if (path === 'workouts/activeTab') {
         this.stores.workouts.applyRemoteActiveTab(value as number)
       } else if (parts.length === 3 && parts[0] === 'tab') {
@@ -133,6 +150,7 @@ export class SessionState {
       videoUrl: this.stores.video.rawUrl,
       videoLoop: this.stores.video.loop,
       workouts: this.stores.workouts.snapshot(),
+      roundCounter: this.stores.counter.count,
       updatedAt: Date.now(),
     }
   }
@@ -184,4 +202,5 @@ export const session = new SessionState(createSyncClient(defaultWsUrl()), {
   timer: timerSingleton,
   workouts: workoutsSingleton,
   video: videoSingleton,
+  counter: counterSingleton,
 })

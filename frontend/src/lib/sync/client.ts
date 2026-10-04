@@ -8,6 +8,8 @@ export interface SyncClient {
   onDoc(cb: (doc: SessionDoc) => void): void
   onPatch(cb: (path: string, value: unknown) => void): void
   onClockOffset(cb: (offsetMs: number) => void): void
+  // Anzahl der Geräte in der Session (inkl. diesem), vom Server bei jedem join/leave gemeldet
+  onPresence(cb: (count: number) => void): void
   connect(sessionId: string, localDoc: () => SessionDoc): void
   send(path: string, value: unknown): void
   close(): void
@@ -31,6 +33,7 @@ export function createSyncClient(
   let docCb: ((doc: SessionDoc) => void) | null = null
   let patchCb: ((path: string, value: unknown) => void) | null = null
   let clockOffsetCb: ((offsetMs: number) => void) | null = null
+  let presenceCb: ((count: number) => void) | null = null
 
   function setStatus(s: SyncStatus) {
     status = s
@@ -74,6 +77,8 @@ export function createSyncClient(
         setStatus('connected')
       } else if (msg.t === 'patch') {
         patchCb?.(msg.path, msg.value)
+      } else if (msg.t === 'presence') {
+        if (typeof msg.count === 'number') presenceCb?.(msg.count)
       } else if (msg.t === 'pong') {
         const t1 = Date.now()
         clockOffsetCb?.((msg.ts - msg.t0 + (msg.ts - t1)) / 2)
@@ -103,6 +108,9 @@ export function createSyncClient(
     },
     onClockOffset(cb) {
       clockOffsetCb = cb
+    },
+    onPresence(cb) {
+      presenceCb = cb
     },
     connect(id, doc) {
       sessionId = id

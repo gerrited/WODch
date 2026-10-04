@@ -43,11 +43,13 @@ frontend/   Svelte-5-SPA, statisches Build hinter Nginx
     main.ts                 Einstiegspunkt
     lib/
       components/           Svelte-Komponenten (TimerBar, WorkoutEditor, VideoPlayer, …)
-      stores/               Zustand als Klassen-Singletons (timer/workouts/video .svelte.ts)
+      stores/               Zustand als Klassen-Singletons (timer/workouts/video/counter .svelte.ts)
       timer/                Reine Timer-Logik (engine.ts, format.ts) — keine Svelte-Abhängigkeit
       sync/                 WebSocket-Client, Session-Orchestrierung, Uhr-Sync
-      audio/                Ton-Cues (beeps, cues)
-      generate/            KI-Client (generate.ts, estimate.ts) → ruft Backend
+      audio/                Ton-Cues, Sprachansagen, Vibration (beeps, cues)
+      device/               Wake Lock (Bildschirm wach halten, solange der Timer läuft)
+      pwa/                  Service-Worker-Registrierung (Worker selbst: public/sw.js)
+      generate/            KI-Client (generate.ts, estimate.ts, timerize.ts) → ruft Backend
       video/               YouTube-URL-Parsing + IFrame-API-Typen
       types.ts             Gemeinsame Typen (TimerDoc, WorkoutsDoc, SessionDoc, …)
 server/     WebSocket-Sync-Dienst
@@ -56,6 +58,7 @@ server/     WebSocket-Sync-Dienst
     store.ts               In-Memory-Session-Store + Patch-Anwendung + TTL-Sweep
     generate.ts            /generate: KI-Workout-Generierung (Anthropic)
     estimate.ts            /estimate: KI-Dauerschätzung (Anthropic)
+    timerize.ts            /timerize: KI-Timer-Vorschlag aus Workout-Text (Anthropic)
     rateLimit.ts           Gleitendes-Fenster-Rate-Limiter pro IP
     types.ts               Gespiegelte Typen (müssen zu frontend/lib/types.ts passen!)
 k8s/        deployment.yaml — Deployments, Services, Ingress
@@ -84,7 +87,7 @@ flowchart LR
   end
 
   subgraph Ingress["k8s Ingress"]
-    ING["/ws, /generate, /estimate → Backend<br>/ → Frontend"]
+    ING["/ws, /generate, /estimate, /timerize → Backend<br>/ → Frontend"]
   end
 
   FE["Frontend<br>(Nginx, statisches SPA)"]
@@ -95,7 +98,7 @@ flowchart LR
   C2 <-->|WebSocket /ws| ING
   ING --> FE
   ING --> BE
-  BE -->|nur /generate, /estimate| ANTH
+  BE -->|nur /generate, /estimate, /timerize| ANTH
 ```
 
 ### Zentraler Datenfluss: Session-Sync
@@ -148,7 +151,7 @@ Da `startedAt` in **Server-Zeit** über das Netz geht, würden Geräte mit falsc
 
 ### Externe Abhängigkeiten
 
-- **Anthropic API** (`@anthropic-ai/sdk`, Modell `claude-haiku-4-5`) — für KI-Workout-Generierung ([generate.ts](server/src/generate.ts)) und KI-Dauerschätzung ([estimate.ts](server/src/estimate.ts)). **Optional:** Fehlt `ANTHROPIC_API_KEY`, degradieren beide Routen sauber mit HTTP 503, die App läuft normal weiter (`hasApiKey()`).
+- **Anthropic API** (`@anthropic-ai/sdk`, Modell `claude-haiku-4-5`) — für KI-Workout-Generierung ([generate.ts](server/src/generate.ts)), KI-Dauerschätzung ([estimate.ts](server/src/estimate.ts)) und KI-Timer-Vorschlag ([timerize.ts](server/src/timerize.ts)). **Optional:** Fehlt `ANTHROPIC_API_KEY`, degradieren alle drei Routen sauber mit HTTP 503, die App läuft normal weiter (`hasApiKey()`).
 - **YouTube IFrame API** — im [VideoPlayer.svelte](frontend/src/lib/components/VideoPlayer.svelte), Typen in [youtube.d.ts](frontend/src/lib/video/youtube.d.ts).
 - Sonst **keine** externen Services — keine DB, kein Redis, kein Auth-Provider.
 
@@ -187,7 +190,8 @@ Da `startedAt` in **Server-Zeit** über das Netz geht, würden Geräte mit falsc
 - **`.svelte.ts`** = Modul mit Runes (reaktiv). Reines `.ts` = keine Reaktivität.
 - **Kommentare sind auf Deutsch** und erklären *warum*, nicht *was*. Das ist projektweit so — halte dich daran. Auch UI-Texte, Fehlermeldungen und KI-System-Prompts sind auf Deutsch.
 - **Wire-Typen enden auf `Doc`** (`TimerDoc`, `SessionDoc`) — das sind die serialisierten Formate über die Leitung.
-- **Patch-Pfade** sind flache Strings mit `/`-Segmenten (`timer`, `workouts/activeTab`, `tab/<id>/content`).
+- **Patch-Pfade** sind flache Strings mit `/`-Segmenten (`timer`, `roundCounter`, `workouts/activeTab`, `tab/<id>/content`).
+- **`presence`-Frames** (`{ t: 'presence', count }`) schickt nur der Server, bei jedem Join/Leave an alle Clients der Session. Sie sind kein Patch und landen nie im Session-Doc.
 - Tests liegen **neben** dem Code (`foo.ts` + `foo.test.ts`), nicht in einem separaten `__tests__`.
 
 ### Hidden Knowledge / historisch Gewachsenes
@@ -201,11 +205,11 @@ Da `startedAt` in **Server-Zeit** über das Netz geht, würden Geräte mit falsc
 # Terminal 1 — Sync-Dienst (Port 8787)
 cd server && npm install && npm run dev      # tsx watch
 
-# Terminal 2 — Frontend (Port 5173, proxied /ws, /generate & /estimate → 8787)
+# Terminal 2 — Frontend (Port 5173, proxied /ws, /generate, /estimate & /timerize → 8787)
 cd frontend && npm install && npm run dev    # vite
 ```
 
-Der Vite-Dev-Server proxied `/ws`, `/generate` und `/estimate` auf `localhost:8787` ([vite.config.ts](frontend/vite.config.ts)). Für KI-Features brauchst du `ANTHROPIC_API_KEY` in der Server-Umgebung — ohne ihn liefern die Routen 503, der Rest läuft.
+Der Vite-Dev-Server proxied `/ws`, `/generate`, `/estimate` und `/timerize` auf `localhost:8787` ([vite.config.ts](frontend/vite.config.ts)). Für KI-Features brauchst du `ANTHROPIC_API_KEY` in der Server-Umgebung — ohne ihn liefern die Routen 503, der Rest läuft.
 
 Tests (in **beiden** Paketen separat):
 
