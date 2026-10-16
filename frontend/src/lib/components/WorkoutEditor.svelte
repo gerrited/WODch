@@ -403,27 +403,42 @@
   }
   /* Aktiver Tab: nur Textfarbe + Akzent-Unterstrich, keine Kästen */
   .tab {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 0 12px;
     cursor: pointer;
-    color: var(--text-muted);
+    /* Inaktive Tabs deutlich gedimmt — mit --text-muted war der aktive kaum zu unterscheiden */
+    color: #71717a;
     font-family: var(--font-ui);
     font-size: 14px;
     font-weight: 500;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
     white-space: nowrap;
     user-select: none;
-    transition: color 0.15s, border-color 0.15s;
+    transition: color 0.15s;
+  }
+  /* Unterstrich innerhalb des Tabs: die Leiste hat overflow-x: auto (→ auch vertikal
+     clippend), ein über den Rand ragender border-bottom wurde halb abgeschnitten */
+  .tab::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: transparent;
+    transition: background-color 0.15s;
   }
   .tab:hover {
     color: var(--text);
   }
   .tab.active {
     color: var(--text);
-    border-bottom-color: var(--accent);
+    font-weight: 600;
+  }
+  .tab.active::after {
+    background: var(--accent);
   }
   .tab.drag-over {
     box-shadow: inset 2px 0 0 var(--text-muted);
