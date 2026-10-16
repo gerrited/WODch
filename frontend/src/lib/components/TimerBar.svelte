@@ -55,19 +55,21 @@
         {session.peers}
       </span>
     {/if}
+  </div>
+  <div class="timer-center">
+    <div class="timer-line">
+      {#if timer.displayRound}
+        <span class="round">{timer.displayRound}</span>
+      {/if}
+      <span class="time" class:work={timer.derived.phase === 'work'} class:rest={timer.derived.phase === 'rest'} class:warmup={timer.derived.phase === 'warmup'}>
+        {timer.displayTime}
+      </span>
+    </div>
     <div class="counter" title="Runden zählen (+/−) — gilt für alle Geräte der Session">
       <button class="count-btn" onclick={(e) => handleCount(e, -1)} disabled={counter.count === 0} aria-label="Runde abziehen">−</button>
       <span class="count" aria-label="Gezählte Runden">R {counter.count}</span>
       <button class="count-btn" onclick={(e) => handleCount(e, 1)} aria-label="Runde zählen">+</button>
     </div>
-  </div>
-  <div class="timer-center">
-    {#if timer.displayRound}
-      <span class="round">{timer.displayRound}</span>
-    {/if}
-    <span class="time" class:work={timer.derived.phase === 'work'} class:rest={timer.derived.phase === 'rest'} class:warmup={timer.derived.phase === 'warmup'}>
-      {timer.displayTime}
-    </span>
   </div>
   <button class="help" data-tour="help" onclick={handleHelp} title="Tour starten" aria-label="Tour starten">?</button>
   <ShareButton />
@@ -107,7 +109,14 @@
   .timer-bar:hover {
     background: #161616;
   }
+  /* Zähler sitzt direkt unter der Zeit — Zeit leicht kleiner, damit beides in die Leiste passt */
   .timer-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .timer-line {
     display: flex;
     align-items: baseline;
     gap: 24px;
@@ -120,7 +129,8 @@
     font-weight: 600;
   }
   .time {
-    font-size: clamp(28px, min(60cqh, 12cqw), 9999px);
+    font-size: clamp(28px, min(48cqh, 12cqw), 9999px);
+    line-height: 1;
     font-weight: 900;
     color: #fff;
     letter-spacing: 4px;
@@ -216,14 +226,13 @@
     display: flex;
     align-items: center;
     gap: 2px;
-    margin-left: 6px;
     font-family: monospace;
   }
   .count {
     color: #888;
-    font-size: 16px;
+    font-size: clamp(12px, 12cqh, 32px);
     font-weight: 700;
-    min-width: 44px;
+    min-width: 3.5em;
     text-align: center;
     letter-spacing: 1px;
   }
@@ -233,10 +242,10 @@
     border-radius: 4px;
     color: #888;
     cursor: pointer;
-    width: 28px;
-    height: 28px;
+    width: clamp(22px, 16cqh, 48px);
+    height: clamp(22px, 16cqh, 48px);
     font-family: monospace;
-    font-size: 16px;
+    font-size: clamp(12px, 10cqh, 28px);
     line-height: 1;
   }
   .count-btn:hover:not(:disabled) {
@@ -256,6 +265,9 @@
       transform: none;
     }
     .timer-center {
+      gap: 16px;
+    }
+    .timer-line {
       flex-direction: column;
       align-items: center;
       gap: 8px;
