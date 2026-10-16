@@ -82,7 +82,13 @@
     {#if video.rawUrl && !currentVideoId}
       <div class="error">Keine gültige YouTube URL.</div>
     {:else if !video.rawUrl}
-      <div class="placeholder">YouTube URL eingeben</div>
+      <div class="placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="5" width="20" height="14" rx="4" />
+          <path d="M10 9.5v5l4.5-2.5z" fill="currentColor" />
+        </svg>
+        Video-Link oben einfügen
+      </div>
     {:else if loadError}
       <div class="error">
         Video konnte nicht geladen werden.
@@ -104,67 +110,74 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: #0d0d0d;
+    background: var(--bg);
   }
   .url-bar {
-    height: 40px;
+    height: var(--bar-h);
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 0 12px;
-    border-bottom: 2px solid #333;
+    gap: 4px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--line);
     flex-shrink: 0;
   }
   .url-input {
     flex: 1;
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 6px 10px;
-    color: #ccc;
-    font-size: 12px;
-    font-family: monospace;
+    height: 32px;
+    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    padding: 0 12px;
+    margin-right: 4px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font-ui);
     outline: none;
     min-width: 0;
+    transition: border-color 0.15s;
   }
   .url-input:focus {
-    border-color: #555;
+    border-color: var(--line-strong);
   }
   .url-input::placeholder {
-    color: #444;
+    color: var(--text-faint);
   }
-  .seek-btn {
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 4px;
-    color: #888;
-    font-size: 11px;
-    font-family: monospace;
-    padding: 5px 8px;
+  .seek-btn,
+  .loop-toggle {
+    height: 32px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    border-radius: var(--radius);
+    color: var(--text-faint);
     cursor: pointer;
     white-space: nowrap;
     flex-shrink: 0;
+    user-select: none;
+    transition: color 0.15s, background-color 0.15s;
   }
-  .seek-btn:hover {
-    color: #fff;
-    background: #1a1a1a;
+  .seek-btn {
+    font-size: 12px;
+    font-family: var(--font-ui);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .seek-btn:hover,
+  .loop-toggle:hover {
+    color: var(--text);
+    background: var(--surface-hover);
   }
   .loop-toggle {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: #555;
     font-size: 18px;
-    cursor: pointer;
-    user-select: none;
-    flex-shrink: 0;
   }
   .loop-toggle input {
     display: none;
   }
   .loop-toggle:has(input:checked) {
-    color: #fff;
+    color: var(--accent);
   }
   .embed-area {
     flex: 1;
@@ -189,32 +202,41 @@
   }
   .placeholder,
   .error {
-    color: #444;
-    font-size: 13px;
+    color: var(--text-faint);
+    font-family: var(--font-ui);
+    font-size: 14px;
     text-align: center;
     padding: 20px;
     position: absolute;
   }
+  /* Leerer Zustand als dezenter Hinweis — die Eingabe sitzt bereits in der Leiste darüber */
   .placeholder {
-    font-size: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .placeholder svg {
+    width: 40px;
+    height: 40px;
   }
   .error {
-    color: #e63946;
+    color: #ff4d5e;
   }
   .retry-btn {
     display: block;
-    margin: 10px auto 0;
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 4px;
-    color: #888;
-    font-size: 12px;
-    font-family: monospace;
-    padding: 6px 12px;
+    margin: 12px auto 0;
+    background: var(--surface);
+    border: none;
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-family: var(--font-ui);
+    padding: 8px 14px;
     cursor: pointer;
   }
   .retry-btn:hover {
-    color: #fff;
-    background: #1a1a1a;
+    color: var(--text);
+    background: var(--surface-hover);
   }
 </style>

@@ -135,7 +135,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: #000;
+    background: var(--bg);
   }
   .panels {
     flex: 1;
@@ -161,26 +161,27 @@
   .tab-bar {
     flex-shrink: 0;
     display: flex;
-    background: #111;
-    border-top: 2px solid #333;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
     padding-bottom: env(safe-area-inset-bottom);
   }
   .tab {
     flex: 1;
     background: none;
     border: none;
-    border-top: 3px solid transparent;
-    color: #666;
-    font-family: monospace;
-    font-size: 13px;
-    letter-spacing: 1px;
-    padding: 14px 0 12px;
+    border-top: 2px solid transparent;
+    margin-top: -1px;
+    color: var(--text-muted);
+    font-family: var(--font-ui);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 16px 0 14px;
     cursor: pointer;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
   .tab.active {
-    color: #fff;
-    border-top-color: #a8d129;
+    color: var(--text);
+    border-top-color: var(--accent);
   }
 </style>

@@ -87,22 +87,35 @@
   .pane.rest {
     flex: 1;
   }
+  /* Sichtbar nur eine Haarlinie — die Griff-Fläche ist per ::before breiter, damit Ziehen leicht bleibt */
   .divider {
     flex-shrink: 0;
+    position: relative;
     z-index: 1;
     touch-action: none;
+    background: var(--line);
+    transition: background-color 0.15s;
+  }
+  .divider::before {
+    content: '';
+    position: absolute;
   }
   .rows > .divider {
-    height: 12px;
-    background: #333;
+    height: 1px;
     cursor: row-resize;
   }
+  .rows > .divider::before {
+    inset: -6px 0;
+  }
   .columns > .divider {
-    width: 12px;
-    background: #333;
+    width: 1px;
     cursor: col-resize;
   }
-  .divider:hover {
-    background: #555;
+  .columns > .divider::before {
+    inset: 0 -6px;
+  }
+  .divider:hover,
+  .divider:active {
+    background: var(--accent);
   }
 </style>

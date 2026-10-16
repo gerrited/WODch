@@ -71,26 +71,28 @@
       <button class="count-btn" onclick={(e) => handleCount(e, 1)} aria-label="Runde zählen">+</button>
     </div>
   </div>
-  <button class="help" data-tour="help" onclick={handleHelp} title="Tour starten" aria-label="Tour starten">?</button>
-  <ShareButton />
-  <button class="gear mute" onclick={handleMute} title={sound.muted ? 'Ton einschalten' : 'Ton ausschalten'} aria-label={sound.muted ? 'Ton einschalten' : 'Ton ausschalten'}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-      {#if sound.muted}
-        <line x1="23" y1="9" x2="17" y2="15" />
-        <line x1="17" y1="9" x2="23" y2="15" />
-      {:else}
-        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-      {/if}
-    </svg>
-  </button>
-  <button class="gear" data-tour="gear" onclick={handleGear} title="Timer-Einstellungen" aria-label="Timer-Einstellungen">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  </button>
+  <div class="actions">
+    <button class="icon-btn mute" onclick={handleMute} title={sound.muted ? 'Ton einschalten' : 'Ton ausschalten'} aria-label={sound.muted ? 'Ton einschalten' : 'Ton ausschalten'}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        {#if sound.muted}
+          <line x1="23" y1="9" x2="17" y2="15" />
+          <line x1="17" y1="9" x2="23" y2="15" />
+        {:else}
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+        {/if}
+      </svg>
+    </button>
+    <button class="icon-btn" data-tour="gear" onclick={handleGear} title="Timer-Einstellungen" aria-label="Timer-Einstellungen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    </button>
+    <ShareButton />
+    <button class="icon-btn help" data-tour="help" onclick={handleHelp} title="Tour starten" aria-label="Tour starten">?</button>
+  </div>
 </div>
 
 <style>
@@ -100,21 +102,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #111;
-    border-bottom: 2px solid #333;
+    background: var(--bg);
     cursor: pointer;
     user-select: none;
     container-type: size;
+    transition: background-color 0.2s;
   }
   .timer-bar:hover {
-    background: #161616;
+    background: #0f0f11;
   }
   /* Zähler sitzt direkt unter der Zeit — Zeit leicht kleiner, damit beides in die Leiste passt */
   .timer-center {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
   }
   .timer-line {
     display: flex;
@@ -123,77 +125,33 @@
   }
   .round {
     /* cqw-Deckel: im mobilen Vollbild begrenzt die Breite, nicht die Höhe */
-    font-size: clamp(14px, min(25cqh, 7cqw), 9999px);
-    color: #888;
-    letter-spacing: 2px;
-    font-weight: 600;
+    font-size: clamp(14px, min(22cqh, 6cqw), 9999px);
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    font-weight: 500;
   }
   .time {
     font-size: clamp(28px, min(48cqh, 12cqw), 9999px);
     line-height: 1;
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: 4px;
-    font-family: monospace;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.02em;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s;
   }
   .time.work {
-    color: #e63946;
+    color: #ff4d5e;
   }
   .time.rest {
-    color: #2dc653;
+    color: #2dd36f;
   }
   .time.warmup {
-    color: #f0a500;
-  }
-  .gear {
-    position: absolute;
-    right: 104px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: #444;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    line-height: 0;
-    transition: color 0.15s;
-  }
-  .gear svg {
-    width: 24px;
-    height: 24px;
-  }
-  .gear:hover {
-    color: #888;
-    background: #222;
-  }
-  .gear.mute {
-    right: 152px;
-  }
-  .help {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: #444;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 22px;
-    transition: color 0.15s;
-  }
-  .help:hover {
-    color: #888;
-    background: #222;
+    color: #f5b700;
   }
   .brand {
     position: absolute;
-    left: 12px;
+    left: 16px;
     top: 50%;
     transform: translateY(-50%);
     display: flex;
@@ -201,56 +159,105 @@
     gap: 10px;
   }
   .connection-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, box-shadow 0.3s;
   }
   .dot-off {
-    background: #333;
+    background: var(--text-faint);
   }
   .dot-ok {
-    background: #4caf50;
+    background: #2dd36f;
+    box-shadow: 0 0 0 3px rgba(45, 211, 111, 0.15);
   }
   .dot-error {
-    background: #e63946;
+    background: #ff4d5e;
+    box-shadow: 0 0 0 3px rgba(255, 77, 94, 0.15);
   }
   .peers {
-    margin-left: -6px;
-    color: #4caf50;
-    font-family: monospace;
+    margin-left: -4px;
+    color: #2dd36f;
+    font-family: var(--font-ui);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
+  }
+  /* Alle Icon-Aktionen als eine ruhige Gruppe — keine Einzel-Offsets mehr pflegen */
+  /* Zentrierung über top/bottom statt transform: das ShareModal darin ist position: fixed,
+     ein transform würde es an diese Gruppe statt an den Viewport binden */
+  .actions {
+    position: absolute;
+    right: 12px;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .actions :global(.icon-btn) {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    border-radius: var(--radius);
+    color: var(--text-faint);
+    cursor: pointer;
+    line-height: 0;
+    transition: color 0.15s, background-color 0.15s;
+  }
+  .actions :global(.icon-btn svg) {
+    width: 20px;
+    height: 20px;
+  }
+  .actions :global(.icon-btn:hover) {
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+  .actions :global(.icon-btn:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .help {
+    font-family: var(--font-ui);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1;
   }
   .counter {
     display: flex;
     align-items: center;
-    gap: 2px;
-    font-family: monospace;
+    gap: 4px;
+    font-family: var(--font-mono);
   }
   .count {
-    color: #888;
-    font-size: clamp(12px, 12cqh, 32px);
-    font-weight: 700;
+    color: var(--text-muted);
+    font-size: clamp(12px, 11cqh, 30px);
+    font-weight: 500;
     min-width: 3.5em;
     text-align: center;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
+    font-variant-numeric: tabular-nums;
   }
   .count-btn {
-    background: none;
-    border: 1px solid #333;
-    border-radius: 4px;
-    color: #888;
+    display: grid;
+    place-items: center;
+    background: var(--surface);
+    border: none;
+    border-radius: 999px;
+    color: var(--text-muted);
     cursor: pointer;
-    width: clamp(22px, 16cqh, 48px);
-    height: clamp(22px, 16cqh, 48px);
-    font-family: monospace;
-    font-size: clamp(12px, 10cqh, 28px);
+    width: clamp(22px, 15cqh, 44px);
+    height: clamp(22px, 15cqh, 44px);
+    font-family: var(--font-ui);
+    font-size: clamp(12px, 9cqh, 24px);
     line-height: 1;
+    transition: color 0.15s, background-color 0.15s;
   }
   .count-btn:hover:not(:disabled) {
-    color: #fff;
-    background: #222;
+    color: var(--text);
+    background: var(--surface-hover);
   }
   .count-btn:disabled {
     opacity: 0.3;
@@ -258,11 +265,13 @@
   }
   /* Hoher Container (mobiles Vollbild-Panel): Logo/Buttons nach oben, Runde über der Zeit */
   @container (max-aspect-ratio: 3/2) {
-    .brand,
-    .gear,
-    .help {
+    .brand {
       top: 20px;
       transform: none;
+    }
+    .actions {
+      top: 20px;
+      bottom: auto;
     }
     .timer-center {
       gap: 16px;

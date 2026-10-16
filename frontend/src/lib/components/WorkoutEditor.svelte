@@ -385,43 +385,48 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: #000;
+    background: var(--bg);
     position: relative;
   }
   .tab-bar {
     display: flex;
     align-items: stretch;
-    background: #0d0d0d;
-    border-bottom: 2px solid #333;
+    gap: 2px;
+    padding: 0 8px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
     flex-shrink: 0;
     overflow-x: auto;
-    height: 40px;
+    height: var(--bar-h);
     box-sizing: border-box;
+    user-select: none;
   }
+  /* Aktiver Tab: nur Textfarbe + Akzent-Unterstrich, keine Kästen */
   .tab {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
+    gap: 8px;
+    padding: 0 12px;
     cursor: pointer;
-    color: #555;
-    font-size: 12px;
-    letter-spacing: 1px;
-    border-right: 1px solid #1a1a1a;
+    color: var(--text-muted);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
     white-space: nowrap;
     user-select: none;
+    transition: color 0.15s, border-color 0.15s;
   }
   .tab:hover {
-    color: #999;
-    background: #111;
+    color: var(--text);
   }
   .tab.active {
-    color: #fff;
-    background: #000;
-    border-bottom: 1px solid #000;
+    color: var(--text);
+    border-bottom-color: var(--accent);
   }
   .tab.drag-over {
-    border-left: 2px solid #555;
+    box-shadow: inset 2px 0 0 var(--text-muted);
   }
   .tab-title {
     pointer-events: none;
@@ -429,38 +434,58 @@
   .tab-rename {
     background: none;
     border: none;
-    border-bottom: 1px solid #555;
-    color: #fff;
-    font-size: 12px;
-    font-family: monospace;
-    letter-spacing: 1px;
+    border-bottom: 1px solid var(--accent);
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font-ui);
+    font-weight: 500;
     outline: none;
     width: 80px;
     padding: 0;
   }
+  /* Schließen-Kreuz erst bei Hover/aktivem Tab zeigen — weniger Rauschen in der Leiste */
   .tab-close {
-    color: #444;
+    color: var(--text-faint);
     font-size: 10px;
     cursor: pointer;
-    padding: 0 2px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+  }
+  .tab:hover .tab-close,
+  .tab.active .tab-close {
+    opacity: 1;
   }
   .tab-close:hover {
-    color: #e63946;
+    color: #ff4d5e;
   }
-  .tab-add {
+  .tab-add,
+  .tab-magic,
+  .tab-estimate {
+    align-self: center;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
     background: none;
     border: none;
-    color: #444;
-    font-size: 18px;
+    border-radius: var(--radius);
+    color: var(--text-faint);
     cursor: pointer;
-    padding: 0 14px;
     line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    transition: color 0.15s, background-color 0.15s;
   }
-  .tab-add:hover {
-    color: #fff;
+  .tab-add {
+    font-family: var(--font-ui);
+    font-size: 18px;
+  }
+  .tab-add:hover,
+  .tab-magic:hover,
+  .tab-estimate:hover:not(:disabled) {
+    color: var(--text);
+    background: var(--surface-hover);
   }
   .editor-area {
     flex: 1;
@@ -472,19 +497,9 @@
   }
   .tab-actions {
     display: flex;
-    align-items: stretch;
-    margin-left: auto;
-  }
-  .tab-magic,
-  .tab-estimate {
-    background: none;
-    border: none;
-    color: #444;
-    cursor: pointer;
-    padding: 0 14px;
-    line-height: 1;
-    display: flex;
     align-items: center;
+    gap: 2px;
+    margin-left: auto;
   }
   .tab-estimate:disabled {
     opacity: 0.4;
@@ -511,10 +526,6 @@
     width: 18px;
     height: 18px;
     display: block;
-  }
-  .tab-magic:hover,
-  .tab-estimate:hover:not(:disabled) {
-    color: #fff;
   }
   .gen-overlay {
     position: absolute;
@@ -562,8 +573,8 @@
   }
   .workout-editor {
     width: 100%;
-    color: #fff;
-    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    font-family: var(--font-mono);
     font-size: 32px;
     line-height: 1.7;
     outline: none;
@@ -574,16 +585,17 @@
   }
   .workout-editor:empty::before {
     content: attr(data-placeholder);
-    color: #333;
+    color: var(--text-faint);
   }
   .estimate-popover {
     position: absolute;
-    top: 44px;
+    top: calc(var(--bar-h) + 6px);
     right: 8px;
     z-index: 50;
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
     padding: 16px 18px;
     min-width: 220px;
     font-family: 'JetBrains Mono', monospace;

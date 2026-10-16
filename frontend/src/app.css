@@ -1,10 +1,26 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #app { height: 100%; background: #000; color: #fff; font-family: monospace; }
+/* Design-Tokens: eine ruhige Fläche, feine Linien, Akzent nur für Zustand/Fokus */
+:root {
+  --bg: #0b0b0c;
+  --surface: #141416;
+  --surface-hover: #1c1c1f;
+  --line: #222226;
+  --line-strong: #2e2e33;
+  --text: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-faint: #4a4a52;
+  --accent: #a8d129;
+  --radius: 8px;
+  --bar-h: 48px;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+html, body, #app { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-mono); -webkit-font-smoothing: antialiased; }
 
 /* Dunkle Scrollbars passend zum Dark Mode */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #333 transparent;
+  scrollbar-color: var(--line-strong) transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
