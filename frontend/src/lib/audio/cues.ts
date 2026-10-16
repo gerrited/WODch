@@ -14,7 +14,13 @@ export interface CueSnapshot {
 // null = Modus/Phase ohne Töne (clock, stopwatch, countup, interval-idle).
 export function snapshot(doc: TimerDoc, derived: Derived, elapsed: number): CueSnapshot | null {
   if (doc.mode === 'countdown') {
-    const secondsLeft = Math.max(0, Math.ceil((doc.countdownTarget - elapsed) / 1000))
+    // Warmup ist eine eigene Phase (wie im Intervall) — sonst kämen die
+    // Countdown-Cues um genau die Warmup-Dauer zu früh
+    if (derived.phase === 'warmup') {
+      return { isRunning: doc.isRunning, phase: 'warmup', round: 0, secondsLeft: Math.ceil(derived.remaining / 1000) }
+    }
+    const warmup = doc.warmupEnabled ? doc.warmupDuration : 0
+    const secondsLeft = Math.max(0, Math.ceil((doc.countdownTarget - (elapsed - warmup)) / 1000))
     return { isRunning: doc.isRunning, phase: 'countdown', round: 0, secondsLeft }
   }
   if (doc.mode === 'interval') {
@@ -58,6 +64,7 @@ export function announcement(prev: CueSnapshot | null, next: CueSnapshot | null,
       if (next.round <= 1) return 'Los'
       return next.round === totalRounds ? 'Letzte Runde' : `Runde ${next.round}`
     }
+    if (next.phase === 'countdown') return 'Los' // Warmup → Countdown
     if (next.phase === 'rest') return 'Pause'
     if (next.phase === 'done') return 'Fertig'
     return null

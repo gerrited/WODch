@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { snapshot, detectCue, announcement, type CueSnapshot } from './cues'
-import { deriveInterval } from '../timer/engine'
+import { deriveInterval, derivePhase } from '../timer/engine'
 import { defaultTimerDoc, type TimerDoc } from '../types'
 
 const SEC = 1000
@@ -140,5 +140,30 @@ describe('announcement', () => {
     // Sprung über die 10er-Marke
     expect(announcement(s('work', 1, 13), s('work', 1, 10), 8)).toBeNull()
     expect(announcement(s('work', 1, 11, false), s('work', 1, 10, false), 8)).toBeNull()
+  })
+})
+
+describe('Countdown mit Warmup', () => {
+  // Warmup 10s, danach Countdown 30s — Cues müssen sich auf die Countdown-Phase beziehen
+  const d = doc({ mode: 'countdown', isRunning: true, warmupEnabled: true, countdownTarget: 30 * SEC })
+  const s = (e: number) => snapshot(d, derivePhase(d, e, true), e)
+
+  it('keine verfrühten Countdown-Töne/Ansagen um die Warmup-Dauer', () => {
+    expect(detectCue(s(26_900), s(27_100))).toBeNull() // ohne Warmup-Abzug: 4 → 3
+    expect(detectCue(s(29_900), s(30_100))).toBeNull() // ohne Warmup-Abzug: 1 → 0
+    expect(announcement(s(19_900), s(20_100), 8)).toBeNull() // ohne Warmup-Abzug: 'Noch zehn Sekunden'
+    expect(announcement(s(29_900), s(30_100), 8)).toBe('Noch zehn Sekunden') // nicht 'Fertig'
+  })
+
+  it('Countdown-Cues relativ zum Warmup-Ende', () => {
+    expect(detectCue(s(36_900), s(37_100))).toBe('short') // 4 → 3
+    expect(detectCue(s(39_900), s(40_100))).toBe('long') // 1 → 0
+    expect(announcement(s(39_900), s(40_100), 8)).toBe('Fertig')
+  })
+
+  it('Warmup zählt 3, 2, 1 herunter und startet mit langem Ton und "Los"', () => {
+    expect(detectCue(s(6_900), s(7_100))).toBe('short') // warmup 4 → 3
+    expect(detectCue(s(9_900), s(10_100))).toBe('long') // warmup → countdown
+    expect(announcement(s(9_900), s(10_100), 8)).toBe('Los')
   })
 })
