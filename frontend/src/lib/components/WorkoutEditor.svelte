@@ -5,6 +5,8 @@
   import GenerateDialog from './GenerateDialog.svelte'
   import { requestWorkout, PHRASES, nextPhraseIndex } from '../generate/generate'
   import { estimateDuration, type EstimateTab, type DurationEstimate } from '../generate/estimate'
+  import { requestTimer, planTimer } from '../generate/timerize'
+  import { timer } from '../stores/timer.svelte'
 
   let editorEl: HTMLDivElement | undefined = $state()
   let focused = false
@@ -27,6 +29,31 @@
   let estimateStale = $state(false)
   let hasContent = $derived(workouts.tabs.some((t) => t.content.trim() !== ''))
 
+  let timerizing = $state(false)
+  let timerizeResult = $state<{ label: string } | { error: string } | null>(null)
+  let activeHasContent = $derived((workouts.tabs[workouts.activeTab]?.content ?? '').trim() !== '')
+
+  // KI leitet aus dem aktiven Tab die Timer-Einstellung ab (EMOM, AMRAP, For Time …).
+  // Lokale Aktion über den Timer-Store → wird wie jede Einstellung an alle Geräte gesynct.
+  async function runTimerize() {
+    const content = workouts.tabs[workouts.activeTab]?.content.trim() ?? ''
+    if (!content || timerizing) return
+    closeEstimate()
+    timerizeResult = null
+    timerizing = true
+    try {
+      const suggestion = await requestTimer(content)
+      const plan = planTimer(suggestion)
+      if (plan.custom) timer.saveCustomInterval(plan.custom)
+      timer.setConfig(plan.config)
+      timerizeResult = { label: suggestion.label }
+    } catch (e) {
+      timerizeResult = { error: e instanceof Error ? e.message : 'Timer-Vorschlag fehlgeschlagen.' }
+    } finally {
+      timerizing = false
+    }
+  }
+
   function collectTabs(): EstimateTab[] {
     return workouts.tabs
       .filter((t) => t.content.trim() !== '')
@@ -36,6 +63,7 @@
   async function runEstimate() {
     const tabs = collectTabs()
     if (tabs.length === 0 || estimating) return
+    timerizeResult = null
     estimateError = null
     estimateStale = false
     estimating = true
@@ -151,13 +179,18 @@
 
 <svelte:window
   onkeydown={(e) => {
-    if (e.key === 'Escape' && (estimate || estimateError)) closeEstimate()
+    if (e.key !== 'Escape') return
+    if (estimate || estimateError) closeEstimate()
+    timerizeResult = null
   }}
   onpointerdown={(e) => {
-    if (!(estimate || estimateError)) return
     const target = e.target as HTMLElement | null
-    if (target?.closest('.estimate-popover') || target?.closest('.tab-estimate')) return
-    closeEstimate()
+    if (estimate || estimateError) {
+      if (!target?.closest('.estimate-popover') && !target?.closest('.tab-estimate')) closeEstimate()
+    }
+    if (timerizeResult) {
+      if (!target?.closest('.timerize-popover') && !target?.closest('.tab-timerize')) timerizeResult = null
+    }
   }}
 />
 
@@ -243,6 +276,20 @@
         </svg>
       </button>
       <button
+        class="tab-estimate tab-timerize"
+        title="Timer aus Workout einstellen"
+        aria-label="Timer aus Workout einstellen"
+        class:busy={timerizing}
+        disabled={timerizing || !activeHasContent}
+        onclick={runTimerize}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="13" r="8" />
+          <path d="M10.5 10v6l4.5-3z" fill="currentColor" stroke-linejoin="round" />
+          <path d="M9 2h6" stroke-linecap="round" />
+        </svg>
+      </button>
+      <button
         class="tab-estimate"
         data-tour="estimate"
         title="Dauer schätzen"
@@ -300,6 +347,20 @@
             </div>
           {/each}
         {/if}
+      {/if}
+    </div>
+  {/if}
+  {#if timerizeResult}
+    <div class="estimate-popover timerize-popover" role="dialog" aria-label="Timer-Vorschlag">
+      <button class="estimate-close" onclick={() => (timerizeResult = null)} aria-label="Schließen">✕</button>
+      {#if 'error' in timerizeResult}
+        <div class="estimate-error">{timerizeResult.error}</div>
+      {:else}
+        <div class="estimate-total">Timer eingestellt</div>
+        {#if timerizeResult.label}
+          <div class="estimate-seg"><span class="estimate-seg-label">{timerizeResult.label}</span></div>
+        {/if}
+        <div class="estimate-stale">Start per Klick auf die Timer-Leiste</div>
       {/if}
     </div>
   {/if}
@@ -573,5 +634,9 @@
   .estimate-error {
     color: #e63946;
     font-size: 13px;
+  }
+  .timerize-popover .estimate-total {
+    font-size: 17px;
+    padding-right: 20px;
   }
 </style>

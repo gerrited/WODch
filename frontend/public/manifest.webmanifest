@@ -1,7 +1,11 @@
 {
+  "id": "/",
   "name": "WODch",
   "short_name": "WODch",
+  "description": "Intervall-Timer, Workout-Editor und Video in einem — synchron auf allen Geräten.",
+  "lang": "de",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#1a1a1a",

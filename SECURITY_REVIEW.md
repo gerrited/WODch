@@ -6,7 +6,7 @@
 
 ## Architektur in einem Satz
 
-Ein statisches Svelte-SPA hinter Nginx plus ein Node-`ws`-Sync-Server, der Sessions **rein im Arbeitsspeicher** hält. Es gibt **keine Nutzerkonten, keine Authentifizierung und keine Datenbank** — eine Session-ID (`nanoid(16)`, zuvor `nanoid(6)`) im URL-Pfad ist die einzige Zugriffskontrolle (Bearer-Capability). Zusätzlich zwei HTTP-Endpunkte (`/generate`, `/estimate`), die die kostenpflichtige Anthropic-API aufrufen.
+Ein statisches Svelte-SPA hinter Nginx plus ein Node-`ws`-Sync-Server, der Sessions **rein im Arbeitsspeicher** hält. Es gibt **keine Nutzerkonten, keine Authentifizierung und keine Datenbank** — eine Session-ID (`nanoid(16)`, zuvor `nanoid(6)`) im URL-Pfad ist die einzige Zugriffskontrolle (Bearer-Capability). Zusätzlich drei HTTP-Endpunkte (`/generate`, `/estimate`, `/timerize`), die die kostenpflichtige Anthropic-API aufrufen. `/timerize` (nachträglich ergänzt) nutzt dasselbe Pro-IP-Limit und dasselbe globale KI-Budget, deckelt Body (8 KiB) und Workout-Text (2000 Zeichen) und validiert die Modell-Ausgabe streng auf die Grenzen des Timer-Modals ([timerize.ts](server/src/timerize.ts)).
 
 Weil es keine Nutzerdaten/PII, keine Passwörter und keine Persistenz gibt, verschiebt sich das Risikoprofil weg von klassischem Datendiebstahl hin zu **Verfügbarkeit (DoS)**, **Kostenmissbrauch der KI-API** und **Session-Kaperung**.
 

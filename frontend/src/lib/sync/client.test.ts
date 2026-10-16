@@ -160,6 +160,17 @@ describe('SyncClient', () => {
     expect(offsets).toEqual([1050])
   })
 
+  it('meldet presence-Frames über onPresence, ignoriert kaputte', () => {
+    const counts: number[] = []
+    client.onPresence((n) => counts.push(n))
+    client.connect('abc123', makeDoc)
+    const ws = MockWS.instances[0]
+    ws.simOpen()
+    ws.simMessage({ t: 'presence', count: 2 })
+    ws.simMessage({ t: 'presence', count: 'x' })
+    expect(counts).toEqual([2])
+  })
+
   it('close beendet ohne Reconnect', () => {
     client.connect('abc123', makeDoc)
     MockWS.instances[0].simOpen()

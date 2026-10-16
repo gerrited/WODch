@@ -10,8 +10,10 @@
   import { timer } from './lib/stores/timer.svelte'
   import { session } from './lib/sync/session.svelte'
   import { onMount } from 'svelte'
-  import { detectCue, snapshot, type CueSnapshot } from './lib/audio/cues'
+  import { announcement, detectCue, snapshot, type CueSnapshot } from './lib/audio/cues'
   import { sound } from './lib/audio/beeps.svelte'
+  import { counter } from './lib/stores/counter.svelte'
+  import { WakeLockController } from './lib/device/wakeLock'
 
   let showModal = $state(false)
   let showTour = $state(false)
@@ -30,15 +32,34 @@
   const mobileQuery = window.matchMedia('(max-width: 768px), (max-height: 500px)')
   let isMobile = $state(mobileQuery.matches)
 
-  // Ton-Cues: bei jedem Tick den Schnappschuss vergleichen und ggf. piepen
+  // Ton-Cues: bei jedem Tick den Schnappschuss vergleichen und ggf. piepen,
+  // vibrieren und ansagen (Sprache/Vibration nur, wenn im Modal aktiviert)
   let prevSnap: CueSnapshot | null = null
   $effect(() => {
     const next = snapshot(timer.doc, timer.derived, timer.elapsed)
     const cue = detectCue(prevSnap, next)
+    const text = announcement(prevSnap, next, timer.doc.totalRounds)
     prevSnap = next
-    if (cue === 'short') sound.beepShort()
-    else if (cue === 'long') sound.beepLong()
+    if (cue === 'short') {
+      sound.beepShort()
+      sound.buzz(100)
+    } else if (cue === 'long') {
+      sound.beepLong()
+      sound.buzz(500)
+    }
+    if (text) sound.speak(text)
   })
+
+  // Bildschirm wach halten, solange ein Timer läuft (auf allen Geräten der Session)
+  const wakeLock = new WakeLockController(navigator, document)
+  $effect(() => {
+    wakeLock.setWanted(timer.doc.isRunning)
+  })
+
+  function resetAll() {
+    timer.reset()
+    counter.reset()
+  }
 
   function onKeydown(e: KeyboardEvent) {
     if (showTour) return
@@ -49,7 +70,11 @@
       sound.unlock()
       timer.toggle()
     } else if (e.code === 'KeyR') {
-      timer.reset()
+      resetAll()
+    } else if (e.key === '+' || e.code === 'NumpadAdd') {
+      counter.increment()
+    } else if (e.key === '-' || e.code === 'NumpadSubtract') {
+      counter.decrement()
     } else if (e.code === 'KeyM') {
       showModal = !showModal
     }

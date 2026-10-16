@@ -9,7 +9,7 @@ Gym-Training-Web-App: Svelte-5-SPA (`frontend/`) + Node-`ws`-Sync-Dienst (`serve
 ```bash
 # Dev (zwei Terminals)
 cd server  && npm run dev   # tsx watch, Port 8787
-cd frontend && npm run dev  # vite, Port 5173, proxied /ws, /generate, /estimate → 8787
+cd frontend && npm run dev  # vite, Port 5173, proxied /ws, /generate, /estimate, /timerize → 8787
 
 # Tests (pro Paket!)
 npm test                              # vitest run, komplett
@@ -23,7 +23,7 @@ cd server && npm run build    # tsc (kompiliert nur src/, Tests werden nicht typ
 
 - **CI-Gate** ([.github/workflows/docker.yml](.github/workflows/docker.yml)): `npm test` + `npm run build` in **beiden** Paketen muss grün sein, sonst kein Image-Build. Push auf `main` baut Images (`latest`), Tag `vX.Y.Z` baut Release-Images.
 - **Kein ESLint/Prettier** konfiguriert — Stil an vorhandenem Code orientieren, nichts Neues einführen.
-- `ANTHROPIC_API_KEY` ist optional: ohne Key liefern `/generate` und `/estimate` 503, der Rest läuft (KI-Features lokal testbar, indem Deps injiziert werden — `opts`-Parameter von `startServer`).
+- `ANTHROPIC_API_KEY` ist optional: ohne Key liefern `/generate`, `/estimate` und `/timerize` 503, der Rest läuft (KI-Features lokal testbar, indem Deps injiziert werden — `opts`-Parameter von `startServer`).
 
 ## Fallstricke (hier brechen Änderungen sonst still)
 

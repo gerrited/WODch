@@ -3,6 +3,7 @@ import { SessionState, extractSessionIdFromPath } from './session.svelte'
 import { TimerStore } from '../stores/timer.svelte'
 import { WorkoutStore } from '../stores/workouts.svelte'
 import { VideoStore } from '../stores/video.svelte'
+import { CounterStore } from '../stores/counter.svelte'
 import type { SyncClient, SyncStatus } from './client'
 import type { SessionDoc } from '../types'
 
@@ -13,12 +14,14 @@ class FakeClient implements SyncClient {
   private statusCb?: (s: SyncStatus) => void
   private docCb?: (d: SessionDoc) => void
   private patchCb?: (p: string, v: unknown) => void
+  private presenceCb?: (n: number) => void
 
   status() { return 'connected' as SyncStatus }
   onStatus(cb: (s: SyncStatus) => void) { this.statusCb = cb }
   onDoc(cb: (d: SessionDoc) => void) { this.docCb = cb }
   onPatch(cb: (p: string, v: unknown) => void) { this.patchCb = cb }
   onClockOffset(_cb: (offsetMs: number) => void) {}
+  onPresence(cb: (n: number) => void) { this.presenceCb = cb }
   connect(id: string, doc: () => SessionDoc) { this.connected = id; this.localDoc = doc }
   send(path: string, value: unknown) { this.sent.push([path, value]) }
   close() {}
@@ -26,6 +29,7 @@ class FakeClient implements SyncClient {
   simStatus(s: SyncStatus) { this.statusCb?.(s) }
   simDoc(d: SessionDoc) { this.docCb?.(d) }
   simPatch(p: string, v: unknown) { this.patchCb?.(p, v) }
+  simPresence(n: number) { this.presenceCb?.(n) }
 }
 
 describe('extractSessionIdFromPath', () => {
@@ -49,6 +53,7 @@ describe('SessionState', () => {
   let timer: TimerStore
   let workouts: WorkoutStore
   let video: VideoStore
+  let counter: CounterStore
   let session: SessionState
 
   beforeEach(() => {
@@ -58,7 +63,8 @@ describe('SessionState', () => {
     timer = new TimerStore()
     workouts = new WorkoutStore()
     video = new VideoStore()
-    session = new SessionState(client, { timer, workouts, video })
+    counter = new CounterStore()
+    session = new SessionState(client, { timer, workouts, video, counter })
   })
 
   afterEach(() => {
@@ -177,5 +183,37 @@ describe('SessionState', () => {
     session.publishVideo({ isPlaying: true, startedAt: 111, accumulatedSeconds: 7 })
     expect(client.sent).toContainEqual(['video', { isPlaying: true, startedAt: 111, accumulatedSeconds: 7 }])
     expect(session.buildDoc().video.accumulatedSeconds).toBe(7)
+  })
+
+  it('Rundenzähler sendet roundCounter-Patch und fließt in buildDoc ein', () => {
+    counter.increment()
+    counter.increment()
+    counter.decrement()
+    expect(client.sent).toEqual([
+      ['roundCounter', 1],
+      ['roundCounter', 2],
+      ['roundCounter', 1],
+    ])
+    expect(session.buildDoc().roundCounter).toBe(1)
+  })
+
+  it('eingehender roundCounter-Patch und doc setzen den Zähler ohne Echo', () => {
+    client.simPatch('roundCounter', 5)
+    expect(counter.count).toBe(5)
+    client.simDoc({ ...session.buildDoc(), roundCounter: 9 })
+    expect(counter.count).toBe(9)
+    // Doc älterer Sessions ohne Feld → 0
+    const legacy = session.buildDoc()
+    delete legacy.roundCounter
+    client.simDoc(legacy)
+    expect(counter.count).toBe(0)
+    expect(client.sent).toEqual([])
+  })
+
+  it('presence setzt peers; Verbindungsverlust setzt sie zurück', () => {
+    client.simPresence(3)
+    expect(session.peers).toBe(3)
+    client.simStatus('error')
+    expect(session.peers).toBe(0)
   })
 })

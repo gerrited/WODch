@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { snapshot, detectCue, type CueSnapshot } from './cues'
+import { snapshot, detectCue, announcement, type CueSnapshot } from './cues'
 import { deriveInterval } from '../timer/engine'
 import { defaultTimerDoc, type TimerDoc } from '../types'
 
@@ -103,5 +103,42 @@ describe('detectCue: Interval (Tabata 20s/10s × 8)', () => {
 
   it('kein Ton beim Start (prev = null)', () => {
     expect(detectCue(null, ivSnap(100))).toBeNull()
+  })
+})
+
+describe('announcement', () => {
+  const s = (phase: CueSnapshot['phase'], round: number, secondsLeft: number, isRunning = true): CueSnapshot => ({
+    isRunning,
+    phase,
+    round,
+    secondsLeft,
+  })
+
+  it('kündigt Phasenwechsel an: Los, Runde N, Letzte Runde, Pause, Fertig', () => {
+    expect(announcement(s('warmup', 0, 1), s('work', 1, 20), 8)).toBe('Los')
+    expect(announcement(s('rest', 2, 1), s('work', 3, 20), 8)).toBe('Runde 3')
+    expect(announcement(s('rest', 7, 1), s('work', 8, 20), 8)).toBe('Letzte Runde')
+    expect(announcement(s('work', 3, 1), s('rest', 3, 10), 8)).toBe('Pause')
+    expect(announcement(s('work', 8, 1), s('done', 0, 0), 8)).toBe('Fertig')
+    // EMOM: work → work
+    expect(announcement(s('work', 1, 1), s('work', 2, 60), 10)).toBe('Runde 2')
+  })
+
+  it('kündigt Countdown-Ende und die letzten zehn Sekunden an', () => {
+    expect(announcement(s('countdown', 0, 1), s('countdown', 0, 0), 0)).toBe('Fertig')
+    expect(announcement(s('countdown', 0, 11), s('countdown', 0, 10), 0)).toBe('Noch zehn Sekunden')
+    expect(announcement(s('work', 2, 11), s('work', 2, 10), 8)).toBe('Noch zehn Sekunden')
+    // in der Pause keine Zehn-Sekunden-Ansage
+    expect(announcement(s('rest', 2, 11), s('rest', 2, 10), 8)).toBeNull()
+  })
+
+  it('bleibt stumm bei Sprüngen, Pause und fehlenden Snapshots', () => {
+    expect(announcement(null, s('work', 1, 20), 8)).toBeNull()
+    expect(announcement(s('work', 1, 20), null, 8)).toBeNull()
+    // Sync-Sprung mitten in eine andere Phase
+    expect(announcement(s('work', 1, 12), s('rest', 1, 5), 8)).toBeNull()
+    // Sprung über die 10er-Marke
+    expect(announcement(s('work', 1, 13), s('work', 1, 10), 8)).toBeNull()
+    expect(announcement(s('work', 1, 11, false), s('work', 1, 10, false), 8)).toBeNull()
   })
 })
