@@ -16,7 +16,9 @@
     return 'dot-off'
   })
 
-  function handleClick() {
+  function handleClick(e: MouseEvent) {
+    // Fehltipps neben die (mobil großen) Zähler-Buttons sollen den Timer nicht starten/pausieren
+    if (e.target instanceof Element && e.target.closest('.counter')) return
     sound.unlock()
     if (barAction(timer.doc, timer.derived) === 'modal') onOpenModal()
     else timer.toggle()
@@ -67,7 +69,7 @@
     </div>
     <div class="counter" title="Runden zählen (+/−) — gilt für alle Geräte der Session">
       <button class="count-btn" onclick={(e) => handleCount(e, -1)} disabled={counter.count === 0} aria-label="Runde abziehen">−</button>
-      <span class="count" aria-label="Gezählte Runden">R {counter.count}</span>
+      <span class="count" aria-label="Gezählte Runden"><span class="count-label">R&nbsp;</span><span class="count-heading">Runden</span>{counter.count}</span>
       <button class="count-btn" onclick={(e) => handleCount(e, 1)} aria-label="Runde zählen">+</button>
     </div>
   </div>
@@ -240,6 +242,9 @@
     letter-spacing: 0.05em;
     font-variant-numeric: tabular-nums;
   }
+  .count-heading {
+    display: none;
+  }
   .count-btn {
     display: grid;
     place-items: center;
@@ -273,13 +278,59 @@
       top: 20px;
       bottom: auto;
     }
+    /* Mobil ist Rundenzählen das Hauptfeature: Zeit mittig im freien Raum,
+       Zähler groß am unteren Rand in Daumenreichweite */
     .timer-center {
+      box-sizing: border-box;
+      height: 100%;
+      width: 100%;
+      padding: 72px 16px 28px;
       gap: 16px;
     }
     .timer-line {
+      flex: 1;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       gap: 8px;
+    }
+    /* Zahl über die volle Breite, −/+ darunter — nebeneinander passt es nicht in Hochkant-Breite */
+    .counter {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px 16px;
+      width: 100%;
+    }
+    .count {
+      order: -1;
+      flex-basis: 100%;
+      color: var(--text);
+      font-size: clamp(40px, min(18cqh, 28cqw), 180px);
+      font-weight: 700;
+      line-height: 1;
+    }
+    /* Die Zahl soll dominieren — statt „R“ davor eine kleine Überschrift darüber */
+    .count-label {
+      display: none;
+    }
+    .count-heading {
+      display: block;
+      margin-bottom: 0.15em;
+      color: var(--text-muted);
+      font-size: 0.14em;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    .count-btn {
+      width: clamp(56px, min(12cqh, 20cqw), 96px);
+      height: clamp(56px, min(12cqh, 20cqw), 96px);
+      font-size: clamp(24px, min(6cqh, 10cqw), 48px);
+    }
+    /* + ist die Hauptaktion: breite Taste statt Kreis */
+    .count-btn:last-child {
+      width: min(55cqw, 240px);
+      color: var(--text);
     }
   }
 </style>
