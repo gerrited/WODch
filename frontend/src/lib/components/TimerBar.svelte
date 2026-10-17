@@ -16,6 +16,13 @@
     return 'dot-off'
   })
 
+  // AMRAP vorbei: statt „ZEIT" das Ergebnis aus dem Rundenzähler zeigen
+  const roundLabel = $derived(
+    timer.doc.mode === 'amrap' && timer.derived.phase === 'done' && counter.count > 0
+      ? `${counter.count} ${counter.count === 1 ? 'RUNDE' : 'RUNDEN'}`
+      : timer.displayRound,
+  )
+
   function handleClick(e: MouseEvent) {
     // Fehltipps neben die (mobil großen) Zähler-Buttons sollen den Timer nicht starten/pausieren
     if (e.target instanceof Element && e.target.closest('.counter')) return
@@ -60,8 +67,8 @@
   </div>
   <div class="timer-center">
     <div class="timer-line">
-      {#if timer.displayRound}
-        <span class="round">{timer.displayRound}</span>
+      {#if roundLabel}
+        <span class="round">{roundLabel}</span>
       {/if}
       <span class="time" class:work={timer.derived.phase === 'work'} class:rest={timer.derived.phase === 'rest'} class:warmup={timer.derived.phase === 'warmup'}>
         {timer.displayTime}

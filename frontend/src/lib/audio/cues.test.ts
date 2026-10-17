@@ -167,3 +167,24 @@ describe('Countdown mit Warmup', () => {
     expect(announcement(s(9_900), s(10_100), 8)).toBe('Los')
   })
 })
+
+describe('AMRAP und For Time mit Cap', () => {
+  function snapAt(d: TimerDoc, elapsed: number) {
+    return snapshot(d, derivePhase(d, elapsed, true), elapsed)
+  }
+
+  it('AMRAP piept 3-2-1 und lang am Ende, sagt „Noch zehn Sekunden" und „Fertig"', () => {
+    const d = doc({ mode: 'amrap', amrapDuration: 60 * SEC, isRunning: true, startedAt: 0 })
+    expect(detectCue(snapAt(d, 56 * SEC), snapAt(d, 57 * SEC))).toBe('short')
+    expect(detectCue(snapAt(d, 59 * SEC), snapAt(d, 60 * SEC))).toBe('long')
+    expect(announcement(snapAt(d, 49.5 * SEC), snapAt(d, 50.5 * SEC), 0)).toBe('Noch zehn Sekunden')
+    expect(announcement(snapAt(d, 59 * SEC), snapAt(d, 60 * SEC), 0)).toBe('Fertig')
+  })
+
+  it('For Time mit Cap zählt die Cues auf das Cap, ohne Cap bleibt es still', () => {
+    const capped = doc({ mode: 'fortime', timeCap: 60 * SEC, isRunning: true, startedAt: 0 })
+    expect(detectCue(snapAt(capped, 59 * SEC), snapAt(capped, 60 * SEC))).toBe('long')
+    const open = doc({ mode: 'fortime', timeCap: 0, isRunning: true, startedAt: 0 })
+    expect(snapAt(open, 59 * SEC)).toBeNull()
+  })
+})

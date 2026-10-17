@@ -8,6 +8,10 @@ export interface ModalForm {
   countdownSec: number
   countupMin: number
   countupSec: number
+  amrapMin: number
+  amrapSec: number
+  capMin: number
+  capSec: number
   emomMin: number
   emomSec: number
   warmupMin: number
@@ -29,6 +33,10 @@ export function applyModalStart(timer: TimerStore, form: ModalForm): void {
     timer.setConfig({ countdownTarget: ms(form.countdownMin, form.countdownSec) })
   } else if (form.mode === 'countup') {
     timer.setConfig({ countupStart: ms(form.countupMin, form.countupSec) })
+  } else if (form.mode === 'amrap') {
+    timer.setConfig({ amrapDuration: ms(form.amrapMin, form.amrapSec) })
+  } else if (form.mode === 'fortime') {
+    timer.setConfig({ timeCap: ms(form.capMin, form.capSec) })
   } else if (form.mode === 'interval' && form.preset === 'emom') {
     timer.setConfig({ emomInterval: ms(form.emomMin, form.emomSec) })
     timer.applyPreset('emom')

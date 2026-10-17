@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { elapsedNow, deriveInterval, derivePhase, displayTime, displayRound } from './engine'
+import { elapsedNow, deriveInterval, derivePhase, displayTime, displayRound, amrapMs, capMs, endMs } from './engine'
 import { defaultTimerDoc, type TimerDoc } from '../types'
 
 const SEC = 1000
@@ -189,5 +189,68 @@ describe('displayRound', () => {
     const d = doc({ mode: 'interval', isRunning: true, startedAt: 0, workDuration: 20000, restDuration: 10000, totalRounds: 8 })
     expect(displayRound(d, 5000)).toBe('1 / 8')
     expect(displayRound(d, 35000)).toBe('2 / 8')
+  })
+})
+
+describe('AMRAP', () => {
+  const amrap = (o: Partial<TimerDoc> = {}) => doc({ mode: 'amrap', amrapDuration: 12 * MIN, isRunning: true, startedAt: 0, ...o })
+  const now = new Date(0)
+
+  it('zählt die Dauer herunter und ist danach done', () => {
+    expect(displayTime(amrap(), 0, now)).toBe('12:00')
+    expect(displayTime(amrap(), 2 * MIN, now)).toBe('10:00')
+    expect(derivePhase(amrap(), 11 * MIN, true)).toEqual({ phase: 'running' })
+    expect(derivePhase(amrap(), 12 * MIN, true)).toEqual({ phase: 'done' })
+    expect(displayTime(amrap(), 13 * MIN, now)).toBe('00:00')
+  })
+
+  it('Label: AMRAP, WARMUP vor dem Start, ZEIT am Ende', () => {
+    expect(displayRound(amrap(), 1 * MIN)).toBe('AMRAP')
+    expect(displayRound(amrap({ warmupEnabled: true, warmupDuration: 10 * SEC }), 5 * SEC)).toBe('WARMUP')
+    expect(displayRound(amrap(), 12 * MIN)).toBe('ZEIT')
+  })
+
+  it('Warmup verschiebt das Ende', () => {
+    const d = amrap({ warmupEnabled: true, warmupDuration: 10 * SEC })
+    expect(derivePhase(d, 12 * MIN, true)).toEqual({ phase: 'running' })
+    expect(derivePhase(d, 12 * MIN + 10 * SEC, true)).toEqual({ phase: 'done' })
+  })
+})
+
+describe('For Time', () => {
+  const fortime = (o: Partial<TimerDoc> = {}) => doc({ mode: 'fortime', timeCap: 15 * MIN, isRunning: true, startedAt: 0, ...o })
+  const now = new Date(0)
+
+  it('zählt hoch und bleibt am Cap stehen', () => {
+    expect(displayTime(fortime(), 3 * MIN, now)).toBe('03:00')
+    expect(derivePhase(fortime(), 14 * MIN, true)).toEqual({ phase: 'running' })
+    expect(derivePhase(fortime(), 15 * MIN, true)).toEqual({ phase: 'done' })
+    expect(displayTime(fortime(), 16 * MIN, now)).toBe('15:00')
+  })
+
+  it('ohne Cap (0) läuft unbegrenzt', () => {
+    const d = fortime({ timeCap: 0 })
+    expect(derivePhase(d, 90 * MIN, true)).toEqual({ phase: 'running' })
+    expect(displayTime(d, 61 * MIN, now)).toBe('1:01:00')
+  })
+
+  it('Label: CAP mm:ss, FOR TIME ohne Cap, TIME CAP am Ende', () => {
+    expect(displayRound(fortime(), MIN)).toBe('CAP 15:00')
+    expect(displayRound(fortime({ timeCap: 0 }), MIN)).toBe('FOR TIME')
+    expect(displayRound(fortime(), 15 * MIN)).toBe('TIME CAP')
+  })
+})
+
+describe('Felder älterer Clients (amrapDuration/timeCap fehlen)', () => {
+  it('fallen auf 20 Min AMRAP bzw. ohne Cap zurück', () => {
+    const legacy = { ...defaultTimerDoc() }
+    delete legacy.amrapDuration
+    delete legacy.timeCap
+    expect(amrapMs(legacy)).toBe(20 * MIN)
+    expect(capMs(legacy)).toBe(0)
+    expect(endMs({ ...legacy, mode: 'fortime' })).toBeNull()
+    expect(endMs({ ...legacy, mode: 'amrap' })).toBe(20 * MIN)
+    expect(endMs({ ...legacy, mode: 'countdown' })).toBe(legacy.countdownTarget)
+    expect(endMs({ ...legacy, mode: 'countup' })).toBeNull()
   })
 })

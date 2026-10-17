@@ -6,14 +6,14 @@ Gym-Training-Web-App: vollwertiger Intervall-Timer, Multi-Tab-Workout-Editor und
 
 ## Features
 
-- **Timer** — 5 Modi: Uhrzeit (12h/24h), Stoppuhr (1/100s), Count-Down, Count-Up, Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, Custom) und optionalem Warmup. Phase und Runde werden deterministisch aus Startzeitpunkt + Konfiguration abgeleitet.
+- **Timer** — 7 Modi: Uhrzeit (12h/24h), Stoppuhr (1/100s), Count-Down, Count-Up, Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, Custom), AMRAP (zählt die Dauer herunter, zeigt am Ende das Ergebnis des Rundenzählers, z. B. „3 RUNDEN") und For Time (zählt hoch, optionaler Time Cap stoppt die Uhr) — jeweils mit optionalem Warmup. Phase und Runde werden deterministisch aus Startzeitpunkt + Konfiguration abgeleitet.
 - **Rundenzähler** — `−`/`+` in der Timer-Leiste (bzw. Tasten `+`/`-`) zählt Runden für alle Geräte der Session, z. B. bei AMRAPs. Timer-Reset (`R`, Reset/Start im Modal) setzt ihn auf 0.
 - **Ansagen & Vibration** — optional pro Gerät (Timer-Modal → „Dieses Gerät"): Sprachansagen („Los", „Runde 3", „Letzte Runde", „Pause", „Noch zehn Sekunden", „Fertig") und Vibration zu den Beeps. Beides gerätelokal, nicht synchronisiert; „Ton aus" schaltet auch die Sprache stumm.
 - **Bildschirm bleibt an** — solange ein Timer läuft, hält ein Wake Lock das Display wach (sofern der Browser die Wake-Lock-API kennt).
 - **Workout-Editor** — mehrere Tabs (umbenennen per Doppelklick, sortieren per Drag & Drop), zentrierter Monospace-Text.
 - **Video-Player** — YouTube-URL einfügen (`watch?v=`/`youtu.be`), ∞-Loop, ±10s-Buttons.
 - **Landing-Page** — `/` zeigt eine Marketing-Seite: Hero-Banner mit großer Video-Bühne, die per Tab-Umschalter zwischen den Demo-Videos der drei Kernfeatures (Timer, KI-Workouts, Fernsteuerung per Link) wechselt — es lädt immer nur ein IFrame. Der CTA-Button erzeugt direkt eine neue Session und öffnet die App; im Footer öffnen Datenschutz und Impressum ein Modal ([LegalModal.svelte](frontend/src/lib/components/LegalModal.svelte)).
-- **KI-Timer aus Workout** — der ⏱▶-Button im Editor schickt den aktiven Tab an `/timerize`; die KI leitet die Timer-Einstellung ab (EMOM/Intervall, AMRAP/Time Cap → Count-Down, For Time → Count-Up) und stellt sie ein, ohne zu starten. Intervalle mit Pause werden als Custom-Programm gespeichert (überschreibt das lokale Custom-Programm).
+- **KI-Timer aus Workout** — der ⏱▶-Button im Editor schickt den aktiven Tab an `/timerize`; die KI leitet die Timer-Einstellung ab (EMOM/Intervall, AMRAP, For Time inkl. Time Cap) und stellt sie ein, ohne zu starten. Intervalle mit Pause werden als Custom-Programm gespeichert (überschreibt das lokale Custom-Programm).
 - **Offline-fähig (PWA)** — ein Service Worker ([public/sw.js](frontend/public/sw.js)) cached die App-Shell; Timer und Editor starten auch ohne Netz. Sharing, Video und KI brauchen weiterhin eine Verbindung.
 - **Session-Sharing** — 📤-Button (bzw. der Landing-Page-CTA) erzeugt einen Link (`/l/<id>`). Alle Geräte mit dem Link sehen Timer, Workouts und Video synchron und haben volle Kontrolle (kein Host-Konzept, last-write-wins). Sessions verfallen 24 h nach der letzten Änderung. Neben dem Verbindungspunkt steht die Anzahl verbundener Geräte (ab 2).
 - **Bedienung** — Klick auf die Timer-Leiste: Start/Pause (im Idle: Einstellungen). Tastatur: `Space` Start/Pause, `R` Reset, `M` Einstellungen. Beim ersten Besuch führt eine kurze Tour durch die Funktionen — jederzeit neu startbar über den ?-Button in der Timer-Leiste.
@@ -71,7 +71,7 @@ docker build -t wodch-backend:local ./server
 
 Der Sync-Dienst hält Sessions im Arbeitsspeicher — bewusst eine Replica. Ausbaupfad für mehrere Replicas (Redis als Backing Store + Pub/Sub): siehe [docs/rewrite-stack-options.md](docs/rewrite-stack-options.md), Abschnitt 6.2.
 
-Für dieses Release wichtig: Beim Rollout zuerst das Backend neu starten, dann das Frontend — ein älteres Backend verwirft `preset: 'custom'` und `roundCounter`-Patches sonst still. Außerdem muss der Ingress `/timerize` ans Backend routen ([k8s/deployment.yaml](k8s/deployment.yaml)). Seeds älterer Clients ohne `roundCounter` akzeptiert das neue Backend weiterhin.
+Für dieses Release wichtig: Beim Rollout zuerst das Backend neu starten, dann das Frontend — ein älteres Backend verwirft `preset: 'custom'` und `roundCounter`-Patches sonst still. Außerdem muss der Ingress `/timerize` ans Backend routen ([k8s/deployment.yaml](k8s/deployment.yaml)). Seeds älterer Clients ohne `roundCounter` akzeptiert das neue Backend weiterhin. Dasselbe gilt für die Timer-Modi `amrap`/`fortime`: ein altes Backend verwirft solche `timer`-Patches; die neuen Felder `amrapDuration`/`timeCap` sind optional, damit TimerDocs alter Clients gültig bleiben. `/timerize` liefert AMRAP/For Time nur Clients, die `version: 2` mitschicken — alte Tabs bekommen weiter Count-Down/Count-Up.
 
 ## Docs
 

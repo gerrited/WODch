@@ -45,4 +45,15 @@ describe('barAction', () => {
     expect(barAction(d, derivedFor(d, 65_000))).toBe('toggle') // noch im Countdown
     expect(barAction(d, derivedFor(d, 70_000))).toBe('modal')  // abgelaufen
   })
+
+  it('amrap und fortime: modal wenn abgelaufen, sonst wie Stoppuhr', () => {
+    const amrap = doc({ mode: 'amrap', amrapDuration: 60_000, isRunning: true, startedAt: 0 })
+    expect(barAction(amrap, derivedFor(amrap, 30_000))).toBe('toggle')
+    expect(barAction(amrap, derivedFor(amrap, 60_000))).toBe('modal')
+    const capped = doc({ mode: 'fortime', timeCap: 60_000, isRunning: true, startedAt: 0 })
+    expect(barAction(capped, derivedFor(capped, 30_000))).toBe('toggle')
+    expect(barAction(capped, derivedFor(capped, 60_000))).toBe('modal')
+    const fresh = doc({ mode: 'fortime' })
+    expect(barAction(fresh, derivedFor(fresh, 0))).toBe('modal')
+  })
 })

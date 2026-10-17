@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   handleTimerize,
   parseTimerSuggestion,
+  toLegacySuggestion,
   TIMERIZE_LIMITS,
   type TimerizeDeps,
   type TimerSuggestion,
@@ -76,10 +77,12 @@ describe('parseTimerSuggestion', () => {
     expect(parseTimerSuggestion({ mode: 'interval', workSeconds: 20, restSeconds: 10, rounds: 8, label: 'Tabata' })).toEqual({
       mode: 'interval', workSeconds: 20, restSeconds: 10, rounds: 8, label: 'Tabata',
     })
-    expect(parseTimerSuggestion({ mode: 'countdown', seconds: 1200, label: 'AMRAP 20 Min' })).toEqual({
-      mode: 'countdown', seconds: 1200, label: 'AMRAP 20 Min',
+    expect(parseTimerSuggestion({ mode: 'amrap', seconds: 1200, label: 'AMRAP 20 Min' })).toEqual({
+      mode: 'amrap', seconds: 1200, label: 'AMRAP 20 Min',
     })
-    expect(parseTimerSuggestion({ mode: 'countup', label: 'For Time' })).toEqual({ mode: 'countup', label: 'For Time' })
+    expect(parseTimerSuggestion({ mode: 'fortime', capSeconds: 900, label: 'For Time' })).toEqual({
+      mode: 'fortime', capSeconds: 900, label: 'For Time',
+    })
   })
 
   it('liefert null für mode none', () => {
@@ -87,9 +90,10 @@ describe('parseTimerSuggestion', () => {
   })
 
   it('rundet Sekunden, kürzt Labels und ersetzt fehlende Labels durch ""', () => {
-    const s = parseTimerSuggestion({ mode: 'countdown', seconds: 59.6, label: 'x'.repeat(100) })
-    expect(s).toEqual({ mode: 'countdown', seconds: 60, label: 'x'.repeat(TIMERIZE_LIMITS.maxLabelChars) })
-    expect(parseTimerSuggestion({ mode: 'countup' })).toEqual({ mode: 'countup', label: '' })
+    const s = parseTimerSuggestion({ mode: 'amrap', seconds: 59.6, label: 'x'.repeat(100) })
+    expect(s).toEqual({ mode: 'amrap', seconds: 60, label: 'x'.repeat(TIMERIZE_LIMITS.maxLabelChars) })
+    // fehlendes Cap = ohne Zeitlimit
+    expect(parseTimerSuggestion({ mode: 'fortime' })).toEqual({ mode: 'fortime', capSeconds: 0, label: '' })
   })
 
   it('wirft bei Werten außerhalb der Modal-Grenzen oder unbekanntem mode', () => {
@@ -97,9 +101,14 @@ describe('parseTimerSuggestion', () => {
       null,
       [],
       { mode: 'stopwatch' },
-      { mode: 'countdown', seconds: 0 },
-      { mode: 'countdown', seconds: TIMERIZE_LIMITS.maxSeconds + 1 },
-      { mode: 'countdown', seconds: '60' },
+      // altes Format liefert das Modell nicht mehr
+      { mode: 'countdown', seconds: 60 },
+      { mode: 'countup' },
+      { mode: 'amrap', seconds: 0 },
+      { mode: 'amrap', seconds: TIMERIZE_LIMITS.maxSeconds + 1 },
+      { mode: 'amrap', seconds: '60' },
+      { mode: 'fortime', capSeconds: -1 },
+      { mode: 'fortime', capSeconds: 'x' },
       { mode: 'interval', workSeconds: 0, restSeconds: 0, rounds: 5 },
       { mode: 'interval', workSeconds: 60, restSeconds: -1, rounds: 5 },
       { mode: 'interval', workSeconds: 60, restSeconds: 0, rounds: 0 },
@@ -107,5 +116,22 @@ describe('parseTimerSuggestion', () => {
       { mode: 'interval', workSeconds: 60, restSeconds: 0, rounds: 2.5 },
     ]
     for (const raw of bad) expect(() => parseTimerSuggestion(raw)).toThrow()
+  })
+})
+
+describe('Format-Version (alte Clients)', () => {
+  it('liefert das neue Format nur mit version 2', async () => {
+    const amrap: TimerSuggestion = { mode: 'amrap', seconds: 1200, label: 'AMRAP 20' }
+    const d = deps({ suggestTimer: async () => amrap })
+    expect((await handleTimerize({ content: 'x', ip: '1.1.1.1', version: 2 }, d)).body).toEqual({ timer: amrap })
+    expect((await handleTimerize({ content: 'x', ip: '1.1.1.2' }, d)).body).toEqual({
+      timer: { mode: 'countdown', seconds: 1200, label: 'AMRAP 20' },
+    })
+  })
+
+  it('toLegacySuggestion: For Time mit Cap → Countdown, ohne Cap → Count-Up, Intervall unverändert', () => {
+    expect(toLegacySuggestion({ mode: 'fortime', capSeconds: 600, label: 'Fran' })).toEqual({ mode: 'countdown', seconds: 600, label: 'Fran' })
+    expect(toLegacySuggestion({ mode: 'fortime', capSeconds: 0, label: 'Fran' })).toEqual({ mode: 'countup', label: 'Fran' })
+    expect(toLegacySuggestion(EMOM)).toBe(EMOM)
   })
 })

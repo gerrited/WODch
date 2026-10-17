@@ -10,6 +10,10 @@ function form(overrides: Partial<ModalForm> = {}): ModalForm {
     countdownSec: 0,
     countupMin: 0,
     countupSec: 0,
+    amrapMin: 20,
+    amrapSec: 0,
+    capMin: 0,
+    capSec: 0,
     emomMin: 1,
     emomSec: 0,
     warmupMin: 0,
@@ -41,6 +45,22 @@ describe('applyModalStart', () => {
     expect(timer.doc.countdownTarget).toBe(150_000)
     expect(timer.doc.isRunning).toBe(true)
     expect(timer.doc.accumulatedMs).toBe(0)
+  })
+
+  it('amrap: übernimmt Dauer und startet', () => {
+    timer.setMode('amrap')
+    applyModalStart(timer, form({ mode: 'amrap', amrapMin: 12, amrapSec: 30 }))
+    expect(timer.doc.amrapDuration).toBe(750_000)
+    expect(timer.doc.isRunning).toBe(true)
+  })
+
+  it('fortime: übernimmt Time Cap (0 = ohne) und startet', () => {
+    timer.setMode('fortime')
+    applyModalStart(timer, form({ mode: 'fortime', capMin: 15, capSec: 0 }))
+    expect(timer.doc.timeCap).toBe(900_000)
+    expect(timer.doc.isRunning).toBe(true)
+    applyModalStart(timer, form({ mode: 'fortime', capMin: 0, capSec: 0 }))
+    expect(timer.doc.timeCap).toBe(0)
   })
 
   it('emom: übernimmt Intervall und startet Preset', () => {

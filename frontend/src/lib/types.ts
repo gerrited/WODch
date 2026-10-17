@@ -1,4 +1,4 @@
-export type TimerMode = 'clock' | 'stopwatch' | 'countdown' | 'countup' | 'interval'
+export type TimerMode = 'clock' | 'stopwatch' | 'countdown' | 'countup' | 'interval' | 'amrap' | 'fortime'
 export type IntervalPreset = 'tabata' | 'fgb1' | 'fgb2' | 'emom' | 'custom'
 
 export interface CustomInterval {
@@ -23,6 +23,10 @@ export interface TimerDoc {
   emomRounds: number
   totalRounds: number
   clock12h: boolean
+  // AMRAP-Dauer bzw. Time Cap für For Time (0 = ohne Cap), ms. Optional, weil
+  // TimerDocs älterer Clients die Felder nicht enthalten — Lesen nur über amrapMs/capMs.
+  amrapDuration?: number
+  timeCap?: number
 }
 
 export interface VideoDoc {
@@ -70,5 +74,7 @@ export function defaultTimerDoc(): TimerDoc {
     emomRounds: 10,
     totalRounds: 8,
     clock12h: false,
+    amrapDuration: 20 * 60 * 1000,
+    timeCap: 0,
   }
 }

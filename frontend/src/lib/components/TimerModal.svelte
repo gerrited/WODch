@@ -4,6 +4,7 @@
   import { sound } from '../audio/beeps.svelte'
   import { applyModalStart, type ModalForm } from './modalStart'
   import type { IntervalPreset, TimerMode } from '../types'
+  import { amrapMs, capMs } from '../timer/engine'
 
   let { onClose }: { onClose: () => void } = $props()
 
@@ -13,6 +14,8 @@
     { value: 'countdown', label: 'Count-Down' },
     { value: 'countup', label: 'Count-Up' },
     { value: 'interval', label: 'Intervall' },
+    { value: 'amrap', label: 'AMRAP' },
+    { value: 'fortime', label: 'For Time' },
   ]
 
   const presets: { value: IntervalPreset; label: string }[] = [
@@ -34,6 +37,10 @@
   let countdownSec = $state(splitMs(timer.doc.countdownTarget)[1])
   let countupMin = $state(splitMs(timer.doc.countupStart)[0])
   let countupSec = $state(splitMs(timer.doc.countupStart)[1])
+  let amrapMin = $state(splitMs(amrapMs(timer.doc))[0])
+  let amrapSec = $state(splitMs(amrapMs(timer.doc))[1])
+  let capMin = $state(splitMs(capMs(timer.doc))[0])
+  let capSec = $state(splitMs(capMs(timer.doc))[1])
   let emomMin = $state(splitMs(timer.doc.emomInterval)[0])
   let emomSec = $state(splitMs(timer.doc.emomInterval)[1])
   let warmupMin = $state(splitMs(timer.doc.warmupDuration)[0])
@@ -66,6 +73,8 @@
       preset: selectedPreset,
       countdownMin, countdownSec,
       countupMin, countupSec,
+      amrapMin, amrapSec,
+      capMin, capSec,
       emomMin, emomSec,
       warmupMin, warmupSec,
       customRounds,
@@ -133,6 +142,28 @@
           <input type="number" bind:value={countupMin} min="0" max="99" class="time-input" /> Min
           <input type="number" bind:value={countupSec} min="0" max="59" class="time-input" /> Sek
         </div>
+      </section>
+    {/if}
+
+    {#if selectedMode === 'amrap'}
+      <section class="section">
+        <div class="label">DAUER</div>
+        <div class="time-input-row">
+          <input type="number" bind:value={amrapMin} min="0" max="99" class="time-input" /> Min
+          <input type="number" bind:value={amrapSec} min="0" max="59" class="time-input" /> Sek
+        </div>
+        <div class="hint">So viele Runden wie möglich — mit + in der Timer-Leiste zählen.</div>
+      </section>
+    {/if}
+
+    {#if selectedMode === 'fortime'}
+      <section class="section">
+        <div class="label">TIME CAP</div>
+        <div class="time-input-row">
+          <input type="number" bind:value={capMin} min="0" max="99" class="time-input" /> Min
+          <input type="number" bind:value={capSec} min="0" max="59" class="time-input" /> Sek
+        </div>
+        <div class="hint">0:00 = ohne Zeitlimit. Am Ziel per Klick auf die Leiste stoppen.</div>
       </section>
     {/if}
 
@@ -304,6 +335,11 @@
     color: #ccc;
     font-size: 13px;
     cursor: pointer;
+  }
+  .hint {
+    color: #555;
+    font-size: 11px;
+    margin-top: 6px;
   }
   .time-input-row {
     display: flex;

@@ -7,7 +7,8 @@ export function barAction(doc: TimerDoc, derived: Derived): 'modal' | 'toggle' {
   if (doc.mode === 'interval') {
     return derived.phase === 'idle' || derived.phase === 'done' ? 'modal' : 'toggle'
   }
-  if (doc.mode === 'countdown' && derived.phase === 'done') return 'modal'
+  // Abgelaufen (Countdown/AMRAP am Ende, For Time am Cap): neuer Durchgang über das Modal
+  if (derived.phase === 'done') return 'modal'
   const started = doc.isRunning || doc.accumulatedMs > 0
   return started ? 'toggle' : 'modal'
 }

@@ -1,6 +1,27 @@
 import type { TimerDoc } from '../types'
 import { formatMs, formatClock } from './format'
 
+export const DEFAULT_AMRAP_MS = 20 * 60 * 1000
+
+// Felder fehlen in TimerDocs älterer Clients — deshalb nur über diese Helfer lesen
+export function amrapMs(doc: Pick<TimerDoc, 'amrapDuration'>): number {
+  return Number.isFinite(doc.amrapDuration) ? (doc.amrapDuration as number) : DEFAULT_AMRAP_MS
+}
+
+// 0 = For Time ohne Zeitlimit
+export function capMs(doc: Pick<TimerDoc, 'timeCap'>): number {
+  return Number.isFinite(doc.timeCap) && (doc.timeCap as number) > 0 ? (doc.timeCap as number) : 0
+}
+
+// Zielzeit der „Runterzähl"-artigen Modi: Countdown/AMRAP enden dort, For Time
+// endet am Cap (ohne Cap: null, läuft unbegrenzt).
+export function endMs(doc: TimerDoc): number | null {
+  if (doc.mode === 'countdown') return doc.countdownTarget
+  if (doc.mode === 'amrap') return amrapMs(doc)
+  if (doc.mode === 'fortime') return capMs(doc) || null
+  return null
+}
+
 export type IntervalConfig = Pick<
   TimerDoc,
   'warmupEnabled' | 'warmupDuration' | 'workDuration' | 'restDuration' | 'totalRounds'
@@ -40,17 +61,17 @@ export function deriveInterval(
 }
 
 // Modus-bewusste Phase: Intervall behält work/rest/done, einfache Modi kennen
-// nur warmup → running (Countdown zusätzlich done). Uhrzeit hat keine Phasen.
+// nur warmup → running (Countdown/AMRAP/For Time mit Cap zusätzlich done).
+// Uhrzeit hat keine Phasen.
 export function derivePhase(doc: TimerDoc, elapsed: number, started: boolean): Derived {
   if (!started) return { phase: 'idle' }
   if (doc.mode === 'interval') return deriveInterval(doc, elapsed, started)
   if (doc.mode === 'clock') return { phase: 'running' }
   const warmup = doc.warmupEnabled ? doc.warmupDuration : 0
   if (elapsed < warmup) return { phase: 'warmup', round: 0, remaining: warmup - elapsed }
-  if (doc.mode === 'countdown') {
-    return elapsed - warmup >= doc.countdownTarget ? { phase: 'done' } : { phase: 'running' }
-  }
-  return { phase: 'running' } // stopwatch, countup
+  const end = endMs(doc)
+  if (end !== null) return elapsed - warmup >= end ? { phase: 'done' } : { phase: 'running' }
+  return { phase: 'running' } // stopwatch, countup, For Time ohne Cap
 }
 
 function isStarted(doc: TimerDoc): boolean {
@@ -70,12 +91,20 @@ export function displayTime(doc: TimerDoc, elapsed: number, now: Date): string {
   const t = started ? elapsed - warmup : elapsed
   if (doc.mode === 'stopwatch') return formatMs(t, true)
   if (doc.mode === 'countdown') return formatMs(doc.countdownTarget - t)
+  if (doc.mode === 'amrap') return formatMs(amrapMs(doc) - t)
+  // For Time zählt hoch und bleibt am Cap stehen
+  if (doc.mode === 'fortime') return formatMs(capMs(doc) ? Math.min(t, capMs(doc)) : t)
   return formatMs(doc.countupStart + t) // countup
 }
 
 export function displayRound(doc: TimerDoc, elapsed: number): string | null {
   const d = derivePhase(doc, elapsed, isStarted(doc))
   if (d.phase === 'warmup') return 'WARMUP'
+  if (doc.mode === 'amrap') return d.phase === 'done' ? 'ZEIT' : 'AMRAP'
+  if (doc.mode === 'fortime') {
+    if (d.phase === 'done') return 'TIME CAP'
+    return capMs(doc) ? `CAP ${formatMs(capMs(doc))}` : 'FOR TIME'
+  }
   if (doc.mode !== 'interval') return null
   if (d.phase !== 'work' && d.phase !== 'rest') return null
   return `${d.round} / ${doc.totalRounds}`

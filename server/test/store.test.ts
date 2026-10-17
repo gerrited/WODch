@@ -189,6 +189,24 @@ describe('applyPatch', () => {
   })
 })
 
+describe('Timer-Modi AMRAP / For Time', () => {
+  it('akzeptiert die Modi mit und ohne die optionalen Felder (ältere Clients)', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    expect(store.applyPatch('s1', 'timer', makeTimer({ mode: 'amrap', amrapDuration: 600_000 }))).toBe(true)
+    expect(store.applyPatch('s1', 'timer', makeTimer({ mode: 'fortime', timeCap: 0 }))).toBe(true)
+    expect(store.applyPatch('s1', 'timer', makeTimer())).toBe(true)
+  })
+
+  it('weist falsch getypte amrapDuration/timeCap ab', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    expect(store.applyPatch('s1', 'timer', { ...makeTimer({ mode: 'amrap' }), amrapDuration: '10' })).toBe(false)
+    expect(store.applyPatch('s1', 'timer', { ...makeTimer({ mode: 'fortime' }), timeCap: null })).toBe(false)
+    expect(validateSessionDoc({ ...makeDoc(), timer: { ...makeTimer(), timeCap: NaN } })).toBe(false)
+  })
+})
+
 describe('roundCounter', () => {
   it('patcht roundCounter mit ganzzahligen Werten im Limit', () => {
     const store = createStore()

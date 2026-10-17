@@ -3,8 +3,11 @@ import type { CustomInterval, TimerDoc } from '../types'
 // Spiegelt TimerSuggestion aus server/src/timerize.ts (Wire-Format, per Hand gepflegt).
 export type TimerSuggestion =
   | { mode: 'interval'; workSeconds: number; restSeconds: number; rounds: number; label: string }
-  | { mode: 'countdown'; seconds: number; label: string }
-  | { mode: 'countup'; label: string }
+  | { mode: 'amrap'; seconds: number; label: string }
+  | { mode: 'fortime'; capSeconds: number; label: string }
+
+// Ohne diese Version liefert der Server das alte Format (countdown/countup)
+const TIMERIZE_VERSION = 2
 
 export interface TimerPlan {
   config: Partial<TimerDoc>
@@ -17,11 +20,11 @@ export interface TimerPlan {
 // zurückgesetzt, aber nicht gestartet — der Start bleibt eine bewusste Aktion.
 export function planTimer(s: TimerSuggestion): TimerPlan {
   const reset = { isRunning: false, startedAt: null, accumulatedMs: 0 }
-  if (s.mode === 'countdown') {
-    return { config: { ...reset, mode: 'countdown', preset: null, countdownTarget: s.seconds * 1000 } }
+  if (s.mode === 'amrap') {
+    return { config: { ...reset, mode: 'amrap', preset: null, amrapDuration: s.seconds * 1000 } }
   }
-  if (s.mode === 'countup') {
-    return { config: { ...reset, mode: 'countup', preset: null, countupStart: 0 } }
+  if (s.mode === 'fortime') {
+    return { config: { ...reset, mode: 'fortime', preset: null, timeCap: s.capSeconds * 1000 } }
   }
   const workDuration = s.workSeconds * 1000
   const restDuration = s.restSeconds * 1000
@@ -42,7 +45,7 @@ export async function requestTimer(content: string): Promise<TimerSuggestion> {
   const res = await fetch('/timerize', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, version: TIMERIZE_VERSION }),
   })
   let data: { timer?: TimerSuggestion; error?: string } = {}
   try {
