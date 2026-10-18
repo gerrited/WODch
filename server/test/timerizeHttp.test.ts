@@ -8,7 +8,7 @@ beforeAll(async () => {
   process.env.ANTHROPIC_API_KEY = 'test-key'
   server = await startServer(0, {
     suggestTimer: async (content) =>
-      content.includes('Yoga') ? null : { mode: 'countdown', seconds: 1200, label: 'AMRAP 20 Min' },
+      content.includes('Yoga') ? null : { mode: 'amrap', seconds: 1200, label: 'AMRAP 20 Min' },
   })
   base = `http://127.0.0.1:${server.port}`
 })
@@ -24,8 +24,13 @@ function post(body: string) {
 
 describe('POST /timerize', () => {
   it('gibt den Timer-Vorschlag zurück', async () => {
-    const res = await post(JSON.stringify({ content: 'AMRAP 20: 5 Pullups, 10 Pushups' }))
+    const res = await post(JSON.stringify({ content: 'AMRAP 20: 5 Pullups, 10 Pushups', version: 2 }))
     expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ timer: { mode: 'amrap', seconds: 1200, label: 'AMRAP 20 Min' } })
+  })
+
+  it('liefert alten Clients (ohne version) das alte Format', async () => {
+    const res = await post(JSON.stringify({ content: 'AMRAP 20: 5 Pullups, 10 Pushups' }))
     expect(await res.json()).toEqual({ timer: { mode: 'countdown', seconds: 1200, label: 'AMRAP 20 Min' } })
   })
 

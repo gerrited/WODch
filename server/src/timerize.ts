@@ -13,9 +13,9 @@ export const TIMERIZE_CONFIG = {
     'dieser Formen:\n' +
     '{"mode":"interval","workSeconds":number,"restSeconds":number,"rounds":number,"label":string} ' +
     'für EMOM/E2MOM, Tabata und Intervalle (EMOM: restSeconds 0, workSeconds = Intervall-Länge);\n' +
-    '{"mode":"countdown","seconds":number,"label":string} für AMRAP und Workouts mit Zeitlimit ' +
-    '(Time Cap);\n' +
-    '{"mode":"countup","label":string} für "For Time" ohne Zeitlimit;\n' +
+    '{"mode":"amrap","seconds":number,"label":string} für AMRAP (seconds = Gesamtdauer);\n' +
+    '{"mode":"fortime","capSeconds":number,"label":string} für "For Time" und andere Workouts, ' +
+    'die auf Zeit laufen (capSeconds = Time Cap, 0 wenn keins angegeben ist);\n' +
     '{"mode":"none"} wenn sich kein sinnvoller Timer ableiten lässt.\n' +
     'label ist eine sehr kurze deutsche Beschreibung (z. B. "EMOM 12 Min", "AMRAP 20 Min").',
 } as const
@@ -29,8 +29,26 @@ export const TIMERIZE_LIMITS = {
 
 export type TimerSuggestion =
   | { mode: 'interval'; workSeconds: number; restSeconds: number; rounds: number; label: string }
+  | { mode: 'amrap'; seconds: number; label: string }
+  | { mode: 'fortime'; capSeconds: number; label: string }
+
+// Format vor den Modi AMRAP/For Time. Clients ohne `version: 2` im Request (noch
+// offene alte Tabs, alte PWA-Caches) kennen nur dieses und bekommen es weiter.
+export type LegacyTimerSuggestion =
+  | Extract<TimerSuggestion, { mode: 'interval' }>
   | { mode: 'countdown'; seconds: number; label: string }
   | { mode: 'countup'; label: string }
+
+export const TIMERIZE_VERSION = 2
+
+export function toLegacySuggestion(s: TimerSuggestion): LegacyTimerSuggestion {
+  if (s.mode === 'amrap') return { mode: 'countdown', seconds: s.seconds, label: s.label }
+  // Alte Clients kennen kein Cap — mit Cap als Countdown, sonst Count-Up wie bisher
+  if (s.mode === 'fortime') {
+    return s.capSeconds > 0 ? { mode: 'countdown', seconds: s.capSeconds, label: s.label } : { mode: 'countup', label: s.label }
+  }
+  return s
+}
 
 export interface TimerizeDeps {
   rateLimiter: RateLimiter
@@ -42,11 +60,11 @@ export interface TimerizeDeps {
 
 export interface TimerizeResult {
   status: number
-  body: { timer: TimerSuggestion } | { error: string }
+  body: { timer: TimerSuggestion | LegacyTimerSuggestion } | { error: string }
 }
 
 export async function handleTimerize(
-  input: { content: unknown; ip: string },
+  input: { content: unknown; ip: string; version?: unknown },
   deps: TimerizeDeps,
 ): Promise<TimerizeResult> {
   if (!deps.hasApiKey()) {
@@ -66,7 +84,7 @@ export async function handleTimerize(
   try {
     const timer = await deps.suggestTimer(content)
     if (!timer) return { status: 422, body: { error: 'Kein passender Timer erkennbar.' } }
-    return { status: 200, body: { timer } }
+    return { status: 200, body: { timer: input.version === TIMERIZE_VERSION ? timer : toLegacySuggestion(timer) } }
   } catch {
     return { status: 500, body: { error: 'Timer-Vorschlag fehlgeschlagen.' } }
   }
@@ -89,8 +107,11 @@ export function parseTimerSuggestion(raw: unknown): TimerSuggestion | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new Error('Kein Objekt')
   const o = raw as Record<string, unknown>
   if (o.mode === 'none') return null
-  if (o.mode === 'countup') return { mode: 'countup', label: label(o.label) }
-  if (o.mode === 'countdown') return { mode: 'countdown', seconds: seconds(o.seconds, 1), label: label(o.label) }
+  if (o.mode === 'amrap') return { mode: 'amrap', seconds: seconds(o.seconds, 1), label: label(o.label) }
+  // fehlendes Cap = ohne Zeitlimit
+  if (o.mode === 'fortime') {
+    return { mode: 'fortime', capSeconds: o.capSeconds === undefined ? 0 : seconds(o.capSeconds, 0), label: label(o.label) }
+  }
   if (o.mode === 'interval') {
     const r = o.rounds
     if (typeof r !== 'number' || !Number.isInteger(r) || r < 1 || r > TIMERIZE_LIMITS.maxRounds) {

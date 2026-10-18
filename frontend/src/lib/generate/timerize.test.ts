@@ -4,14 +4,15 @@ import { planTimer, requestTimer } from './timerize'
 describe('planTimer', () => {
   const reset = { isRunning: false, startedAt: null, accumulatedMs: 0 }
 
-  it('Countdown (AMRAP) setzt Zielzeit', () => {
-    expect(planTimer({ mode: 'countdown', seconds: 1200, label: 'AMRAP 20' })).toEqual({
-      config: { ...reset, mode: 'countdown', preset: null, countdownTarget: 1_200_000 },
+  it('AMRAP setzt die Dauer', () => {
+    expect(planTimer({ mode: 'amrap', seconds: 1200, label: 'AMRAP 20' })).toEqual({
+      config: { ...reset, mode: 'amrap', preset: null, amrapDuration: 1_200_000 },
     })
   })
 
-  it('Count-Up (For Time) startet bei 0', () => {
-    expect(planTimer({ mode: 'countup', label: 'For Time' }).config).toMatchObject({ mode: 'countup', countupStart: 0 })
+  it('For Time setzt das Cap (0 = ohne)', () => {
+    expect(planTimer({ mode: 'fortime', capSeconds: 900, label: 'Fran' }).config).toMatchObject({ mode: 'fortime', timeCap: 900_000 })
+    expect(planTimer({ mode: 'fortime', capSeconds: 0, label: 'Fran' }).config).toMatchObject({ mode: 'fortime', timeCap: 0 })
   })
 
   it('20/10 × 8 wird zum Tabata-Preset', () => {
@@ -44,11 +45,11 @@ describe('requestTimer', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('liefert den Vorschlag bei Erfolg', async () => {
-    const timer = { mode: 'countup', label: 'For Time' }
+    const timer = { mode: 'fortime', capSeconds: 0, label: 'For Time' }
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ timer }), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
     expect(await requestTimer('21-15-9')).toEqual(timer)
-    expect(fetchMock).toHaveBeenCalledWith('/timerize', expect.objectContaining({ method: 'POST', body: '{"content":"21-15-9"}' }))
+    expect(fetchMock).toHaveBeenCalledWith('/timerize', expect.objectContaining({ method: 'POST', body: '{"content":"21-15-9","version":2}' }))
   })
 
   it('wirft die Server-Fehlermeldung bzw. einen Default', async () => {

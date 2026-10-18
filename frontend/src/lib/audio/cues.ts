@@ -1,5 +1,5 @@
 import type { TimerDoc } from '../types'
-import type { Derived } from '../timer/engine'
+import { endMs, type Derived } from '../timer/engine'
 
 export type Cue = 'short' | 'long' | null
 
@@ -11,16 +11,18 @@ export interface CueSnapshot {
 }
 
 // Reduziert den Timer-Zustand auf das, was für Ton-Cues relevant ist.
-// null = Modus/Phase ohne Töne (clock, stopwatch, countup, interval-idle).
+// null = Modus/Phase ohne Töne (clock, stopwatch, countup, For Time ohne Cap,
+// interval-idle). AMRAP und For Time mit Cap klingen wie ein Countdown auf ihr Ende.
 export function snapshot(doc: TimerDoc, derived: Derived, elapsed: number): CueSnapshot | null {
-  if (doc.mode === 'countdown') {
+  const end = endMs(doc)
+  if (end !== null) {
     // Warmup ist eine eigene Phase (wie im Intervall) — sonst kämen die
     // Countdown-Cues um genau die Warmup-Dauer zu früh
     if (derived.phase === 'warmup') {
       return { isRunning: doc.isRunning, phase: 'warmup', round: 0, secondsLeft: Math.ceil(derived.remaining / 1000) }
     }
     const warmup = doc.warmupEnabled ? doc.warmupDuration : 0
-    const secondsLeft = Math.max(0, Math.ceil((doc.countdownTarget - (elapsed - warmup)) / 1000))
+    const secondsLeft = Math.max(0, Math.ceil((end - (elapsed - warmup)) / 1000))
     return { isRunning: doc.isRunning, phase: 'countdown', round: 0, secondsLeft }
   }
   if (doc.mode === 'interval') {

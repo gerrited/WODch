@@ -169,7 +169,7 @@ export function startServer(
       // Ein Tab-Inhalt (≤ 2000 Zeichen) plus JSON-Hülle und Escapes
       readJsonBody(req, res, 8192, async (body) => {
         const result = await handleTimerize(
-          { content: body.content, ip },
+          { content: body.content, ip, version: body.version },
           { rateLimiter, globalBudget: globalAiBudget, hasApiKey, suggestTimer },
         )
         sendJson(res, result.status, result.body)

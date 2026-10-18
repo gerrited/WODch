@@ -30,7 +30,7 @@ function isFiniteNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v)
 }
 
-const TIMER_MODES = new Set(['clock', 'stopwatch', 'countdown', 'countup', 'interval'])
+const TIMER_MODES = new Set(['clock', 'stopwatch', 'countdown', 'countup', 'interval', 'amrap', 'fortime'])
 const INTERVAL_PRESETS = new Set(['tabata', 'fgb1', 'fgb2', 'emom', 'custom'])
 
 function isTimerDoc(v: unknown): v is TimerDoc {
@@ -56,7 +56,10 @@ function isTimerDoc(v: unknown): v is TimerDoc {
     isFiniteNumber(v.emomInterval) &&
     isFiniteNumber(v.emomRounds) &&
     isFiniteNumber(v.totalRounds) &&
-    typeof v.clock12h === 'boolean'
+    typeof v.clock12h === 'boolean' &&
+    // fehlen in TimerDocs älterer Clients — die dürfen nicht abgewiesen werden
+    (v.amrapDuration === undefined || isFiniteNumber(v.amrapDuration)) &&
+    (v.timeCap === undefined || isFiniteNumber(v.timeCap))
   )
 }
 
