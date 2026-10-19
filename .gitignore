@@ -3,3 +3,4 @@ dist/
 .superpowers/
 .superpowers/sdd/
 .env.local
+.factory-verdict

@@ -1,0 +1,91 @@
+name: "Factory: Wartung"
+
+# Zeitgesteuerte Agent-Läufe. Sie legen ausschließlich Issues an (Label
+# `agent:triage`), nie PRs — ob daraus Arbeit wird, entscheidet ein Mensch
+# mit `agent:plan` oder `agent:build`. Cron in GitHub Actions ist unpünktlich
+# (Verzögerungen von Minuten bis Stunden sind normal); das ist hier egal.
+on:
+  schedule:
+    - cron: '17 3 * * *'   # täglich: Sicherheit & Abhängigkeiten
+    - cron: '43 4 * * 1'   # montags: Aufräumen & Doku-Abgleich
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Welcher Lauf?'
+        type: choice
+        options: [security, housekeeping]
+        default: security
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write
+
+concurrency:
+  group: factory-maintenance
+  cancel-in-progress: false
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Lauf bestimmen
+        id: job
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT: ${{ inputs.job }}
+        run: |
+          if [ "$SCHEDULE" = "43 4 * * 1" ] || [ "$INPUT" = "housekeeping" ]; then
+            echo "job=housekeeping" >> "$GITHUB_OUTPUT"
+          else
+            echo "job=security" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Dependencies installieren
+        run: |
+          (cd frontend && npm ci)
+          (cd server && npm ci)
+
+      - name: Agent
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Du bist die Wartungsstation der WODch-Software-Factory.
+            Repository: ${{ github.repository }}. Lauf: ${{ steps.job.outputs.job }}.
+
+            Allgemein: Lies AGENTS.md. Prüfe vor jedem neuen Issue mit
+            `gh issue list --state open --label agent:triage`, ob es das Thema schon gibt —
+            dann kommentiere dort ein Update statt ein Duplikat anzulegen. Lege höchstens
+            3 Issues pro Lauf an, jeweils mit Label `agent:triage`, auf Deutsch, mit
+            Befund, Belegen (Befehlsausgabe/Datei:Zeile) und einem Vorschlag, der sich
+            direkt als Auftrag für die Build-Station eignet. Ändere keine Dateien.
+            Gibt es nichts Relevantes, lege nichts an.
+
+            Lauf security:
+            - `npm audit --omit=dev` und `npm outdated` in frontend/ und server/.
+            - Gleiche Funde und den Code mit SECURITY_REVIEW.md ab: Sind offene Befunde
+              dort inzwischen behoben, oder gibt es Regressionen?
+            - Melde nur High/Critical-Schwachstellen in Laufzeit-Abhängigkeiten sowie
+              Major-Updates von Kernabhängigkeiten (svelte, vite, ws, @anthropic-ai/sdk).
+
+            Lauf housekeeping:
+            - Versehentlich eingecheckte Artefakte (z. B. .claude/worktrees/, .vite/,
+              Screenshots/Entwürfe im Root, die nirgends referenziert werden) und
+              fehlende .gitignore-Einträge.
+            - Abgleich README.md, ONBOARDING.md und AGENTS.md gegen den Code:
+              Befehle, Patch-Pfade des Sync-Modells, Endpunkte, Ingress-Routen in
+              k8s/deployment.yaml. Melde konkrete Abweichungen.
+            - Tote Exporte oder Tests, die nichts mehr prüfen.
+          claude_args: >-
+            --max-turns 40
+            --allowedTools "Read,Glob,Grep,LS,Bash(npm audit:*),Bash(npm outdated:*),Bash(npm ls:*),Bash(cd:*),Bash(git ls-files:*),Bash(git log:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue comment:*)"
