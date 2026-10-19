@@ -56,7 +56,7 @@ Zwei Container-Images, gebaut per GitHub Actions bei Push auf `main` (Tag `lates
 | `ghcr.io/gerrited/wodch-frontend` | Statisches Build hinter Nginx | 80 |
 | `ghcr.io/gerrited/wodch-backend` | WebSocket-Sync-Dienst + AI-Generierung | 8787 |
 
-Der Test-Job (beide Pakete: `npm test` + Build) muss vor dem Image-Build bestehen.
+Der Test-Job (beide Pakete: `npm test` + Build, [test.yml](.github/workflows/test.yml)) muss vor dem Image-Build bestehen und läuft zusätzlich auf jedem PR.
 
 Lokal bauen:
 
@@ -77,3 +77,4 @@ Für dieses Release wichtig: Beim Rollout zuerst das Backend neu starten, dann d
 
 - [docs/rewrite-requirements.md](docs/rewrite-requirements.md) — vollständige Anforderungen (Grundlage des Rewrites)
 - [docs/rewrite-stack-options.md](docs/rewrite-stack-options.md) — Stack-Entscheidung inkl. Nebenläufigkeit & State-Haltung
+- [docs/software-factory.md](docs/software-factory.md) — Agenten-Fließband per GitHub Actions (Issue → Plan → PR → Review)
