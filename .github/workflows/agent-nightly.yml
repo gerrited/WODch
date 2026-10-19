@@ -79,9 +79,10 @@ jobs:
               Major-Updates von Kernabhängigkeiten (svelte, vite, ws, @anthropic-ai/sdk).
 
             Lauf housekeeping:
-            - Versehentlich eingecheckte Artefakte (z. B. .claude/worktrees/, .vite/,
-              Screenshots/Entwürfe im Root, die nirgends referenziert werden) und
-              fehlende .gitignore-Einträge.
+            - Versehentlich eingecheckte Artefakte (Gitlinks/Modus 160000 ohne
+              .gitmodules, Screenshots/Entwürfe im Root, die nirgends referenziert
+              werden) und fehlende .gitignore-Einträge.
+            - Branches räumt branch-cleanup.yml auf — dazu keine Issues anlegen.
             - Abgleich README.md, ONBOARDING.md und AGENTS.md gegen den Code:
               Befehle, Patch-Pfade des Sync-Modells, Endpunkte, Ingress-Routen in
               k8s/deployment.yaml. Melde konkrete Abweichungen.

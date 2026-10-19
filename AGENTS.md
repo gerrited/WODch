@@ -50,5 +50,5 @@ Agent-Läufe per Label (`agent:plan`, `agent:build`, `agent:review`) — Ablauf,
 ## Nicht-Produktivcode
 
 - `docs/superpowers/` und `.superpowers/`: KI-Workflow-Artefakte (Task-Briefs, Pläne), kein Produktivcode.
-- `.claude/worktrees/`: verwaiste Git-Worktrees (bereits gemergt).
+- `.claude/worktrees/`: lokale Agent-Worktrees, per `.gitignore` ausgeschlossen. Aufräumen lokal mit `git worktree list` / `git worktree remove <pfad>` / `git worktree prune`.
 - `server/Dockerfile` & `frontend/Dockerfile`: Deployment-Kontext ist jeweils das Paketverzeichnis.

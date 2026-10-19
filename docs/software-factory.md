@@ -28,6 +28,7 @@ Issue ──agent:plan──▶ Plan-Kommentar ──(Mensch prüft)──▶ ag
 | [agent-build.yml](../.github/workflows/agent-build.yml) | Label `agent:build` am Issue, oder Dispatch aus dem Review | PR mit Tests + Spec/Plan unter `docs/superpowers/`, startet Review |
 | [agent-review.yml](../.github/workflows/agent-review.yml) | Dispatch aus dem Build, oder Label `agent:review` an jedem eigenen PR | Review gegen die [Checkliste](../.github/factory/review-checklist.md); `agent:approved`, `agent:fix` oder `needs-human` |
 | [agent-nightly.yml](../.github/workflows/agent-nightly.yml) | täglich 03:17 UTC / montags 04:43 UTC | höchstens 3 Issues mit `agent:triage` (Sicherheit, Abhängigkeiten, Aufräumen, Doku-Drift) |
+| [branch-cleanup.yml](../.github/workflows/branch-cleanup.yml) | PR geschlossen / montags 05:29 UTC | löscht gemergte Branches und alle `agent/*`-Branches geschlossener PRs; nicht gemergte fremde Branches nur im Bericht |
 | [test.yml](../.github/workflows/test.yml) | jeder PR, und vom Image-Build wiederverwendet | `npm test` + `npm run build` in beiden Paketen |
 
 ## Labels
@@ -75,6 +76,18 @@ Das Repo ist öffentlich, deshalb:
      gh label create "$l" --force
    done
    ```
+
+## Branches & Worktrees
+
+- **Remote-Branches:** `branch-cleanup.yml` löscht beim Schließen eines PRs den
+  Head-Branch, wenn er gemergt wurde oder unter `agent/` liegt. Der wöchentliche
+  Lauf erwischt Altlasten: Branches ohne offenen PR, deren PRs alle gemergt sind
+  und die seit 14 Tagen ruhen. Geschlossene, nicht gemergte Branches anderer
+  Herkunft werden nur im Job-Bericht gelistet. Manuell startbar, standardmäßig
+  als Probelauf.
+- **Worktrees:** In der Factory entstehen keine — jeder Lauf hat einen frischen
+  Runner. Lokale Claude-Code-Worktrees (`.claude/worktrees/`) sind per
+  `.gitignore` ausgeschlossen; lokal aufräumen mit `git worktree prune`.
 
 ## Bekannte Grenzen
 
