@@ -25,7 +25,7 @@ Vollständige Anforderungen: [docs/rewrite-requirements.md](docs/rewrite-require
 | Bereich | Technologie |
 |---|---|
 | **Frontend** | Svelte 5 (Runes-API: `$state`/`$derived`/`$effect`), Vite 6, TypeScript |
-| **Backend** | Node 22, `ws` (WebSocket), `@anthropic-ai/sdk` (KI-Features) |
+| **Backend** | Node 24, `ws` (WebSocket), `@anthropic-ai/sdk` (KI-Features) |
 | **Tests** | Vitest (in beiden Paketen), jsdom fürs Frontend |
 | **IDs / QR** | `nanoid` (16-stellige Session-IDs, 6-stellige Tab-IDs), `uqr` (QR-Code im Share-Modal) |
 | **Deployment** | Docker (multi-arch), Nginx (Frontend), Kubernetes, GitHub Actions |
@@ -277,7 +277,7 @@ Solide bei reiner Logik (Timer-Engine, Store-Klassen, Sync-Client, Server-Handle
 
 Am besten etwas Kleines, klar Umrissenes, das dich durch **einen kompletten Client-Server-Pfad** führt, ohne die riskante `WorkoutEditor`-Komponente:
 
-- **Idealer Einstieg (und ohnehin nötig): einen Security-Fix aus [SECURITY_REVIEW.md](SECURITY_REVIEW.md) umsetzen** (§4) — z. B. Befund 6: Security-Header in [frontend/nginx.conf](frontend/nginx.conf) ergänzen (CSP, `X-Frame-Options`, `X-Content-Type-Options`). Klein und klar umrissen, und du lernst Frontend-Container und Deployment kennen.
+- **Idealer Einstieg (und ohnehin nötig): einen offenen Security-Fix aus [SECURITY_REVIEW.md](SECURITY_REVIEW.md) umsetzen** — z. B. **F3** (KI-Eingabe vor dem Budget validieren, drei Handler, kleine Änderung) oder **F6** (Frame-Ratenlimit vor dem Dispatch). Die Befunde 1–6/8 des ersten Reviews sind bereits umgesetzt; nimm einen Punkt aus dem Abschnitt „Audit 2026-10-26", der noch offen ist. Klein und klar umrissen, und du lernst Server und Protokoll kennen.
 - **Alternativ zum Warmwerden:** einen Charakterisierungs-Test für eine bisher untestete Komponente schreiben (z. B. [ShareButton.svelte](frontend/src/lib/components/ShareButton.svelte) — klein und überschaubar). Zeigt dir das Test-Setup (jsdom, `test-setup.ts`) und Svelte-5-Komponententests.
 
 ### Faustregeln

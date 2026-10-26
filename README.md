@@ -22,8 +22,8 @@ Gym-Training-Web-App: vollwertiger Intervall-Timer, Multi-Tab-Workout-Editor und
 
 ```
 frontend/   Svelte 5 + Vite + TypeScript, statisches SPA-Build hinter Nginx
-server/     Sync-Dienst: Node 22 + ws, Sessions in-Memory, 24h-TTL-Sweep
-k8s/        Deployments (frontend skalierbar, sync replicas: 1) + Ingress
+server/     Sync-Dienst: Node 24 + ws, Sessions in-Memory, 24h-TTL-Sweep
+k8s/        Deployments (je `replicas: 1`) + Ingress
 ```
 
 **Sync-Modell:** Clients verbinden sich per WebSocket (`/ws`) und tauschen Pfad-Patches aus (`timer`, `video`, `videoUrl`, `videoLoop`, `roundCounter`, `workouts`, `workouts/activeTab`, `tab/<id>/content|title`). Zusätzlich meldet der Server bei jedem Join/Leave `{ t: 'presence', count }` — reine Laufzeit-Info, nicht Teil des Session-Docs. Der laufende Timer wird **nie** gestreamt — übertragen werden nur Zustandsübergänge (`startedAt`, `accumulatedMs`); jeder Client rechnet die Anzeige lokal. Workout-Eingaben werden 500 ms debounced und pro Tab-Feld gepatcht, damit sich parallel Tippende nicht überschreiben.
@@ -53,7 +53,7 @@ Zwei Container-Images, gebaut per GitHub Actions bei Push auf `main` (Tag `lates
 
 | Image | Inhalt | Port |
 |---|---|---|
-| `ghcr.io/gerrited/wodch-frontend` | Statisches Build hinter Nginx | 80 |
+| `ghcr.io/gerrited/wodch-frontend` | Statisches Build hinter Nginx | 8080 |
 | `ghcr.io/gerrited/wodch-backend` | WebSocket-Sync-Dienst + AI-Generierung | 8787 |
 
 Der Test-Job (beide Pakete: `npm test` + Build) muss vor dem Image-Build bestehen.
@@ -67,7 +67,9 @@ docker build -t wodch-backend:local ./server
 
 ### Kubernetes
 
-`k8s/deployment.yaml`: Frontend-Deployment + Service, Sync-Deployment (`replicas: 1`, `strategy: Recreate`, `/healthz`-Probes) + Service, ein Ingress (`wodch.com` / `www.wodch.com`) mit `/ws`, `/generate`, `/estimate`, `/timerize` → Backend und `/` → Frontend (TLS/HSTS, WebSocket-Timeouts und `X-Forwarded-For`-Normalisierung via Annotations).
+`k8s/deployment.yaml`: Frontend-Deployment + Service, Sync-Deployment (`replicas: 1`, `strategy: Recreate`, `/healthz`-Probes) + Service, ein Ingress (`wodch.com` / `www.wodch.com`) mit `/ws`, `/generate`, `/estimate`, `/timerize` → Backend und `/` → Frontend (WebSocket-Timeouts und `X-Forwarded-For`-Normalisierung via Annotations).
+
+**Transport (TLS/HSTS):** Das Repo selbst terminiert **kein** TLS — der Ingress hat keinen `tls:`-Block, keine cert-manager-Annotation und keinen `https`-Redirect, und Nginx sendet kein HSTS. Die Annahme ist, dass ein Cloudflare Tunnel davor TLS terminiert und HSTS setzt; das ist eine externe Konfiguration und im Repo nicht belegbar. Ebenso setzt die XFF-Normalisierung im Ingress „kein CDN/LB davor" voraus — beides zusammen ist nur stimmig, wenn der Tunnel nicht als zusätzlicher Proxy-Hop auf den Ingress zeigt. Siehe [SECURITY_REVIEW.md](SECURITY_REVIEW.md) V1/V2.
 
 Der Sync-Dienst hält Sessions im Arbeitsspeicher — bewusst eine Replica. Ausbaupfad für mehrere Replicas (Redis als Backing Store + Pub/Sub): siehe [docs/rewrite-stack-options.md](docs/rewrite-stack-options.md), Abschnitt 6.2.
 
