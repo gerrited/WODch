@@ -70,20 +70,36 @@ function isVideoDoc(v: unknown): v is VideoDoc {
 }
 
 function isWorkoutsDoc(v: unknown): v is WorkoutsDoc {
-  return (
-    isRecord(v) &&
-    Array.isArray(v.tabs) &&
-    v.tabs.length <= SESSION_DOC_LIMITS.maxTabs &&
-    v.tabs.every(
+  if (
+    !isRecord(v) ||
+    !Array.isArray(v.tabs) ||
+    // Mindestens ein Tab: der Editor schreibt immer auf tabs[activeTab], ein
+    // leeres Doc würde den Empfänger beim nächsten Tastendruck crashen (F2).
+    v.tabs.length < 1 ||
+    v.tabs.length > SESSION_DOC_LIMITS.maxTabs ||
+    !v.tabs.every(
       (t) =>
         isRecord(t) &&
         typeof t.id === 'string' &&
+        t.id.length > 0 &&
         typeof t.title === 'string' &&
         t.title.length <= SESSION_DOC_LIMITS.maxTabTitleChars &&
         typeof t.content === 'string' &&
         t.content.length <= SESSION_DOC_LIMITS.maxTabContentChars,
-    ) &&
-    isFiniteNumber(v.activeTab)
+    )
+  ) {
+    return false
+  }
+  // Eindeutige IDs: das keyed {#each} des Clients wirft bei Duplikaten auch im
+  // Production-Build, und tab/<id>-Patches träfen nur noch den ersten Treffer.
+  const ids = new Set(v.tabs.map((t) => (t as { id: string }).id))
+  if (ids.size !== v.tabs.length) return false
+  // activeTab muss ein gültiger Index sein — sonst greift der Client auf
+  // tabs[activeTab] === undefined zu (F2).
+  return (
+    Number.isInteger(v.activeTab) &&
+    (v.activeTab as number) >= 0 &&
+    (v.activeTab as number) < v.tabs.length
   )
 }
 
@@ -172,8 +188,16 @@ export function createStore(): Store {
         }
       } else if (parts.length === 2 && parts[0] === 'workouts' && parts[1] === 'activeTab') {
         // Guards auf dem Bestands-Doc: schützt gegen Typ-Verwirrung durch Garbage-Seeds.
-        if (isFiniteNumber(value) && isRecord(doc.workouts)) {
-          doc.workouts.activeTab = value
+        // Der Index muss im Bereich liegen wie in isWorkoutsDoc (F2) — ein
+        // out-of-range activeTab bricht beim Client jeden Schreibzugriff.
+        if (
+          Number.isInteger(value) &&
+          isRecord(doc.workouts) &&
+          Array.isArray(doc.workouts.tabs) &&
+          (value as number) >= 0 &&
+          (value as number) < doc.workouts.tabs.length
+        ) {
+          doc.workouts.activeTab = value as number
           applied = true
         }
       } else if (parts.length === 3 && parts[0] === 'tab' && (parts[2] === 'content' || parts[2] === 'title')) {
