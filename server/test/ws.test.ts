@@ -249,7 +249,12 @@ describe('Eingangs-Validierung (Befund 1)', () => {
     await nextMsg(b) // doc
 
     const received: any[] = []
-    b.on('message', (d) => received.push(JSON.parse(d.toString())))
+    // presence wird bei jedem join/leave gebroadcastet und kann hier noch eintreffen
+    // (der presence-Frame folgt dem doc-Frame) — er ist keine Patch-Weiterleitung.
+    b.on('message', (d) => {
+      const msg = JSON.parse(d.toString())
+      if (msg.t !== 'presence') received.push(msg)
+    })
     send(a, { t: 'patch', path: 'timer', value: { kaputt: true } })
     send(a, { t: 'patch', path: 'videoUrl', value: 42 })
     await new Promise((r) => setTimeout(r, 50))
