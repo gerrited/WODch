@@ -75,6 +75,10 @@ export function createSyncClient(
         if (localDoc) ws?.send(JSON.stringify({ t: 'seed', session: sessionId, doc: localDoc() }))
         retries = 0
         setStatus('connected')
+      } else if (msg.t === 'error') {
+        // Seed vom Server verweigert (voller Store / ungültiges Doc). Nicht
+        // 'connected' bleiben, sonst würden alle Patches still verworfen (F7).
+        setStatus('error')
       } else if (msg.t === 'patch') {
         patchCb?.(msg.path, msg.value)
       } else if (msg.t === 'presence') {

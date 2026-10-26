@@ -241,11 +241,20 @@ export function startServer(
         } else if (msg.t === 'seed') {
           if (!wsEntryLimiter.allow(ip)) return close()
           // Volle Struktur-Validierung vor dem Speichern (Befund 4/5)
-          if (!validateSessionDoc(msg.doc)) return
+          if (!validateSessionDoc(msg.doc)) {
+            // Ohne Rückmeldung bliebe der Client im Glauben, verbunden zu sein, und
+            // alle folgenden Patches würden still verworfen (Audit F7).
+            ws.send(JSON.stringify({ t: 'error', reason: 'invalid_seed' }))
+            return
+          }
           const existing = store.get(msg.session)
           const session = store.create(msg.session, msg.doc)
-          // Store voll (MAX_SESSIONS): Seed verweigern, Client bleibt wo er war
-          if (!session) return
+          // Store voll und keine verdrängbare Session: explizit melden statt
+          // den Client mit einer Geister-Session zurückzulassen (Audit F1/F7).
+          if (!session) {
+            ws.send(JSON.stringify({ t: 'error', reason: 'store_full' }))
+            return
+          }
           leave()
           joined = msg.session
           session.clients.add(ws)

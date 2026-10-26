@@ -94,6 +94,16 @@ describe('sync protocol', () => {
     a.close(); b.close()
   })
 
+  it('verweigerter Seed meldet einen error-Frame (F1/F7)', async () => {
+    const ws = await connect()
+    const doc = makeDoc()
+    // Leere Tab-Liste ist seit F2 ungültig → der Server darf nicht still verwerfen
+    ;(doc.workouts as { tabs: unknown[] }).tabs = []
+    send(ws, { t: 'seed', session: 'baddoc1', doc })
+    expect(await nextMsg(ws)).toEqual({ t: 'error', reason: 'invalid_seed' })
+    ws.close()
+  })
+
   it('patch von A erreicht B, nicht A selbst', async () => {
     const a = await connect()
     send(a, { t: 'seed', session: 'sess02', doc: makeDoc() })
@@ -278,11 +288,16 @@ describe('Missbrauch-Limits (Befund 3/4)', () => {
     await abuseServer.close()
   })
 
-  it('verwirft strukturell kaputte Seed-Dokumente', async () => {
+  it('verwirft strukturell kaputte Seed-Dokumente und meldet den Fehler', async () => {
     const ws = await connect(abuseUrl)
     const doc = makeDoc()
+    // Jeweils senden und auf die Antwort warten: bei zwei Frames in Folge könnte
+    // nextMsg den zweiten verlieren, wenn beide im selben Tick eintreffen.
     send(ws, { t: 'seed', session: 'bad1', doc: { ...doc, workouts: null } })
+    expect(await nextMsg(ws)).toEqual({ t: 'error', reason: 'invalid_seed' })
     send(ws, { t: 'seed', session: 'bad2', doc: { ...doc, timer: { mode: 'x' } } })
+    expect(await nextMsg(ws)).toEqual({ t: 'error', reason: 'invalid_seed' })
+    // Keine Session wurde angelegt.
     send(ws, { t: 'join', session: 'bad1' })
     expect(await nextMsg(ws)).toEqual({ t: 'missing' })
     send(ws, { t: 'join', session: 'bad2' })
