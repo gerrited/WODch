@@ -255,30 +255,29 @@
         {/if}
       </div>
     {/each}
-    <button
-      class="tab-add"
-      title="Neues Workout"
-      aria-label="Neues Workout"
-      onclick={() => workouts.addTab()}>+</button
-    >
+    <button class="tab-add" title="Neues Workout" aria-label="Neues Workout" onclick={() => workouts.addTab()}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    </button>
     <div class="tab-actions">
+      <!-- Beide KI-Aktionen mit sichtbarem Text; bei schmalem Editor nur noch Icon (Container-Query) -->
       <button
-        class="tab-magic"
+        class="action-btn tab-magic"
         data-tour="ai-generate"
         title="Workout mit AI erstellen"
-        aria-label="Workout mit AI erstellen"
+        aria-label="Generieren"
         onclick={openGenerate}
       >
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path
-            d="M12 2l1.6 4.6L18 8.2l-4.4 1.6L12 14.4l-1.6-4.6L6 8.2l4.4-1.6L12 2zM19 13l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9L19 13zM5 14l.7 2 2 .7-2 .7L5 19.4l-.7-2-2-.7 2-.7L5 14z"
-          />
+        <svg class="sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
         </svg>
+        <span class="action-text">Generieren</span>
       </button>
       <button
-        class="tab-estimate tab-timerize"
+        class="action-btn tint tab-estimate tab-timerize"
         title="Timer aus Workout einstellen"
-        aria-label="Timer aus Workout einstellen"
+        aria-label="Timer aus Workout"
         class:busy={timerizing}
         disabled={timerizing || !activeHasContent}
         onclick={runTimerize}
@@ -288,9 +287,10 @@
           <path d="M10.5 10v6l4.5-3z" fill="currentColor" stroke-linejoin="round" />
           <path d="M9 2h6" stroke-linecap="round" />
         </svg>
+        <span class="action-text">Timer aus Workout</span>
       </button>
       <button
-        class="tab-estimate"
+        class="icon-action tab-estimate"
         data-tour="estimate"
         title="Dauer schätzen"
         aria-label="Dauer schätzen"
@@ -387,8 +387,10 @@
     flex-direction: column;
     background: var(--bg);
     position: relative;
+    container-type: inline-size;
   }
   .tab-bar {
+    --toolbar-h: 56px;
     display: flex;
     align-items: stretch;
     gap: 2px;
@@ -397,22 +399,21 @@
     border-bottom: 1px solid var(--line);
     flex-shrink: 0;
     overflow-x: auto;
-    height: var(--bar-h);
+    height: var(--toolbar-h);
     box-sizing: border-box;
     user-select: none;
   }
-  /* Aktiver Tab: nur Textfarbe + Akzent-Unterstrich, keine Kästen */
+  /* Tabs in Mono: inaktiv gedimmt, aktiv hell + fett mit Lime-Unterstrich */
   .tab {
     position: relative;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 0 12px;
+    padding: 0 14px;
     cursor: pointer;
-    /* Inaktive Tabs deutlich gedimmt — mit --text-muted war der aktive kaum zu unterscheiden */
-    color: #71717a;
-    font-family: var(--font-ui);
-    font-size: 14px;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
     user-select: none;
@@ -435,7 +436,7 @@
   }
   .tab.active {
     color: var(--text);
-    font-weight: 600;
+    font-weight: 700;
   }
   .tab.active::after {
     background: var(--accent);
@@ -452,10 +453,10 @@
     border-bottom: 1px solid var(--accent);
     color: var(--text);
     font-size: 13px;
-    font-family: var(--font-ui);
-    font-weight: 500;
+    font-family: var(--font-mono);
+    font-weight: 700;
     outline: none;
-    width: 80px;
+    width: 90px;
     padding: 0;
   }
   /* Schließen-Kreuz erst bei Hover/aktivem Tab zeigen — weniger Rauschen in der Leiste */
@@ -473,16 +474,15 @@
     opacity: 1;
   }
   .tab-close:hover {
-    color: #ff4d5e;
+    color: var(--rest);
   }
   .tab-add,
-  .tab-magic,
-  .tab-estimate {
+  .icon-action {
     align-self: center;
     display: grid;
     place-items: center;
-    width: 32px;
-    height: 32px;
+    width: var(--tap);
+    height: var(--tap);
     flex-shrink: 0;
     background: none;
     border: none;
@@ -492,15 +492,72 @@
     line-height: 1;
     transition: color 0.15s, background-color 0.15s;
   }
-  .tab-add {
-    font-family: var(--font-ui);
-    font-size: 18px;
+  .tab-add svg,
+  .icon-action svg {
+    width: 18px;
+    height: 18px;
+    display: block;
   }
   .tab-add:hover,
-  .tab-magic:hover,
-  .tab-estimate:hover:not(:disabled) {
+  .icon-action:hover:not(:disabled) {
     color: var(--text);
     background: var(--surface-hover);
+  }
+  /* Text-Buttons der Editor-Aktionen: Rahmen (Generieren) bzw. Lime-Tint (Timer aus Workout) */
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    height: 40px;
+    min-width: var(--tap);
+    padding: 0 12px;
+    font: 500 13px/1 var(--font-ui);
+    color: var(--text-2);
+    background: none;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .action-btn svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+  }
+  .action-btn .sparkle {
+    color: var(--accent);
+  }
+  .action-btn:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--text-ghost);
+  }
+  .action-btn.tint {
+    color: var(--accent-tint-text);
+    background: var(--accent-tint-bg);
+    border-color: var(--accent-tint-line);
+  }
+  .action-btn.tint:hover:not(:disabled) {
+    color: var(--accent-tint-text);
+    border-color: var(--accent);
+  }
+  .tab-add:focus-visible,
+  .icon-action:focus-visible,
+  .action-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* Schmaler Editor (Split klein gezogen, Handy): Aktionen nur als Icon */
+  @container (max-width: 620px) {
+    .action-text {
+      display: none;
+    }
+    .action-btn {
+      width: var(--tap);
+      padding: 0;
+    }
   }
   .editor-area {
     flex: 1;
@@ -513,8 +570,9 @@
   .tab-actions {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 8px;
     margin-left: auto;
+    padding-left: 8px;
   }
   .tab-estimate:disabled {
     opacity: 0.4;
@@ -532,27 +590,17 @@
       opacity: 1;
     }
   }
-  .tab-estimate svg {
-    width: 18px;
-    height: 18px;
-    display: block;
-  }
-  .tab-magic svg {
-    width: 18px;
-    height: 18px;
-    display: block;
-  }
   .gen-overlay {
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(10, 10, 11, 0.88);
   }
   .gen-phrase {
-    color: #7cc;
-    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-family: var(--font-mono);
     font-size: 22px;
     letter-spacing: 1px;
   }
@@ -579,19 +627,20 @@
     bottom: 12px;
     left: 50%;
     transform: translateX(-50%);
-    color: #e63946;
-    font-size: 12px;
-    font-family: monospace;
-    background: #1a1a1a;
-    padding: 6px 12px;
-    border-radius: 4px;
+    color: var(--rest);
+    font-size: 13px;
+    font-family: var(--font-ui);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
   }
   .workout-editor {
     width: 100%;
     color: var(--text);
     font-family: var(--font-mono);
     font-size: 32px;
-    line-height: 1.7;
+    line-height: 1.6;
     outline: none;
     padding: 20px;
     text-align: center;
@@ -604,17 +653,16 @@
   }
   .estimate-popover {
     position: absolute;
-    top: calc(var(--bar-h) + 6px);
+    top: 62px;
     right: 8px;
     z-index: 50;
     background: var(--surface);
     border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius-lg);
     padding: 16px 18px;
-    min-width: 220px;
-    font-family: 'JetBrains Mono', monospace;
-    color: #ccc;
+    min-width: 240px;
+    font-family: var(--font-mono);
+    color: var(--text-2);
     text-align: left;
   }
   .estimate-close {
@@ -623,26 +671,26 @@
     right: 10px;
     background: none;
     border: none;
-    color: #666;
+    color: var(--text-faint);
     font-size: 13px;
     cursor: pointer;
     padding: 2px 4px;
   }
   .estimate-close:hover {
-    color: #fff;
+    color: var(--text);
   }
   .estimate-total {
-    color: #7cc;
+    color: var(--accent);
     font-size: 22px;
     letter-spacing: 1px;
   }
   .estimate-stale {
-    color: #b58a4a;
+    color: var(--rest);
     font-size: 11px;
     margin-top: 4px;
   }
   .estimate-divider {
-    border-top: 1px solid #2a2a2a;
+    border-top: 1px solid var(--line);
     margin: 12px 0 8px;
   }
   .estimate-seg {
@@ -653,13 +701,13 @@
     padding: 2px 0;
   }
   .estimate-seg-label {
-    color: #999;
+    color: var(--text-muted);
   }
   .estimate-seg-min {
-    color: #ccc;
+    color: var(--text-2);
   }
   .estimate-error {
-    color: #e63946;
+    color: var(--rest);
     font-size: 13px;
   }
   .timerize-popover .estimate-total {
