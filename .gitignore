@@ -3,3 +3,7 @@ dist/
 .superpowers/
 .superpowers/sdd/
 .env.local
+
+# Lokale Claude-Code-Worktrees und Playwright-Artefakte
+.claude/worktrees/
+.playwright-mcp/
