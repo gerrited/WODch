@@ -22,7 +22,7 @@
     flex-shrink: 0;
   }
   .logo text {
-    font-family: inherit;
+    font-family: var(--font-display);
     user-select: none;
   }
 </style>

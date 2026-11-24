@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>WODch – Session-Screen</title>
+<script src="./preview-runtime.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,900&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0B}
+a{color:#A8D129}a:hover{color:#C6EB4F}
+@keyframes wpulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+<div style="min-height: 900px; background: #0A0A0B; color: #F4F4F5; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column">
+
+<!-- TIMER BAR -->
+<header style="border-bottom: 1px solid #222226; background: #0E0E10">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; padding: 14px 24px; flex-wrap: wrap">
+<div style="display: flex; align-items: center; gap: 16px; flex: 1 1 200px">
+<a href="Main.dc.html" aria-label="Zur Startseite" style="text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; font-size: 40px; line-height: 1; color: #F4F4F5">W<span style="color: #A8D129; font-size: 31px">ch</span></a>
+<span style="display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #A1A1AA; border: 1px solid #26262B; border-radius: 999px; padding: 6px 12px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #A8D129; animation: wpulse 2s infinite"></span>2 Geräte</span>
+</div>
+
+<button onClick="{{ toggle }}" aria-label="Timer starten oder pausieren" style="all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 0 1 auto; padding: 0 12px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: {{ phaseColor }}; font-weight: 700">{{ phaseLabel }}</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 92px; line-height: 1; letter-spacing: -3px; color: {{ digitColor }}">{{ clock }}</span>
+</button>
+
+<div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 1 1 200px; flex-wrap: wrap">
+<div style="display: flex; align-items: center; border: 1px solid #2E2E33; border-radius: 12px; overflow: hidden; margin-right: 8px">
+<button onClick="{{ dec }}" aria-label="Runde zurück" style="all: unset; cursor: pointer; width: 44px; height: 48px; display: flex; align-items: center; justify-content: center; color: #A1A1AA"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+<div style="padding: 0 10px; text-align: center; min-width: 56px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.16em; color: #8B8B94">RUNDE</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 22px; line-height: 1.1">{{ rounds }}</div>
+</div>
+<button onClick="{{ inc }}" aria-label="Runde zählen" style="all: unset; cursor: pointer; width: 44px; height: 48px; display: flex; align-items: center; justify-content: center; background: #A8D129; color: #0A0A0B"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<button aria-label="Ton" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #A1A1AA"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4zM16 9a4 4 0 010 6M19 6a8 8 0 010 12"></path></svg></button>
+<button aria-label="Timer-Einstellungen" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #A1A1AA"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg></button>
+<a href="Remote.dc.html" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #2E2E33; color: #F4F4F5; text-decoration: none; font-size: 14px; font-weight: 500; box-sizing: border-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"></path></svg>Teilen</a>
+</div>
+</div>
+<div style="height: 4px; background: #1A1A1D"><div style="height: 100%; width: {{ barW }}; background: {{ phaseColor }}; transition: width 1s linear"></div></div>
+</header>
+
+<!-- SPLIT -->
+<main style="flex: 1; display: flex; flex-wrap: wrap; min-height: 0">
+
+<!-- EDITOR -->
+<section aria-label="Workout-Editor" style="flex: 1 1 560px; min-width: 0; display: flex; flex-direction: column; border-right: 1px solid #222226">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px 0 12px; border-bottom: 1px solid #222226; flex-wrap: wrap">
+<div style="display: flex; gap: 2px; font-family: 'JetBrains Mono', monospace; font-size: 13px" role="tablist" aria-label="Workouts">
+<button role="tab" aria-selected="false" style="all: unset; cursor: pointer; padding: 12px 16px; color: #8B8B94; border-bottom: 2px solid transparent">Warmup</button>
+<button role="tab" aria-selected="true" style="all: unset; cursor: pointer; padding: 12px 16px; color: #F4F4F5; border-bottom: 2px solid #A8D129; font-weight: 700">Workout 1</button>
+<button role="tab" aria-selected="false" style="all: unset; cursor: pointer; padding: 12px 16px; color: #8B8B94; border-bottom: 2px solid transparent">Cooldown</button>
+<button aria-label="Tab hinzufügen" style="all: unset; cursor: pointer; width: 44px; display: flex; align-items: center; justify-content: center; color: #8B8B94"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<div style="display: flex; gap: 8px; padding-bottom: 8px">
+<button style="all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #2E2E33; font-size: 13px; color: #C4C4CC"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A8D129" stroke-width="2" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path></svg>Generieren</button>
+<button style="all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 8px; background: #1A1F0C; border: 1px solid #3A4A12; font-size: 13px; color: #C6EB4F"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4M9 2h6"></path></svg>Timer aus Workout</button>
+</div>
+</div>
+<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 32px; text-align: center; font-family: 'JetBrains Mono', monospace">
+<div style="font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; font-size: 56px; line-height: 1; text-transform: uppercase; color: #A8D129">EMOM 12</div>
+<div style="margin-top: 8px; font-size: 15px; color: #8B8B94; letter-spacing: 0.12em">4 RUNDEN · JEDE MINUTE</div>
+<ol style="list-style: none; margin: 36px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; font-size: 30px; font-weight: 500">
+<li><span style="color: #5E5E66; margin-right: 18px">1</span>12 Wall Balls</li>
+<li><span style="color: #5E5E66; margin-right: 18px">2</span>10 Burpees</li>
+<li><span style="color: #5E5E66; margin-right: 18px">3</span>200 m Row</li>
+</ol>
+<p style="margin: 40px 0 0; font-size: 17px; color: #A1A1AA">Restzeit der Minute = Pause.</p>
+</div>
+</section>
+
+<!-- VIDEO -->
+<section aria-label="Video-Player" style="flex: 1 1 480px; min-width: 0; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #222226; flex-wrap: wrap">
+<label for="vurl" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">YouTube-URL</label>
+<input id="vurl" value="youtube.com/watch?v=…" style="flex: 1 1 200px; min-width: 0; height: 40px; box-sizing: border-box; background: #131315; border: 1px solid #26262B; border-radius: 8px; padding: 0 12px; color: #C4C4CC; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+<button aria-label="10 Sekunden zurück" style="all: unset; cursor: pointer; height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid #26262B; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #A1A1AA; display: flex; align-items: center">−10s</button>
+<button aria-label="10 Sekunden vor" style="all: unset; cursor: pointer; height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid #26262B; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #A1A1AA; display: flex; align-items: center">+10s</button>
+<button aria-label="Endlos-Loop" aria-pressed="true" style="all: unset; cursor: pointer; width: 40px; height: 40px; border-radius: 8px; background: #1A1F0C; border: 1px solid #3A4A12; color: #A8D129; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 013-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 01-3 3H3"></path></svg></button>
+</div>
+<div style="flex: 1; padding: 20px; display: flex">
+<div style="flex: 1; min-height: 320px; border-radius: 12px; background: #131315; border: 1px dashed #2E2E33; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #8B8B94">
+<span style="width: 64px; height: 64px; border-radius: 50%; border: 2px solid #3A3A40; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="#A1A1AA" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg></span>
+<span style="font-size: 14px">YouTube-Video · Technik-Demo oder Playlist</span>
+</div>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { running: true, t: 197, rounds: 3 };
+  }
+  componentDidMount() {
+    this.iv = setInterval(() => {
+      if (this.state.running) this.setState((s) => ({ t: (s.t + 1) % 720 }));
+    }, 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.iv);
+  }
+  renderVals() {
+    const st = this.state || { running: true, t: 0, rounds: 0 };
+    const left = 720 - st.t;
+    const m = Math.floor(left / 60);
+    const s = left % 60;
+    const sec = st.t % 60;
+    const station = Math.floor(st.t / 60) % 3 + 1;
+    return {
+      clock: String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0'),
+      phaseLabel: st.running ? 'EMOM · Minute ' + (Math.floor(st.t / 60) + 1) + ' · Station ' + station : 'Pausiert — tippen zum Fortsetzen',
+      phaseColor: st.running ? '#A8D129' : '#FF9F43',
+      digitColor: st.running ? '#F4F4F5' : '#8B8B94',
+      barW: Math.round(((sec + 1) / 60) * 100) + '%',
+      rounds: st.rounds,
+      toggle: () => this.setState((x) => ({ running: !x.running })),
+      inc: () => this.setState((x) => ({ rounds: x.rounds + 1 })),
+      dec: () => this.setState((x) => ({ rounds: Math.max(0, x.rounds - 1) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

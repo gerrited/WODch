@@ -1,0 +1,58 @@
+/* WODch Redesign — Design-Tokens
+   Ersetzt den :root-Block in frontend/src/app.css. Bestehende Variablennamen bleiben
+   erhalten (--bg, --surface, --line, --text, --accent …), damit vorhandene Komponenten
+   nicht brechen; neue Tokens kommen dazu. */
+:root {
+  /* Flächen: fast schwarz, Ebenen über minimale Helligkeitsstufen statt Schatten */
+  --bg: #0a0a0b;
+  --bg-band: #0e0e10;          /* Bänder: Timer-Leiste, Preset-Ticker, Open-Source-Sektion */
+  --surface: #111113;          /* Karten, Bühne */
+  --surface-2: #131315;        /* Inputs, Video-Platzhalter */
+  --surface-hover: #17171a;    /* aktiver Tab, Hover */
+
+  /* Linien */
+  --line: #222226;
+  --line-strong: #2e2e33;
+  --line-soft: #1e1e22;        /* Sektionstrenner */
+
+  /* Text — alle Stufen ≥ 4.5:1 auf --bg */
+  --text: #f4f4f5;
+  --text-2: #c4c4cc;           /* Fliesstext in Hero/Lead */
+  --text-muted: #a1a1aa;       /* Sekundärtext */
+  --text-faint: #8b8b94;       /* Labels, Meta (vorher #4a4a52 — zu wenig Kontrast) */
+  --text-ghost: #5e5e66;       /* nur dekorativ / grosse Schrift (Ticker, Listennummern) */
+
+  /* Akzent: Lime = Arbeit/Aktion, Orange = Pause/Rest */
+  --accent: #a8d129;
+  --accent-hover: #c6eb4f;
+  --accent-ink: #0a0a0b;       /* Text auf Lime-Buttons */
+  --accent-tint-bg: #1a1f0c;   /* Chips, aktive Toggles */
+  --accent-tint-line: #3a4a12;
+  --accent-tint-text: #c6eb4f;
+  --rest: #ff9f43;             /* Phase Pause / pausierter Zustand */
+  --round-current: #5e6e1e;    /* laufende Runde in der Rundenleiste */
+
+  /* Typografie — selbst gehostet über @fontsource (CSP erlaubt keine Google Fonts) */
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif; /* immer italic 900, uppercase */
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Typo-Skala (Landing) */
+  --fs-hero: clamp(56px, 8vw, 104px);   /* line-height .92 */
+  --fs-h2: clamp(40px, 5vw, 64px);      /* line-height .95 */
+  --fs-h3: 21px;                        /* Inter 600 */
+  --fs-lead: 19px;
+  --fs-body: 16px;                      /* line-height 1.55 */
+  --fs-eyebrow: 13px;                   /* Mono, uppercase, letter-spacing .18em */
+
+  /* Radien & Abstände */
+  --radius-sm: 8px;    /* Buttons in Toolbars, Inputs */
+  --radius: 10px;      /* Primär-Buttons */
+  --radius-lg: 16px;   /* Karten, Feature-Raster */
+  --radius-xl: 18px;   /* Bühne, Handy-Buttons */
+  --container: 1200px;
+  --gutter: 24px;
+  --section-y: 96px;   /* 112–120px für Ablauf und Schluss-CTA */
+  --tap: 44px;         /* Mindestgrösse aller Bedienelemente */
+  --bar-h: 48px;
+}

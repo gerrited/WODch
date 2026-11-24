@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>WODch – Fernbedienung</title>
+<script src="./preview-runtime.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,900&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0B}
+a{color:#A8D129}a:hover{color:#C6EB4F}
+@keyframes wpulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0A0A0B; color: #F4F4F5; font-family: Inter, system-ui, sans-serif; padding: 24px 20px 24px; display: flex; flex-direction: column; gap: 18px">
+
+<div style="display: flex; align-items: center; justify-content: space-between">
+<a href="App.dc.html" aria-label="Zum Session-Screen" style="text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; font-size: 34px; line-height: 1; color: #F4F4F5">W<span style="color: #A8D129; font-size: 26px">ch</span></a>
+<span style="display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #A1A1AA; border: 1px solid #26262B; border-radius: 999px; padding: 7px 12px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #A8D129; animation: wpulse 2s infinite"></span>Verbunden · 2 Geräte</span>
+</div>
+
+<div style="background: #111113; border: 1px solid #26262B; border-radius: 20px; padding: 22px 20px 20px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; color: {{ phaseColor }}">{{ phaseLabel }}</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 84px; line-height: 1.05; letter-spacing: -3px; color: {{ digitColor }}">{{ clock }}</span>
+<div style="width: 100%; height: 6px; background: #222226; border-radius: 3px; overflow: hidden; margin-top: 8px"><div style="height: 100%; width: {{ barW }}; background: {{ phaseColor }}; transition: width 1s linear"></div></div>
+<span style="margin-top: 8px; font-size: 13px; color: #8B8B94">Läuft synchron auf dem Screen in der Box</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<button aria-label="Timer zurücksetzen" onClick="{{ reset }}" style="all: unset; cursor: pointer; height: 88px; border-radius: 18px; border: 1px solid #2E2E33; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #C4C4CC; font-size: 13px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8"></path><path d="M3 3v5h5"></path></svg>Reset</button>
+<button aria-label="{{ playLabel }}" onClick="{{ toggle }}" style="all: unset; cursor: pointer; height: 88px; border-radius: 18px; background: {{ playBg }}; color: #0A0A0B; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 600">
+<sc-if value="{{ running }}" hint-placeholder-val="{{ true }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg></sc-if>
+<sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"></path></svg></sc-if>
+{{ playLabel }}</button>
+<button aria-label="Timer-Einstellungen" style="all: unset; cursor: pointer; height: 88px; border-radius: 18px; border: 1px solid #2E2E33; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #C4C4CC; font-size: 13px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>Modus</button>
+</div>
+
+<div style="border: 1px solid #26262B; border-radius: 18px; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<button aria-label="Runde zurück" onClick="{{ dec }}" style="all: unset; cursor: pointer; width: 64px; height: 64px; border-radius: 14px; border: 1px solid #2E2E33; display: flex; align-items: center; justify-content: center; color: #A1A1AA"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+<div style="text-align: center">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #8B8B94">RUNDEN</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 44px; line-height: 1.1">{{ rounds }}</div>
+</div>
+<button aria-label="Runde zählen" onClick="{{ inc }}" style="all: unset; cursor: pointer; width: 64px; height: 64px; border-radius: 14px; background: #A8D129; display: flex; align-items: center; justify-content: center; color: #0A0A0B"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+
+<div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #8B8B94; margin-bottom: 10px">SCHNELLSTART</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+<button style="all: unset; cursor: pointer; padding: 0 14px; height: 44px; display: flex; align-items: center; border-radius: 999px; border: 1px solid #3A4A12; background: #1A1F0C; color: #C6EB4F">EMOM</button>
+<button style="all: unset; cursor: pointer; padding: 0 14px; height: 44px; display: flex; align-items: center; border-radius: 999px; border: 1px solid #2E2E33; color: #C4C4CC">Tabata</button>
+<button style="all: unset; cursor: pointer; padding: 0 14px; height: 44px; display: flex; align-items: center; border-radius: 999px; border: 1px solid #2E2E33; color: #C4C4CC">Count-Down</button>
+<button style="all: unset; cursor: pointer; padding: 0 14px; height: 44px; display: flex; align-items: center; border-radius: 999px; border: 1px solid #2E2E33; color: #C4C4CC">For Time</button>
+</div>
+</div>
+
+<div style="margin-top: auto; border-top: 1px solid #222226; padding-top: 16px; display: flex; align-items: center; gap: 10px">
+<div style="flex: 1; min-width: 0">
+<div style="font-size: 12px; color: #8B8B94">Session-Link</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #F4F4F5">wodch.com/l/k3x9q</div>
+</div>
+<button style="all: unset; cursor: pointer; height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #2E2E33; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15V5a2 2 0 012-2h10"></path></svg>Kopieren</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { running: true, t: 197, rounds: 3 };
+  }
+  componentDidMount() {
+    this.iv = setInterval(() => {
+      if (this.state.running) this.setState((s) => ({ t: (s.t + 1) % 720 }));
+    }, 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.iv);
+  }
+  renderVals() {
+    const st = this.state || { running: true, t: 0, rounds: 0 };
+    const left = 720 - st.t;
+    const sec = st.t % 60;
+    return {
+      clock: String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0'),
+      phaseLabel: st.running ? 'EMOM · Minute ' + (Math.floor(st.t / 60) + 1) : 'Pausiert',
+      phaseColor: st.running ? '#A8D129' : '#FF9F43',
+      digitColor: st.running ? '#F4F4F5' : '#8B8B94',
+      barW: Math.round(((sec + 1) / 60) * 100) + '%',
+      running: st.running,
+      paused: !st.running,
+      playLabel: st.running ? 'Pause' : 'Start',
+      playBg: st.running ? '#A8D129' : '#FF9F43',
+      rounds: st.rounds,
+      toggle: () => this.setState((x) => ({ running: !x.running })),
+      reset: () => this.setState({ t: 0, rounds: 0, running: false }),
+      inc: () => this.setState((x) => ({ rounds: x.rounds + 1 })),
+      dec: () => this.setState((x) => ({ rounds: Math.max(0, x.rounds - 1) }))
+    };
+  }
+}
+</script>
+</body>
+</html>
