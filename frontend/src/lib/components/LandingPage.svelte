@@ -85,7 +85,7 @@
     { title: 'Trainieren', text: 'Timer, Workout und Video laufen synchron. Starten, pausieren und Runden zählen direkt vom Handy.' },
   ]
 
-  const presets = ['Tabata', 'Fight Gone Bad', 'EMOM', 'Custom']
+  const presets = ['EMOM', 'Fight Gone Bad', 'Tabata', 'Custom']
 
   // Icons als SVG-Pfade (stroke = currentColor, Strichstärke 2), keine Emojis
   const features = [
