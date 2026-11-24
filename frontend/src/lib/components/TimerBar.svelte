@@ -1,6 +1,7 @@
 <script lang="ts">
   import { timer } from '../stores/timer.svelte'
   import { session } from '../sync/session.svelte'
+  import { phaseInfo } from '../timer/phaseInfo'
   import { barAction } from './barAction'
   import Logo from './Logo.svelte'
   import ShareButton from './ShareButton.svelte'
@@ -16,8 +17,18 @@
     return 'dot-off'
   })
 
+  const connectionText = $derived.by(() => {
+    if (session.peers > 1) return `${session.peers} Geräte verbunden`
+    if (dotClass === 'dot-ok') return 'Verbunden'
+    if (dotClass === 'dot-error') return 'Verbindungsfehler'
+    return 'Nicht verbunden'
+  })
+
+  // Label, Farbton und Fortschritt werden lokal abgeleitet — nichts davon wird synchronisiert
+  const info = $derived(phaseInfo(timer.doc, timer.derived, timer.elapsed, new Date(timer.now)))
+
   function handleClick(e: MouseEvent) {
-    // Fehltipps neben die (mobil großen) Zähler-Buttons sollen den Timer nicht starten/pausieren
+    // Fehltipps neben die Zähler-Buttons sollen den Timer nicht starten/pausieren
     if (e.target instanceof Element && e.target.closest('.counter')) return
     sound.unlock()
     if (barAction(timer.doc, timer.derived) === 'modal') onOpenModal()
@@ -48,289 +59,335 @@
   }
 </script>
 
-<div class="timer-bar" data-tour="timer-bar" onclick={handleClick} role="button" tabindex="-1" onkeydown={() => {}}>
-  <div class="brand">
-    <Logo />
-    <span class="connection-dot {dotClass}"></span>
-    {#if session.peers > 1}
-      <span class="peers" title="{session.peers} Geräte verbunden" aria-label="{session.peers} Geräte verbunden">
-        {session.peers}
-      </span>
-    {/if}
-  </div>
-  <div class="timer-center">
-    <div class="timer-line">
-      {#if timer.displayRound}
-        <span class="round">{timer.displayRound}</span>
-      {/if}
-      <span class="time" class:work={timer.derived.phase === 'work'} class:rest={timer.derived.phase === 'rest'} class:warmup={timer.derived.phase === 'warmup'}>
-        {timer.displayTime}
+<div class="timer-bar tone-{info.tone}" data-tour="timer-bar" onclick={handleClick} role="button" tabindex="-1" onkeydown={() => {}}>
+  <div class="row">
+    <div class="brand">
+      <Logo />
+      <span class="conn" class:pill={session.peers > 1} title={connectionText} aria-label={connectionText}>
+        <span class="connection-dot {dotClass}"></span>
+        {#if session.peers > 1}<span class="peers">{session.peers} Geräte</span>{/if}
       </span>
     </div>
-    <div class="counter" title="Runden zählen (+/−) — gilt für alle Geräte der Session">
-      <button class="count-btn" onclick={(e) => handleCount(e, -1)} disabled={counter.count === 0} aria-label="Runde abziehen">−</button>
-      <span class="count" aria-label="Gezählte Runden"><span class="count-label">R&nbsp;</span><span class="count-heading">Runden</span>{counter.count}</span>
-      <button class="count-btn" onclick={(e) => handleCount(e, 1)} aria-label="Runde zählen">+</button>
+
+    <div class="timer-center">
+      <span class="phase">{info.label}</span>
+      <span class="time" class:long={timer.displayTime.length > 5}>{timer.displayTime}</span>
+    </div>
+
+    <div class="actions">
+      <div class="counter" title="Runden zählen (+/−) — gilt für alle Geräte der Session">
+        <button class="count-btn" onclick={(e) => handleCount(e, -1)} disabled={counter.count === 0} aria-label="Runde abziehen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14" /></svg>
+        </button>
+        <span class="count" aria-label="Gezählte Runden">
+          <span class="count-heading" aria-hidden="true">Runde</span>
+          <span class="count-value">{counter.count}</span>
+        </span>
+        <button class="count-btn plus" onclick={(e) => handleCount(e, 1)} aria-label="Runde zählen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+      </div>
+      <button class="icon-btn mute" onclick={handleMute} title={sound.muted ? 'Ton einschalten' : 'Ton ausschalten'} aria-label={sound.muted ? 'Ton einschalten' : 'Ton ausschalten'}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M11 5L6 9H3v6h3l5 4z" />
+          {#if sound.muted}
+            <path d="M22 9l-6 6M16 9l6 6" />
+          {:else}
+            <path d="M16 9a4 4 0 010 6M19 6a8 8 0 010 12" />
+          {/if}
+        </svg>
+      </button>
+      <button class="icon-btn" data-tour="gear" onclick={handleGear} title="Timer-Einstellungen" aria-label="Timer-Einstellungen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" />
+          <circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" />
+        </svg>
+      </button>
+      <ShareButton />
+      <button class="icon-btn help" data-tour="help" onclick={handleHelp} title="Tour starten" aria-label="Tour starten">?</button>
     </div>
   </div>
-  <div class="actions">
-    <button class="icon-btn mute" onclick={handleMute} title={sound.muted ? 'Ton einschalten' : 'Ton ausschalten'} aria-label={sound.muted ? 'Ton einschalten' : 'Ton ausschalten'}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-        {#if sound.muted}
-          <line x1="23" y1="9" x2="17" y2="15" />
-          <line x1="17" y1="9" x2="23" y2="15" />
-        {:else}
-          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-          <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-        {/if}
-      </svg>
-    </button>
-    <button class="icon-btn" data-tour="gear" onclick={handleGear} title="Timer-Einstellungen" aria-label="Timer-Einstellungen">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-      </svg>
-    </button>
-    <ShareButton />
-    <button class="icon-btn help" data-tour="help" onclick={handleHelp} title="Tour starten" aria-label="Tour starten">?</button>
+  <div class="progress" aria-hidden="true">
+    <div class="progress-fill" style="transform: scaleX({info.progress})"></div>
   </div>
 </div>
 
 <style>
   .timer-bar {
-    position: relative;
+    /* Phasenfarbe: Lime = Arbeit, Orange = Pause/pausiert */
+    --phase: var(--text-muted);
+    --digits: var(--text);
     height: 100%;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg);
+    flex-direction: column;
+    background: var(--bg-band);
     cursor: pointer;
     user-select: none;
+  }
+  .tone-work {
+    --phase: var(--accent);
+  }
+  .tone-rest {
+    --phase: var(--rest);
+    --digits: var(--rest);
+  }
+  .tone-paused {
+    --phase: var(--rest);
+    --digits: var(--text-faint);
+  }
+  .tone-done {
+    --phase: var(--accent);
+  }
+
+  /* Container für die Ziffern-Skalierung (cqh/cqw) — wächst mit der ziehbaren Leiste */
+  .row {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
     container-type: size;
-    transition: background-color 0.2s;
   }
-  .timer-bar:hover {
-    background: #0f0f11;
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
   }
-  /* Zähler sitzt direkt unter der Zeit — Zeit leicht kleiner, damit beides in die Leiste passt */
+  .conn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+    border-radius: 999px;
+  }
+  /* Pill erst ab zwei Geräten — vorher genügt der Punkt */
+  .conn.pill {
+    padding: 6px 12px;
+    border-color: #26262b;
+  }
+  .connection-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+  }
+  .dot-off {
+    background: var(--text-ghost);
+  }
+  .dot-ok {
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+  .dot-error {
+    background: var(--rest);
+  }
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+
   .timer-center {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
+    min-width: 0;
   }
-  .timer-line {
-    display: flex;
-    align-items: baseline;
-    gap: 24px;
-  }
-  .round {
-    /* cqw-Deckel: im mobilen Vollbild begrenzt die Breite, nicht die Höhe */
-    font-size: clamp(14px, min(22cqh, 6cqw), 9999px);
-    color: var(--text-muted);
-    letter-spacing: 0.08em;
-    font-weight: 500;
-  }
-  .time {
-    font-size: clamp(28px, min(48cqh, 12cqw), 9999px);
-    line-height: 1;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: 0.02em;
+  .phase {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
+    font-size: clamp(11px, 9cqh, 16px);
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--phase);
     transition: color 0.3s;
   }
-  .time.work {
-    color: #ff4d5e;
+  .time {
+    /* cqw-Deckel: bei schmaler Leiste begrenzt die Breite, nicht die Höhe */
+    font-size: clamp(28px, min(62cqh, 10cqw), 9999px);
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--digits);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    transition: color 0.3s;
   }
-  .time.rest {
-    color: #2dd36f;
+  /* Uhrzeit, Stunden, Hundertstel: mehr Zeichen → schmaler deckeln */
+  .time.long {
+    font-size: clamp(28px, min(62cqh, 6.2cqw), 9999px);
   }
-  .time.warmup {
-    color: #f5b700;
-  }
-  .brand {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .connection-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    transition: background-color 0.3s, box-shadow 0.3s;
-  }
-  .dot-off {
-    background: var(--text-faint);
-  }
-  .dot-ok {
-    background: #2dd36f;
-    box-shadow: 0 0 0 3px rgba(45, 211, 111, 0.15);
-  }
-  .dot-error {
-    background: #ff4d5e;
-    box-shadow: 0 0 0 3px rgba(255, 77, 94, 0.15);
-  }
-  .peers {
-    margin-left: -4px;
-    color: #2dd36f;
-    font-family: var(--font-ui);
-    font-size: 12px;
-    font-weight: 600;
-  }
-  /* Alle Icon-Aktionen als eine ruhige Gruppe — keine Einzel-Offsets mehr pflegen */
-  /* Zentrierung über top/bottom statt transform: das ShareModal darin ist position: fixed,
-     ein transform würde es an diese Gruppe statt an den Viewport binden */
+
   .actions {
-    position: absolute;
-    right: 12px;
-    top: 0;
-    bottom: 0;
     display: flex;
     align-items: center;
-    gap: 2px;
+    justify-content: flex-end;
+    gap: 4px;
+    min-width: 0;
   }
-  .actions :global(.icon-btn) {
+  .icon-btn {
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    flex-shrink: 0;
+    width: var(--tap);
+    height: var(--tap);
     background: none;
     border: none;
     border-radius: var(--radius);
-    color: var(--text-faint);
+    color: var(--text-muted);
     cursor: pointer;
     line-height: 0;
-    transition: color 0.15s, background-color 0.15s;
+    transition:
+      color 0.15s,
+      background-color 0.15s;
   }
-  .actions :global(.icon-btn svg) {
+  .icon-btn svg {
     width: 20px;
     height: 20px;
   }
-  .actions :global(.icon-btn:hover) {
+  .icon-btn:hover {
     color: var(--text);
     background: var(--surface-hover);
   }
-  .actions :global(.icon-btn:focus-visible) {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-  }
   .help {
     font-family: var(--font-ui);
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     line-height: 1;
   }
+  .actions :global(.share-btn) {
+    margin: 0 4px;
+  }
+
+  /* Rundenzähler als Segmentgruppe [−] Runde n [+] */
   .counter {
     display: flex;
-    align-items: center;
-    gap: 4px;
-    font-family: var(--font-mono);
-  }
-  .count {
-    color: var(--text-muted);
-    font-size: clamp(12px, 11cqh, 30px);
-    font-weight: 500;
-    min-width: 3.5em;
-    text-align: center;
-    letter-spacing: 0.05em;
-    font-variant-numeric: tabular-nums;
-  }
-  .count-heading {
-    display: none;
+    align-items: stretch;
+    flex-shrink: 0;
+    margin-right: 8px;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: default;
   }
   .count-btn {
     display: grid;
     place-items: center;
-    background: var(--surface);
+    width: var(--tap);
+    height: 48px;
+    padding: 0;
+    background: none;
     border: none;
-    border-radius: 999px;
     color: var(--text-muted);
     cursor: pointer;
-    width: clamp(22px, 15cqh, 44px);
-    height: clamp(22px, 15cqh, 44px);
-    font-family: var(--font-ui);
-    font-size: clamp(12px, 9cqh, 24px);
-    line-height: 1;
-    transition: color 0.15s, background-color 0.15s;
+    transition:
+      color 0.15s,
+      background-color 0.15s;
+  }
+  .count-btn svg {
+    width: 18px;
+    height: 18px;
   }
   .count-btn:hover:not(:disabled) {
     color: var(--text);
     background: var(--surface-hover);
   }
   .count-btn:disabled {
-    opacity: 0.3;
+    opacity: 0.35;
     cursor: default;
   }
-  /* Hoher Container (mobiles Vollbild-Panel): Logo/Buttons nach oben, Runde über der Zeit */
-  @container (max-aspect-ratio: 3/2) {
-    .brand {
-      top: 20px;
-      transform: none;
-    }
-    .actions {
-      top: 20px;
-      bottom: auto;
-    }
-    /* Mobil ist Rundenzählen das Hauptfeature: Zeit mittig im freien Raum,
-       Zähler groß am unteren Rand in Daumenreichweite */
-    .timer-center {
-      box-sizing: border-box;
-      height: 100%;
-      width: 100%;
-      padding: 72px 16px 28px;
-      gap: 16px;
-    }
-    .timer-line {
-      flex: 1;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    /* Zahl über die volle Breite, −/+ darunter — nebeneinander passt es nicht in Hochkant-Breite */
-    .counter {
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px 16px;
-      width: 100%;
-    }
-    .count {
-      order: -1;
-      flex-basis: 100%;
-      color: var(--text);
-      font-size: clamp(40px, min(18cqh, 28cqw), 180px);
-      font-weight: 700;
-      line-height: 1;
-    }
-    /* Die Zahl soll dominieren — statt „R“ davor eine kleine Überschrift darüber */
-    .count-label {
+  .count-btn.plus {
+    color: var(--accent-ink);
+    background: var(--accent);
+  }
+  .count-btn.plus:hover {
+    color: var(--accent-ink);
+    background: var(--accent-hover);
+  }
+  .count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    padding: 0 10px;
+    font-family: var(--font-mono);
+  }
+  .count-heading {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .count-value {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .icon-btn:focus-visible,
+  .count-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* 4px-Fortschritt der aktuellen Phase (bzw. Minute) über die volle Breite */
+  .progress {
+    flex-shrink: 0;
+    height: 4px;
+    background: #1a1a1d;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--phase);
+    transform-origin: left center;
+    transition: background-color 0.3s;
+  }
+
+  /* Schmale Leiste: Text-Zusätze weg, damit Zeit und Aktionen nicht kollidieren */
+  @container (max-width: 1180px) {
+    .actions :global(.share-text),
+    .count-heading,
+    .peers {
       display: none;
     }
-    .count-heading {
-      display: block;
-      margin-bottom: 0.15em;
-      color: var(--text-muted);
-      font-size: 0.14em;
-      font-weight: 500;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
+    .actions :global(.share-btn) {
+      width: var(--tap);
+      padding: 0;
+      justify-content: center;
     }
-    .count-btn {
-      width: clamp(56px, min(12cqh, 20cqw), 96px);
-      height: clamp(56px, min(12cqh, 20cqw), 96px);
-      font-size: clamp(24px, min(6cqh, 10cqw), 48px);
+  }
+  @container (max-width: 820px) {
+    .conn.pill {
+      padding: 6px;
+      border-color: transparent;
     }
-    /* + ist die Hauptaktion: breite Taste statt Kreis */
-    .count-btn:last-child {
-      width: min(55cqw, 240px);
-      color: var(--text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dot-ok {
+      animation: none;
     }
   }
 </style>
