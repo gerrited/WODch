@@ -157,6 +157,12 @@
     scroll-snap-align: start;
     scroll-snap-stop: always;
     overflow: hidden;
+    /* Containing Block für absolut positionierte Nachfahren: ohne ihn hängt z. B.
+       ein visually-hidden-Label im Video-Panel am Dokument (x ≈ 2 × Viewport),
+       wird vom Scroller nicht abgeschnitten und verbreitert die Seite. Mobile
+       Browser vergrößern dann den Layout-Viewport, und alle fixed-Dialoge werden
+       darin zentriert — also außerhalb des sichtbaren Bildes. */
+    position: relative;
   }
   .tab-bar {
     flex-shrink: 0;
