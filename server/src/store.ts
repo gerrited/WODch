@@ -19,6 +19,10 @@ export const SESSION_DOC_LIMITS = {
 // für die App („Handvoll Sessions") weit überdimensioniert.
 export const MAX_SESSIONS = 200
 
+// Mindestalter, ab dem eine verwaiste Session bei vollem Store verdrängt werden
+// darf. Schützt eine gerade angelegte Session davor, sofort wieder zu fliegen.
+export const EVICTION_MIN_IDLE_MS = 60_000
+
 // Struktur-Validierung aller Patch-Werte. Der Server ist die single source of truth:
 // ein Angreifer darf weder den Prozess crashen noch kaputte Docs an andere Clients
 // weiterreichen können (SECURITY_REVIEW Befund 1/5).
@@ -70,20 +74,36 @@ function isVideoDoc(v: unknown): v is VideoDoc {
 }
 
 function isWorkoutsDoc(v: unknown): v is WorkoutsDoc {
-  return (
-    isRecord(v) &&
-    Array.isArray(v.tabs) &&
-    v.tabs.length <= SESSION_DOC_LIMITS.maxTabs &&
-    v.tabs.every(
+  if (
+    !isRecord(v) ||
+    !Array.isArray(v.tabs) ||
+    // Mindestens ein Tab: der Editor schreibt immer auf tabs[activeTab], ein
+    // leeres Doc würde den Empfänger beim nächsten Tastendruck crashen (F2).
+    v.tabs.length < 1 ||
+    v.tabs.length > SESSION_DOC_LIMITS.maxTabs ||
+    !v.tabs.every(
       (t) =>
         isRecord(t) &&
         typeof t.id === 'string' &&
+        t.id.length > 0 &&
         typeof t.title === 'string' &&
         t.title.length <= SESSION_DOC_LIMITS.maxTabTitleChars &&
         typeof t.content === 'string' &&
         t.content.length <= SESSION_DOC_LIMITS.maxTabContentChars,
-    ) &&
-    isFiniteNumber(v.activeTab)
+    )
+  ) {
+    return false
+  }
+  // Eindeutige IDs: das keyed {#each} des Clients wirft bei Duplikaten auch im
+  // Production-Build, und tab/<id>-Patches träfen nur noch den ersten Treffer.
+  const ids = new Set(v.tabs.map((t) => (t as { id: string }).id))
+  if (ids.size !== v.tabs.length) return false
+  // activeTab muss ein gültiger Index sein — sonst greift der Client auf
+  // tabs[activeTab] === undefined zu (F2).
+  return (
+    Number.isInteger(v.activeTab) &&
+    (v.activeTab as number) >= 0 &&
+    (v.activeTab as number) < v.tabs.length
   )
 }
 
@@ -115,7 +135,7 @@ export interface Session {
 
 export interface Store {
   get(id: string): Session | undefined
-  create(id: string, doc: SessionDoc): Session | null
+  create(id: string, doc: SessionDoc, now?: number): Session | null
   applyPatch(id: string, path: string, value: unknown, now?: number): boolean
   sweep(now?: number): string[]
 }
@@ -128,12 +148,27 @@ export function createStore(): Store {
       return sessions.get(id)
     },
 
-    create(id, doc) {
+    create(id, doc, now = Date.now()) {
       const existing = sessions.get(id)
       if (existing) return existing
-      // Obergrenze erreicht: Seed verweigern statt den Speicher unbegrenzt wachsen
-      // zu lassen (Befund 4). Der sweep räumt abgelaufene Sessions weiter frei.
-      if (sessions.size >= MAX_SESSIONS) return null
+      // Obergrenze erreicht: statt hart abzulehnen (das würde neue Sessions für die
+      // gesamte TTL blockieren) die älteste verwaiste Session verdängen. Der
+      // Seed-Zeitstempel des Clients ist keine Autorität — deshalb setzen wir
+      // updatedAt hier serverseitig, sonst könnte ein Seed mit updatedAt: 1e308
+      // nie vom TTL-Sweep erfasst werden (F1).
+      if (sessions.size >= MAX_SESSIONS) {
+        let oldest: { id: string; session: Session } | null = null
+        for (const [sid, session] of sessions) {
+          if (session.clients.size > 0 || now - session.doc.updatedAt < EVICTION_MIN_IDLE_MS) continue
+          if (!oldest || session.doc.updatedAt < oldest.session.doc.updatedAt) {
+            oldest = { id: sid, session }
+          }
+        }
+        // Alle Sessions sind belegt oder zu frisch: Seed bleibt verweigert.
+        if (!oldest) return null
+        sessions.delete(oldest.id)
+      }
+      doc.updatedAt = now
       const session: Session = { doc, clients: new Set() }
       sessions.set(id, session)
       return session
@@ -172,8 +207,16 @@ export function createStore(): Store {
         }
       } else if (parts.length === 2 && parts[0] === 'workouts' && parts[1] === 'activeTab') {
         // Guards auf dem Bestands-Doc: schützt gegen Typ-Verwirrung durch Garbage-Seeds.
-        if (isFiniteNumber(value) && isRecord(doc.workouts)) {
-          doc.workouts.activeTab = value
+        // Der Index muss im Bereich liegen wie in isWorkoutsDoc (F2) — ein
+        // out-of-range activeTab bricht beim Client jeden Schreibzugriff.
+        if (
+          Number.isInteger(value) &&
+          isRecord(doc.workouts) &&
+          Array.isArray(doc.workouts.tabs) &&
+          (value as number) >= 0 &&
+          (value as number) < doc.workouts.tabs.length
+        ) {
+          doc.workouts.activeTab = value as number
           applied = true
         }
       } else if (parts.length === 3 && parts[0] === 'tab' && (parts[2] === 'content' || parts[2] === 'title')) {

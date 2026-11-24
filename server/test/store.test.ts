@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createStore, validateSessionDoc, MAX_SESSIONS, SESSION_DOC_LIMITS } from '../src/store.ts'
+import { createStore, validateSessionDoc, MAX_SESSIONS, EVICTION_MIN_IDLE_MS, SESSION_DOC_LIMITS } from '../src/store.ts'
 import type { SessionDoc, TimerDoc } from '../src/types.ts'
 
 function makeTimer(overrides: Partial<TimerDoc> = {}): TimerDoc {
@@ -63,9 +63,40 @@ describe('create', () => {
     for (let i = 0; i < MAX_SESSIONS; i++) {
       expect(store.create(`s${i}`, makeDoc()), `Session ${i}`).not.toBeNull()
     }
+    // Frisch angelegte Sessions sind vor Verdrängung geschützt
     expect(store.create('eine-zu-viel', makeDoc())).toBeNull()
     // Existierende Sessions bleiben erreichbar
     expect(store.create('s0', makeDoc())).not.toBeNull()
+  })
+
+  it('setzt updatedAt serverseitig (F1)', () => {
+    const store = createStore()
+    const doc = makeDoc()
+    doc.updatedAt = 1e308 // Zukunfts-Zeitstempel eines Clients
+    const s = store.create('abc123', doc, 5000)!
+    expect(s.doc.updatedAt).toBe(5000)
+    // Der Sweep erfasst die Session damit wie jede andere — nicht unsterblich
+    expect(store.sweep(5000 + 86_400_000 + 1)).toEqual(['abc123'])
+  })
+
+  it('verdrängt bei vollem Store die älteste verwaiste Session (F1)', () => {
+    const store = createStore()
+    for (let i = 0; i < MAX_SESSIONS; i++) store.create(`s${i}`, makeDoc(), 1000)
+    const created = store.create('neu', makeDoc(), 1000 + EVICTION_MIN_IDLE_MS + 1)
+    expect(created).not.toBeNull()
+    expect(store.get('s0')).toBeUndefined()
+    expect(store.get('s1')).toBeDefined()
+    expect(store.get('neu')).toBe(created)
+  })
+
+  it('verweigert den Seed, wenn alle Sessions belegt oder zu frisch sind (F1)', () => {
+    const store = createStore()
+    for (let i = 0; i < MAX_SESSIONS; i++) store.create(`s${i}`, makeDoc(), 1000)
+    // Jede zweite Session hat einen Client → nicht verdrängbar; die übrigen sind
+    // noch innerhalb der Schonfrist.
+    for (let i = 0; i < MAX_SESSIONS; i += 2) store.get(`s${i}`)!.clients.add({})
+    expect(store.create('neu', makeDoc(), 1500)).toBeNull()
+    expect(store.get('neu')).toBeUndefined()
   })
 })
 
@@ -155,7 +186,7 @@ describe('applyPatch', () => {
     store.create('s1', makeDoc())
     expect(store.applyPatch('s1', 'timer', makeTimer({ preset: 'custom' }), 2)).toBe(true)
     expect(store.applyPatch('s1', 'video', { isPlaying: false, startedAt: null, accumulatedSeconds: 0 }, 3)).toBe(true)
-    expect(store.applyPatch('s1', 'workouts', { tabs: [], activeTab: 0 }, 4)).toBe(true)
+    expect(store.applyPatch('s1', 'workouts', { tabs: [{ id: 'ccc333', title: 'T', content: '' }], activeTab: 0 }, 4)).toBe(true)
   })
 
   it('akzeptiert weiterhin das Legacy-Preset custom-<n> alter Clients', () => {
@@ -186,6 +217,47 @@ describe('applyPatch', () => {
     // Grenzwerte selbst sind erlaubt
     expect(store.applyPatch('s1', 'tab/aaa111/content', 'x'.repeat(SESSION_DOC_LIMITS.maxTabContentChars), 2)).toBe(true)
     expect(store.applyPatch('s1', 'videoUrl', `https://youtu.be/${'a'.repeat(SESSION_DOC_LIMITS.maxVideoUrlChars - 19)}`, 2)).toBe(true)
+  })
+})
+
+describe('Workouts-Invarianten (Audit F2)', () => {
+  const tab = (id: string) => ({ id, title: 'T', content: '' })
+
+  it('weist doppelte Tab-IDs ab (Patch und Seed)', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    const before = JSON.stringify(store.get('s1')!.doc)
+    expect(store.applyPatch('s1', 'workouts', { tabs: [tab('dup'), tab('dup')], activeTab: 0 }, 2)).toBe(false)
+    expect(JSON.stringify(store.get('s1')!.doc)).toBe(before)
+    expect(validateSessionDoc({ ...makeDoc(), workouts: { tabs: [tab('dup'), tab('dup')], activeTab: 0 } })).toBe(false)
+  })
+
+  it('weist leere Tab-Liste und leere IDs ab', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    expect(store.applyPatch('s1', 'workouts', { tabs: [], activeTab: 0 }, 2)).toBe(false)
+    expect(store.applyPatch('s1', 'workouts', { tabs: [tab('')], activeTab: 0 }, 2)).toBe(false)
+    expect(validateSessionDoc({ ...makeDoc(), workouts: { tabs: [], activeTab: 0 } })).toBe(false)
+  })
+
+  it('weist activeTab außerhalb des Bereichs oder nicht-ganzzahlig ab', () => {
+    const store = createStore()
+    store.create('s1', makeDoc()) // zwei Tabs
+    for (const v of [-1, 2, 1.5, 1e308, NaN, '0']) {
+      expect(store.applyPatch('s1', 'workouts/activeTab', v, 2), `activeTab ${String(v)}`).toBe(false)
+    }
+    expect(store.get('s1')!.doc.workouts.activeTab).toBe(0)
+    // Volle Doc-Patches laufen durch dieselbe Prüfung
+    expect(store.applyPatch('s1', 'workouts', { tabs: [tab('a'), tab('b')], activeTab: 2 }, 2)).toBe(false)
+    expect(store.applyPatch('s1', 'workouts', { tabs: [tab('a'), tab('b')], activeTab: 1.5 }, 2)).toBe(false)
+    expect(validateSessionDoc({ ...makeDoc(), workouts: { tabs: [tab('a')], activeTab: 1 } })).toBe(false)
+  })
+
+  it('akzeptiert den letzten gültigen Index', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    expect(store.applyPatch('s1', 'workouts/activeTab', 1, 2)).toBe(true)
+    expect(store.get('s1')!.doc.workouts.activeTab).toBe(1)
   })
 })
 
@@ -242,8 +314,8 @@ describe('sweep', () => {
 
   it('löscht Sessions mit updatedAt älter als 24h ohne Clients', () => {
     const store = createStore()
-    store.create('old1', makeDoc()) // updatedAt: 1000
-    const fresh = store.create('fresh', makeDoc())
+    store.create('old1', makeDoc(), 1000) // updatedAt wird serverseitig auf 1000 gesetzt
+    const fresh = store.create('fresh', makeDoc(), 1000)
     store.applyPatch('fresh', 'videoUrl', '', DAY + 500)
     void fresh
     const removed = store.sweep(DAY + 2000)
@@ -254,8 +326,8 @@ describe('sweep', () => {
 
   it('verschont stale Sessions mit verbundenen Clients', () => {
     const store = createStore()
-    const s = store.create('busy', makeDoc())
-    s.clients.add({})
+    const s = store.create('busy', makeDoc(), 1000)
+    s!.clients.add({})
     expect(store.sweep(DAY + 2000)).toEqual([])
     expect(store.get('busy')).toBeDefined()
   })

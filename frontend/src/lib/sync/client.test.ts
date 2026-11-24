@@ -94,6 +94,17 @@ describe('SyncClient', () => {
     expect(client.status()).toBe('connected')
   })
 
+  it('error-Frame nach verweigertem Seed → status error, keine Patches mehr', () => {
+    client.connect('abc123', makeDoc)
+    const ws = MockWS.instances[0]
+    ws.simOpen()
+    ws.simMessage({ t: 'missing' })
+    ws.simMessage({ t: 'error', reason: 'store_full' })
+    expect(client.status()).toBe('error')
+    client.send('videoUrl', 'x')
+    expect(ws.sent.filter((m) => m.t === 'patch')).toHaveLength(0)
+  })
+
   it('eingehende patches rufen onPatch; send schickt patch-Frames', () => {
     const patches: [string, unknown][] = []
     client.onPatch((p, v) => patches.push([p, v]))
