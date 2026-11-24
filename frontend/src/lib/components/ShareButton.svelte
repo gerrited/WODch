@@ -32,6 +32,7 @@
 <style>
   .share-btn {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 8px;
     height: var(--tap);
