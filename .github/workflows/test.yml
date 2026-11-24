@@ -1,0 +1,47 @@
+name: Tests
+
+# Gemeinsames Test-Gate: läuft auf jedem PR (auch auf Agent-PRs, solange
+# sie über die Claude-GitHub-App erstellt werden) und wird vom Image-Build
+# per workflow_call wiederverwendet — so prüfen PR-Gate und Release exakt
+# dasselbe.
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [frontend, server]
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.package }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

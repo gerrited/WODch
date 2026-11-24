@@ -21,7 +21,7 @@ cd frontend && npm run build  # svelte-check LÄUFT ZUERST — Typfehler brechen
 cd server && npm run build    # tsc (kompiliert nur src/, Tests werden nicht typgeprüft)
 ```
 
-- **CI-Gate** ([.github/workflows/docker.yml](.github/workflows/docker.yml)): `npm test` + `npm run build` in **beiden** Paketen muss grün sein, sonst kein Image-Build. Push auf `main` baut Images (`latest`), Tag `vX.Y.Z` baut Release-Images.
+- **CI-Gate** ([.github/workflows/test.yml](.github/workflows/test.yml), auf jedem PR und vor dem Image-Build in [docker.yml](.github/workflows/docker.yml)): `npm test` + `npm run build` in **beiden** Paketen muss grün sein, sonst kein Image-Build. Push auf `main` baut Images (`latest`), Tag `vX.Y.Z` baut Release-Images.
 - **Kein ESLint/Prettier** konfiguriert — Stil an vorhandenem Code orientieren, nichts Neues einführen.
 - `ANTHROPIC_API_KEY` ist optional: ohne Key liefern `/generate`, `/estimate` und `/timerize` 503, der Rest läuft (KI-Features lokal testbar, indem Deps injiziert werden — `opts`-Parameter von `startServer`).
 
@@ -43,8 +43,12 @@ cd server && npm run build    # tsc (kompiliert nur src/, Tests werden nicht typ
 - Reine Logik (`timer/`, `video/`, `generate/`) bleibt frei von Svelte, damit isoliert testbar.
 - Kein Router, keine UI-Library, keine DB, kein Auth — bewusst simpel; Architektur-Änderungen vorher gegen die Stack-Doku prüfen.
 
+## Software Factory
+
+Agent-Läufe per Label (`agent:plan`, `agent:build`, `agent:review`) — Ablauf, Labels und Sicherheitsmodell in [docs/software-factory.md](docs/software-factory.md). Reviews prüfen gegen [.github/factory/review-checklist.md](.github/factory/review-checklist.md); neue Fallstricke oben bitte dort nachziehen.
+
 ## Nicht-Produktivcode
 
 - `docs/superpowers/` und `.superpowers/`: KI-Workflow-Artefakte (Task-Briefs, Pläne), kein Produktivcode.
-- `.claude/worktrees/`: verwaiste Git-Worktrees (bereits gemergt).
+- `.claude/worktrees/`: lokale Agent-Worktrees, per `.gitignore` ausgeschlossen. Aufräumen lokal mit `git worktree list` / `git worktree remove <pfad>` / `git worktree prune`.
 - `server/Dockerfile` & `frontend/Dockerfile`: Deployment-Kontext ist jeweils das Paketverzeichnis.

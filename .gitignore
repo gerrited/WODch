@@ -3,3 +3,8 @@ dist/
 .superpowers/
 .superpowers/sdd/
 .env.local
+.factory-verdict
+
+# Lokale Agent-Worktrees und Vite-Cache gehören nicht ins Repo
+.claude/worktrees/
+.vite/
