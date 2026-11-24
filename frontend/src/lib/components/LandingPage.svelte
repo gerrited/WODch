@@ -1,7 +1,6 @@
 <script lang="ts">
   import { session } from '../sync/session.svelte'
   import { router } from '../router.svelte'
-  import { extractVideoId } from '../video/youtube'
   import Logo from './Logo.svelte'
   import LegalModal from './LegalModal.svelte'
 
@@ -24,22 +23,16 @@
     id: 'timer' | 'ki' | 'sync'
     title: string
     short: string
-    videoUrl: string
   }
 
   const tabs: StageTab[] = [
-    { id: 'timer', title: 'Intervall-Timer', short: 'Tabata, EMOM & Co.', videoUrl: 'https://youtu.be/oSdlbRmrgNw' },
-    { id: 'ki', title: 'KI-Workouts', short: 'Prompt rein, WOD raus', videoUrl: 'https://youtu.be/0CU6XrGlTbw' },
-    { id: 'sync', title: 'Fernsteuerung', short: 'Handy steuert den Screen', videoUrl: 'https://youtu.be/zgr379mhAPQ' },
+    { id: 'timer', title: 'Intervall-Timer', short: 'Tabata, EMOM & Co.' },
+    { id: 'ki', title: 'KI-Workouts', short: 'Prompt rein, WOD raus' },
+    { id: 'sync', title: 'Fernsteuerung', short: 'Handy steuert den Screen' },
   ]
 
   let activeId = $state<StageTab['id']>('timer')
   const active = $derived(tabs.find((t) => t.id === activeId) ?? tabs[0])
-  // Videos laden erst nach Klick: kein YouTube-Request beim bloßen Öffnen der Seite.
-  // Bleibt beim Tab-Wechsel an, damit die Bühne dann das Video des neuen Tabs zeigt —
-  // es gibt aber immer höchstens ein IFrame.
-  let videoOpen = $state(false)
-  const activeVideoId = $derived(extractVideoId(active.videoUrl))
 
   // Live-Demo: tickt lokal statt über die echten Stores, damit auf '/' weder
   // Session noch Sync angefasst werden. Tabata 20 s Arbeit / 10 s Pause × 8.
@@ -49,11 +42,18 @@
   const ROUNDS = 8
   // Startpunkt = Runde 2, noch 15 s Arbeit — zugleich das Standbild bei reduzierter Bewegung
   let t = $state(ROUND + 5)
+  // Bei reduzierter Bewegung startet die Demo pausiert; Fortsetzen ist dann eine bewusste Aktion.
+  const reducedMotion =
+    typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  let running = $state(!reducedMotion)
+
+  // Pausieren/Fortsetzen wie in der App: Klick auf die Zeit oder den Start/Pause-Button
+  function toggleDemo() {
+    running = !running
+  }
 
   $effect(() => {
-    const reduced =
-      typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduced) return
+    if (!running) return
     const id = setInterval(() => {
       t = (t + 1) % (ROUND * ROUNDS)
     }, 1000)
@@ -142,6 +142,16 @@
   </svg>
 {/snippet}
 
+{#snippet playPause()}
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    {#if running}
+      <rect x="6" y="5" width="4" height="14" /><rect x="14" y="5" width="4" height="14" />
+    {:else}
+      <path d="M7 4.5v15l13-7.5z" />
+    {/if}
+  </svg>
+{/snippet}
+
 <div class="landing" id="top">
   <header class="nav-wrap">
     <nav class="nav container" aria-label="Hauptnavigation">
@@ -193,22 +203,21 @@
       </div>
 
       <div class="stage-body" role="tabpanel" id="stage-panel" aria-label={active.title}>
-        {#if videoOpen && activeVideoId}
-          <div class="video">
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${activeVideoId}?rel=0`}
-              title={`Demo-Video: ${active.title}`}
-              allow="encrypted-media; picture-in-picture"
-              allowfullscreen
-            ></iframe>
-          </div>
-        {:else if activeId === 'timer'}
-          <div class="demo-timer" class:rest={!demo.work}>
+        {#if activeId === 'timer'}
+          <div class="demo-timer" class:rest={!demo.work} class:paused={!running}>
             <div class="demo-meta">
-              <span class="phase">{demo.work ? 'Arbeit' : 'Pause'}</span>
+              <span class="phase">
+                {#if !running}Pausiert — tippen zum Fortsetzen{:else}{demo.work ? 'Arbeit' : 'Pause'}{/if}
+              </span>
               <span>Tabata · Runde {demo.round}/{ROUNDS}</span>
             </div>
-            <div class="demo-clock">{demo.clock}</div>
+            <button
+              class="demo-clock"
+              onclick={toggleDemo}
+              aria-label={running ? `Demo-Timer ${demo.clock} — pausieren` : `Demo-Timer ${demo.clock} — fortsetzen`}
+            >
+              {demo.clock}
+            </button>
             <div class="bar"><div class="bar-fill" style="width: {demo.progress}%"></div></div>
             <div class="rounds" aria-hidden="true">
               {#each { length: ROUNDS } as _, i (i)}
@@ -238,28 +247,34 @@
           <div class="demo-sync">
             <div class="screen">
               <span class="screen-label">TV in der Box</span>
-              <span class="screen-clock">{demo.clock}</span>
+              <span class="screen-clock" class:paused={!running}>{demo.clock}</span>
             </div>
             <svg class="link" width="56" height="24" viewBox="0 0 56 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 4" aria-hidden="true">
               <path d="M2 12h52" />
             </svg>
             <div class="phone">
               <span class="phone-clock">{demo.clock}</span>
-              <span class="phone-btn" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="6" y="5" width="4" height="14" /><rect x="14" y="5" width="4" height="14" />
-                </svg>
-              </span>
+              <button
+                class="phone-btn"
+                class:paused={!running}
+                onclick={toggleDemo}
+                aria-label={running ? 'Demo pausieren' : 'Demo fortsetzen'}
+              >
+                {@render playPause()}
+              </button>
             </div>
           </div>
         {/if}
       </div>
 
-      <div class="stage-actions">
-        <button class="video-toggle" onclick={() => (videoOpen = !videoOpen)}>
-          {videoOpen ? '← Zurück zur Live-Demo' : '▶ Video ansehen'}
-        </button>
-      </div>
+      {#if activeId === 'timer'}
+        <div class="stage-actions">
+          <button class="demo-toggle" class:paused={!running} onclick={toggleDemo} aria-pressed={!running}>
+            {@render playPause()}
+            {running ? 'Pause' : 'Fortsetzen'}
+          </button>
+        </div>
+      {/if}
 
       <div class="stage-tabs" role="tablist" aria-label="Features">
         {#each tabs as tab (tab.id)}
@@ -714,21 +729,6 @@
     flex-direction: column;
   }
 
-  .video {
-    position: relative;
-    flex: 1;
-    min-height: 340px;
-    background: #000;
-  }
-
-  .video iframe {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: none;
-  }
-
   .demo-timer {
     --phase: var(--accent);
     display: flex;
@@ -740,6 +740,11 @@
   }
 
   .demo-timer.rest {
+    --phase: var(--rest);
+  }
+
+  /* Pausiert: Label in Orange, Ziffern zurückgenommen — wie in der Timer-Leiste der App */
+  .demo-timer.paused {
     --phase: var(--rest);
   }
 
@@ -769,6 +774,18 @@
     letter-spacing: -4px;
     text-align: center;
     color: var(--phase);
+    background: none;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+
+  .paused .demo-clock {
+    color: var(--text-faint);
+  }
+
+  .paused .bar-fill {
+    background: var(--text-ghost);
   }
 
   .bar {
@@ -895,6 +912,10 @@
     color: var(--accent);
   }
 
+  .screen-clock.paused {
+    color: var(--text-faint);
+  }
+
   .link {
     color: var(--accent);
   }
@@ -923,9 +944,16 @@
     justify-content: center;
     width: 44px;
     height: 44px;
+    padding: 0;
+    border: none;
     border-radius: 50%;
     color: var(--accent-ink);
     background: var(--accent);
+    cursor: pointer;
+  }
+
+  .phone-btn.paused {
+    background: var(--rest);
   }
 
   .stage-actions {
@@ -934,25 +962,33 @@
     padding: 0 12px 8px;
   }
 
-  .video-toggle {
+  .demo-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     min-height: var(--tap);
-    padding: 0 14px;
+    padding: 0 16px;
     font-family: var(--font-mono);
     font-size: 12px;
     letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--accent-tint-text);
-    background: transparent;
-    border: 1px solid transparent;
+    background: var(--accent-tint-bg);
+    border: 1px solid var(--accent-tint-line);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition:
-      background 0.15s,
-      border-color 0.15s;
+    transition: border-color 0.15s;
   }
 
-  .video-toggle:hover {
-    background: var(--accent-tint-bg);
-    border-color: var(--accent-tint-line);
+  .demo-toggle:hover {
+    border-color: var(--accent);
+  }
+
+  /* Orange heißt pausiert: der Button lädt zum Fortsetzen ein */
+  .demo-toggle.paused {
+    color: var(--rest);
+    background: transparent;
+    border-color: var(--rest);
   }
 
   .stage-tabs {

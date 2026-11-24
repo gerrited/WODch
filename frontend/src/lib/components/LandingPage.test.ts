@@ -20,8 +20,8 @@ function tabs() {
   return Array.from(document.querySelectorAll('.stage-tab')) as HTMLButtonElement[]
 }
 
-function videoToggle() {
-  return document.querySelector('.video-toggle') as HTMLButtonElement
+function demoToggle() {
+  return document.querySelector('.demo-toggle') as HTMLButtonElement
 }
 
 function mockReducedMotion(reduce: boolean) {
@@ -64,7 +64,7 @@ describe('LandingPage', () => {
     expect(create).toHaveBeenCalledTimes(2)
   })
 
-  it('lädt ohne Klick kein Video-IFrame', () => {
+  it('lädt keine Videos (kein IFrame, auch nicht nach Tab-Wechsel)', () => {
     render()
     expect(iframes()).toHaveLength(0)
     for (const tab of tabs()) {
@@ -74,29 +74,53 @@ describe('LandingPage', () => {
     }
   })
 
-  it('„Video ansehen“ lädt genau ein IFrame mit dem Video des aktiven Tabs', () => {
+  it('Pause hält die Demo an, Fortsetzen lässt sie weiterlaufen', () => {
+    vi.useFakeTimers()
+    mockReducedMotion(false)
     render()
-    videoToggle().click()
-    flushSync()
-    expect(iframes()).toHaveLength(1)
-    expect(iframes()[0].src).toBe('https://www.youtube-nocookie.com/embed/oSdlbRmrgNw?rel=0')
+    const clock = () => document.querySelector('.demo-clock')?.textContent?.trim()
 
-    tabs()[1].click()
+    demoToggle().click()
     flushSync()
-    expect(iframes()).toHaveLength(1)
-    expect(iframes()[0].src).toBe('https://www.youtube-nocookie.com/embed/0CU6XrGlTbw?rel=0')
-    expect(tabs()[1].getAttribute('aria-selected')).toBe('true')
+    expect(document.querySelector('.phase')?.textContent).toContain('Pausiert — tippen zum Fortsetzen')
+    expect(demoToggle().getAttribute('aria-pressed')).toBe('true')
+    vi.advanceTimersByTime(3000)
+    flushSync()
+    expect(clock()).toBe('00:15')
 
+    demoToggle().click()
+    flushSync()
+    vi.advanceTimersByTime(2000)
+    flushSync()
+    expect(clock()).toBe('00:13')
+  })
+
+  it('Klick auf die Zeit pausiert ebenfalls — wie die Timer-Leiste der App', () => {
+    vi.useFakeTimers()
+    mockReducedMotion(false)
+    render()
+    ;(document.querySelector('.demo-clock') as HTMLButtonElement).click()
+    flushSync()
+    vi.advanceTimersByTime(3000)
+    flushSync()
+    expect(document.querySelector('.demo-clock')?.textContent?.trim()).toBe('00:15')
+    expect(document.querySelector('.demo-timer.paused')).not.toBeNull()
+  })
+
+  it('der Handy-Button in der Fernsteuerungs-Demo pausiert dieselbe Zeit', () => {
+    vi.useFakeTimers()
+    mockReducedMotion(false)
+    render()
     tabs()[2].click()
     flushSync()
-    expect(iframes()).toHaveLength(1)
-    expect(iframes()[0].src).toBe('https://www.youtube-nocookie.com/embed/zgr379mhAPQ?rel=0')
-
-    // Zurück zur Live-Demo entfernt das IFrame wieder
-    videoToggle().click()
+    const phoneBtn = document.querySelector('.phone-btn') as HTMLButtonElement
+    expect(phoneBtn.getAttribute('aria-label')).toBe('Demo pausieren')
+    phoneBtn.click()
     flushSync()
-    expect(iframes()).toHaveLength(0)
-    expect(document.querySelector('.demo-sync')).not.toBeNull()
+    vi.advanceTimersByTime(3000)
+    flushSync()
+    expect(document.querySelector('.screen-clock')?.textContent).toBe('00:15')
+    expect(phoneBtn.getAttribute('aria-label')).toBe('Demo fortsetzen')
   })
 
   it('die Tabs wechseln die Live-Demo', () => {
@@ -114,20 +138,20 @@ describe('LandingPage', () => {
     vi.useFakeTimers()
     mockReducedMotion(false)
     render()
-    const clock = () => document.querySelector('.demo-clock')?.textContent
+    const clock = () => document.querySelector('.demo-clock')?.textContent?.trim()
     expect(clock()).toBe('00:15')
     vi.advanceTimersByTime(3000)
     flushSync()
     expect(clock()).toBe('00:12')
   })
 
-  it('bei reduzierter Bewegung steht die Demo still', () => {
+  it('bei reduzierter Bewegung startet die Demo pausiert', () => {
     vi.useFakeTimers()
     mockReducedMotion(true)
     render()
     vi.advanceTimersByTime(5000)
     flushSync()
-    expect(document.querySelector('.demo-clock')?.textContent).toBe('00:15')
+    expect(document.querySelector('.demo-clock')?.textContent?.trim()).toBe('00:15')
   })
 
   it('zeigt die Feature-Überschriften', () => {
