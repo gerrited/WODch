@@ -60,7 +60,8 @@ export function defaultTimerDoc(): TimerDoc {
     isRunning: false,
     startedAt: null,
     accumulatedMs: 0,
-    countdownTarget: 3 * 60 * 1000,
+    // Standard-Zielzeit 20 min — passt zu typischen AMRAP-/Count-Down-WODs
+    countdownTarget: 20 * 60 * 1000,
     countupStart: 0,
     workDuration: 20 * 1000,
     restDuration: 10 * 1000,

@@ -82,6 +82,12 @@ describe('TimerStore', () => {
     expect(store.doc.warmupEnabled).toBe(true)
   })
 
+  it('Count-Down hat standardmäßig 20 Minuten Zielzeit', () => {
+    store.setMode('countdown')
+    expect(store.doc.countdownTarget).toBe(20 * MIN)
+    expect(store.displayTime).toBe('20:00')
+  })
+
   it('applyPreset lässt warmupEnabled unangetastet', () => {
     store.setConfig({ warmupEnabled: true })
     store.applyPreset('emom')
