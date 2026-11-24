@@ -207,7 +207,7 @@
           <div class="demo-timer" class:rest={!demo.work} class:paused={!running}>
             <div class="demo-meta">
               <span class="phase">
-                {#if !running}Pausiert — tippen zum Fortsetzen{:else}{demo.work ? 'Arbeit' : 'Pause'}{/if}
+                {#if !running}Pausiert{:else}{demo.work ? 'Arbeit' : 'Pause'}{/if}
               </span>
               <span>Tabata · Runde {demo.round}/{ROUNDS}</span>
             </div>
@@ -227,6 +227,12 @@
                   class:current={i + 1 === demo.round}
                 ></span>
               {/each}
+            </div>
+            <div class="stage-actions">
+              <button class="demo-toggle" class:paused={!running} onclick={toggleDemo} aria-pressed={!running}>
+                {@render playPause()}
+                {running ? 'Pause' : 'Fortsetzen'}
+              </button>
             </div>
           </div>
         {:else if activeId === 'ki'}
@@ -266,15 +272,6 @@
           </div>
         {/if}
       </div>
-
-      {#if activeId === 'timer'}
-        <div class="stage-actions">
-          <button class="demo-toggle" class:paused={!running} onclick={toggleDemo} aria-pressed={!running}>
-            {@render playPause()}
-            {running ? 'Pause' : 'Fortsetzen'}
-          </button>
-        </div>
-      {/if}
 
       <div class="stage-tabs" role="tablist" aria-label="Features">
         {#each tabs as tab (tab.id)}
@@ -723,8 +720,10 @@
     }
   }
 
+  /* Feste Höhe für alle Tabs — sonst springt die Karte beim Tab-Wechsel */
   .stage-body {
-    min-height: 340px;
+    container-type: inline-size;
+    height: 340px;
     display: flex;
     flex-direction: column;
   }
@@ -734,9 +733,9 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 18px;
+    gap: 16px;
     flex: 1;
-    padding: 28px 28px 24px;
+    padding: 24px 28px 8px;
   }
 
   .demo-timer.rest {
@@ -768,7 +767,7 @@
   .demo-clock {
     font-family: var(--font-mono);
     font-weight: 800;
-    font-size: clamp(88px, 13vw, 150px);
+    font-size: clamp(80px, 11vw, 128px);
     font-variant-numeric: tabular-nums;
     line-height: 1;
     letter-spacing: -4px;
@@ -875,7 +874,6 @@
 
   .demo-sync {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
     gap: 28px;
@@ -889,8 +887,8 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
-    width: 250px;
-    max-width: 100%;
+    flex: 0 1 250px;
+    min-width: 0;
     height: 160px;
     border: 2px solid var(--line-strong);
     border-radius: var(--radius);
@@ -917,6 +915,7 @@
   }
 
   .link {
+    flex-shrink: 0;
     color: var(--accent);
   }
 
@@ -926,7 +925,7 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    width: 96px;
+    flex: 0 0 96px;
     height: 176px;
     border: 2px solid var(--line-strong);
     border-radius: var(--radius-xl);
@@ -952,6 +951,24 @@
     cursor: pointer;
   }
 
+  /* Schmale Karte: Verbindungslinie weg, damit TV und Handy nebeneinander bleiben */
+  @container (max-width: 500px) {
+    .demo-sync {
+      gap: 16px;
+      padding: 20px;
+    }
+    .link {
+      display: none;
+    }
+    .screen-clock {
+      font-size: 40px;
+    }
+    .demo-ki {
+      gap: 12px;
+      padding: 16px 20px;
+    }
+  }
+
   .phone-btn.paused {
     background: var(--rest);
   }
@@ -959,7 +976,7 @@
   .stage-actions {
     display: flex;
     justify-content: flex-end;
-    padding: 0 12px 8px;
+    margin-right: -16px;
   }
 
   .demo-toggle {

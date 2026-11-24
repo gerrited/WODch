@@ -82,7 +82,7 @@ describe('LandingPage', () => {
 
     demoToggle().click()
     flushSync()
-    expect(document.querySelector('.phase')?.textContent).toContain('Pausiert — tippen zum Fortsetzen')
+    expect(document.querySelector('.phase')?.textContent).toContain('Pausiert')
     expect(demoToggle().getAttribute('aria-pressed')).toBe('true')
     vi.advanceTimersByTime(3000)
     flushSync()
