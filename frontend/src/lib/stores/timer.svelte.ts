@@ -74,10 +74,10 @@ export class TimerStore {
     }
     if (preset === 'tabata') {
       this.commit({ ...base, workDuration: 20_000, restDuration: 10_000, totalRounds: 8 })
-    } else if (preset === 'fgb1') {
-      this.commit({ ...base, workDuration: 300_000, restDuration: 60_000, totalRounds: 5 })
-    } else if (preset === 'fgb2') {
-      this.commit({ ...base, workDuration: 300_000, restDuration: 60_000, totalRounds: 3 })
+    } else if (preset === 'fgb1' || preset === 'fgb2') {
+      // Fight Gone Bad: 3 Runden à 5 min Arbeit (Stationswechsel im Workout) + 1 min Pause.
+      // 'fgb2' ist nur noch für ältere Sessions im Wire-Format und wirkt identisch.
+      this.commit({ ...base, preset: 'fgb1', workDuration: 300_000, restDuration: 60_000, totalRounds: 3 })
     } else if (preset === 'emom') {
       this.commit({ ...base, workDuration: this.doc.emomInterval, restDuration: 0, totalRounds: this.doc.emomRounds })
     } else if (preset === 'custom') {

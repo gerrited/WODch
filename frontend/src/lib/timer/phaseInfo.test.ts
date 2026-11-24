@@ -8,7 +8,8 @@ const MIN = 60 * SEC
 const NOW = new Date(2026, 0, 1, 12, 0, 30)
 
 function doc(overrides: Partial<TimerDoc> = {}): TimerDoc {
-  return { ...defaultTimerDoc(), ...overrides }
+  // Ohne Warmup als Basis (Standard ist jetzt an) — Warmup-Tests schalten es explizit ein
+  return { ...defaultTimerDoc(), warmupEnabled: false, ...overrides }
 }
 
 // Laufender Timer: Phase so ableiten wie der Store es tut
@@ -23,7 +24,8 @@ const tabata = (o: Partial<TimerDoc> = {}) =>
 describe('modeName', () => {
   it('benennt Modi und Presets', () => {
     expect(modeName({ mode: 'countdown', preset: null })).toBe('Count-Down')
-    expect(modeName({ mode: 'interval', preset: 'fgb1' })).toBe('Fight Gone Bad 1')
+    expect(modeName({ mode: 'interval', preset: 'fgb1' })).toBe('Fight Gone Bad')
+    expect(modeName({ mode: 'interval', preset: 'fgb2' })).toBe('Fight Gone Bad')
     expect(modeName({ mode: 'interval', preset: 'custom' })).toBe('Intervall')
   })
 })

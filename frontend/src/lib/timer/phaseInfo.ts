@@ -31,8 +31,7 @@ export function modeName(doc: Pick<TimerDoc, 'mode' | 'preset'>): string {
     case 'interval':
       if (doc.preset === 'tabata') return 'Tabata'
       if (doc.preset === 'emom') return 'EMOM'
-      if (doc.preset === 'fgb1') return 'Fight Gone Bad 1'
-      if (doc.preset === 'fgb2') return 'Fight Gone Bad 2'
+      if (doc.preset === 'fgb1' || doc.preset === 'fgb2') return 'Fight Gone Bad'
       return 'Intervall'
   }
 }
