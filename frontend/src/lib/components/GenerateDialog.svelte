@@ -67,104 +67,132 @@
     <div class="counter">{value.length}/{MAX}</div>
     <div class="actions">
       <button class="btn btn-cancel" onclick={onCancel}>Abbrechen</button>
-      <button class="btn btn-generate" onclick={submit} disabled={!value.trim()}>Generieren</button>
+      <button class="btn btn-primary btn-generate" onclick={submit} disabled={!value.trim()}>Generieren</button>
     </div>
   </div>
 </div>
 
 <style>
+  /* Dialog-Grundstil des Redesigns: Overlay 70 %, Panel --surface, Radius 16px */
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 16px;
     z-index: 100;
     overscroll-behavior: contain;
     touch-action: none;
   }
   .modal {
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 24px;
-    width: 360px;
     position: relative;
-    text-align: center;
+    width: 420px;
+    max-width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    color: var(--text);
+    font-family: var(--font-ui);
+    text-align: left;
   }
   .close-btn {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 10px;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    width: var(--tap);
+    height: var(--tap);
     background: none;
     border: none;
-    color: #666;
+    border-radius: var(--radius-sm);
+    color: var(--text-faint);
     font-size: 16px;
     cursor: pointer;
-    padding: 4px 8px;
   }
   .close-btn:hover {
-    color: #fff;
+    color: var(--text);
+    background: var(--surface-hover);
   }
   .title {
-    color: #fff;
-    font-size: 15px;
+    padding-right: 40px;
+    margin-bottom: 8px;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+  }
+  .btn {
+    min-height: var(--tap);
+    padding: 0 18px;
+    font: 500 14px/1 var(--font-ui);
+    color: var(--text);
+    background: none;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+  .btn:hover:not(:disabled) {
+    border-color: var(--text-ghost);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  /* Primär = Lime mit dunkler Schrift */
+  .btn-primary {
+    font-weight: 600;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+  .btn:focus-visible,
+  .close-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .title {
     margin-bottom: 16px;
   }
   .gen-input {
     width: 100%;
     box-sizing: border-box;
-    background: #000;
-    border: 1px solid #333;
-    border-radius: 4px;
-    color: #fff;
-    font-family: monospace;
-    font-size: 13px;
-    padding: 10px;
+    background: var(--surface-2);
+    border: 1px solid #26262b;
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 12px;
     resize: vertical;
     outline: none;
   }
-  .gen-input:focus {
-    border-color: #555;
+  .gen-input::placeholder {
+    color: var(--text-faint);
+  }
+  .gen-input:focus-visible {
+    border-color: var(--accent);
   }
   .counter {
-    color: #555;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
     font-size: 11px;
     text-align: right;
-    margin-top: 4px;
+    margin-top: 6px;
   }
   .actions {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
     margin-top: 16px;
-  }
-  .btn {
-    border: 1px solid #333;
-    border-radius: 4px;
-    background: none;
-    color: #ccc;
-    font-family: monospace;
-    font-size: 13px;
-    letter-spacing: 1px;
-    padding: 8px 16px;
-    cursor: pointer;
-  }
-  .btn-cancel:hover {
-    color: #fff;
-    border-color: #555;
-  }
-  .btn-generate {
-    color: #7cc;
-    border-color: #7cc;
-  }
-  .btn-generate:hover:not(:disabled) {
-    background: #7cc;
-    color: #000;
-  }
-  .btn-generate:disabled {
-    opacity: 0.4;
-    cursor: default;
   }
 </style>

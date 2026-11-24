@@ -6,7 +6,7 @@ Gym-Training-Web-App: vollwertiger Intervall-Timer, Multi-Tab-Workout-Editor und
 
 ## Features
 
-- **Timer** — 5 Modi: Uhrzeit (12h/24h), Stoppuhr (1/100s), Count-Down, Count-Up, Intervall mit Presets (Tabata, Fight Gone Bad 1/2, EMOM, Custom) und optionalem Warmup. Phase und Runde werden deterministisch aus Startzeitpunkt + Konfiguration abgeleitet.
+- **Timer** — 5 Modi: Uhrzeit (12h/24h), Stoppuhr (1/100s), Count-Down, Count-Up, Intervall mit Presets (Tabata, Fight Gone Bad, EMOM, Custom) und optionalem Warmup. Phase und Runde werden deterministisch aus Startzeitpunkt + Konfiguration abgeleitet.
 - **Rundenzähler** — `−`/`+` in der Timer-Leiste (bzw. Tasten `+`/`-`) zählt Runden für alle Geräte der Session, z. B. bei AMRAPs. Timer-Reset (`R`, Reset/Start im Modal) setzt ihn auf 0.
 - **Ansagen & Vibration** — optional pro Gerät (Timer-Modal → „Dieses Gerät"): Sprachansagen („Los", „Runde 3", „Letzte Runde", „Pause", „Noch zehn Sekunden", „Fertig") und Vibration zu den Beeps. Beides gerätelokal, nicht synchronisiert; „Ton aus" schaltet auch die Sprache stumm.
 - **Bildschirm bleibt an** — solange ein Timer läuft, hält ein Wake Lock das Display wach (sofern der Browser die Wake-Lock-API kennt).

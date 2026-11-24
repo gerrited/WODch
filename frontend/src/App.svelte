@@ -1,5 +1,6 @@
 <script lang="ts">
   import MobileTabs from './lib/components/MobileTabs.svelte'
+  import RemoteControl from './lib/components/RemoteControl.svelte'
   import SplitPane from './lib/components/SplitPane.svelte'
   import TimerBar from './lib/components/TimerBar.svelte'
   import TimerModal from './lib/components/TimerModal.svelte'
@@ -105,7 +106,8 @@
         <WorkoutEditor />
       {/snippet}
       {#snippet timer()}
-        <TimerBar onOpenModal={() => (showModal = true)} onStartTour={() => (showTour = true)} />
+        <!-- Mobil ist das Handy die Fernbedienung für den Screen in der Box -->
+        <RemoteControl onOpenModal={() => (showModal = true)} onStartTour={() => (showTour = true)} />
       {/snippet}
     </MobileTabs>
   {:else}

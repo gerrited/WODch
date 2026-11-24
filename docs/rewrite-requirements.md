@@ -37,8 +37,7 @@ Web-App für Gym-Trainings: kombiniert einen vollwertigen Trainings-Timer, einen
 | Preset | Parameter |
 |---|---|
 | Tabata | 20 s Work / 10 s Rest × 8 Runden |
-| Fight Gone Bad 1 | 5 × (5 min Work + 1 min Rest) |
-| Fight Gone Bad 2 | 3 × (5 min Work + 1 min Rest) |
+| Fight Gone Bad | 3 × (5 min Work + 1 min Rest) — die 5 min Arbeit verteilen sich auf die Stationen/Übungen im Workout. Interner Schlüssel `fgb1`; `fgb2` bleibt nur für ältere Sessions im Wire-Format und wirkt identisch |
 | EMOM | Intervall frei (Min/Sek), Runden 1–99, kein Rest (Rest = 0 ⇒ direkter Work→Work-Übergang) |
 | Custom | Frei konfigurierbar: Runden 1–99, Work- und Rest-Dauer; Rest = 0 erlaubt. Ein einziges Programm, kein Name |
 

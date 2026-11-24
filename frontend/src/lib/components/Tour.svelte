@@ -103,21 +103,22 @@
   }
   .spotlight {
     position: fixed;
-    border-radius: 8px;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
     /* dunkelt alles außer dem Ziel ab */
     box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.7);
     pointer-events: none;
   }
   .tour-card {
     position: fixed;
-    width: 320px;
+    width: 340px;
     max-width: calc(100vw - 32px);
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 16px;
-    color: #ddd;
-    font-family: monospace;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    color: var(--text-2);
+    font-family: var(--font-ui);
   }
   .tour-card.center {
     top: 50%;
@@ -125,46 +126,54 @@
     transform: translate(-50%, -50%);
   }
   .tour-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #fff;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
     margin-bottom: 8px;
   }
   .tour-body {
-    font-size: 13px;
-    line-height: 1.5;
-    margin-bottom: 14px;
+    font-size: 14px;
+    line-height: 1.55;
+    margin-bottom: 16px;
   }
   .tour-footer {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
   .tour-progress {
-    color: #666;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
     font-size: 12px;
     margin-right: auto;
   }
   .tour-footer button {
+    min-height: var(--tap);
+    padding: 0 12px;
     background: none;
-    border: 1px solid #444;
-    border-radius: 4px;
-    color: #ccc;
-    font-family: monospace;
-    font-size: 12px;
-    padding: 6px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    color: var(--text);
+    font: 500 13px/1 var(--font-ui);
     cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
   }
   .tour-footer button:hover {
-    background: #222;
-    color: #fff;
+    border-color: var(--text-ghost);
+  }
+  .tour-footer button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   .tour-skip {
-    border-color: transparent;
-    color: #666;
+    border-color: transparent !important;
+    color: var(--text-muted) !important;
   }
   .tour-next {
-    border-color: #a8d129;
-    color: #a8d129;
+    font-weight: 600 !important;
+    color: var(--accent-ink) !important;
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
   }
 </style>

@@ -161,27 +161,36 @@
   .tab-bar {
     flex-shrink: 0;
     display: flex;
-    background: var(--bg);
+    background: var(--bg-band);
     border-top: 1px solid var(--line);
     padding-bottom: env(safe-area-inset-bottom);
   }
+  /* Mono wie die Editor-Tabs; aktiver Tab mit 2px-Lime-Linie an der Kante zum Inhalt */
   .tab {
     flex: 1;
+    min-height: 52px;
     background: none;
     border: none;
     border-top: 2px solid transparent;
     margin-top: -1px;
-    color: var(--text-muted);
-    font-family: var(--font-ui);
-    font-size: 15px;
-    font-weight: 600;
-    padding: 16px 0 14px;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 14px 0 12px;
     cursor: pointer;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s;
   }
   .tab.active {
     color: var(--text);
+    font-weight: 700;
     border-top-color: var(--accent);
+  }
+  .tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
 </style>

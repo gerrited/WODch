@@ -63,16 +63,23 @@ describe('TimerStore', () => {
     expect(store.doc).toMatchObject({ mode: 'countdown', preset: null, isRunning: false, accumulatedMs: 0 })
   })
 
-  it('applyPreset materialisiert tabata/fgb1/fgb2/emom in Dauern', () => {
+  it('applyPreset materialisiert tabata/fgb/emom in Dauern', () => {
     store.applyPreset('tabata')
     expect(store.doc).toMatchObject({ mode: 'interval', preset: 'tabata', workDuration: 20 * SEC, restDuration: 10 * SEC, totalRounds: 8 })
     store.applyPreset('fgb1')
-    expect(store.doc).toMatchObject({ workDuration: 5 * MIN, restDuration: 1 * MIN, totalRounds: 5 })
+    expect(store.doc).toMatchObject({ preset: 'fgb1', workDuration: 5 * MIN, restDuration: 1 * MIN, totalRounds: 3 })
+    // Altlast aus älteren Sessions: fgb2 ergibt dasselbe Fight Gone Bad
     store.applyPreset('fgb2')
-    expect(store.doc.totalRounds).toBe(3)
+    expect(store.doc).toMatchObject({ preset: 'fgb1', workDuration: 5 * MIN, restDuration: 1 * MIN, totalRounds: 3 })
     store.setConfig({ emomInterval: 90 * SEC, emomRounds: 12 })
     store.applyPreset('emom')
     expect(store.doc).toMatchObject({ workDuration: 90 * SEC, restDuration: 0, totalRounds: 12 })
+  })
+
+  it('Warmup ist standardmäßig aktiv — auch nach einem Preset', () => {
+    expect(store.doc.warmupEnabled).toBe(true)
+    store.applyPreset('tabata')
+    expect(store.doc.warmupEnabled).toBe(true)
   })
 
   it('applyPreset lässt warmupEnabled unangetastet', () => {
@@ -161,6 +168,7 @@ describe('TimerStore', () => {
   })
 
   it('derived: Tabata läuft deterministisch durch die Phasen', () => {
+    store.setConfig({ warmupEnabled: false })
     store.applyPreset('tabata')
     store.start()
     store.now = 100_000 + 5 * SEC

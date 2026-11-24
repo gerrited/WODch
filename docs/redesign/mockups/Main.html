@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>WODch – Landing-Page</title>
+<script src="./preview-runtime.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,800;1,800;1,900&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0B}
+a{color:#A8D129}a:hover{color:#C6EB4F}
+@keyframes wpulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+<div style="background: #0A0A0B; color: #F4F4F5; font-family: Inter, system-ui, sans-serif; font-size: 16px; line-height: 1.55; overflow: hidden">
+
+<!-- NAV -->
+<header style="border-bottom: 1px solid #1E1E22">
+<nav style="max-width: 1200px; margin: 0 auto; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+<a href="#top" aria-label="WODch Startseite" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #F4F4F5">
+<span style="font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; font-size: 34px; line-height: 1; letter-spacing: -0.5px">W<span style="color: #A8D129; font-size: 26px">ch</span></span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A1A1AA; letter-spacing: 0.08em">WODch</span>
+</a>
+<div style="display: flex; align-items: center; gap: 28px; flex-wrap: wrap; font-size: 14px">
+<a href="#features" style="color: #A1A1AA; text-decoration: none">Features</a>
+<a href="#ablauf" style="color: #A1A1AA; text-decoration: none">So funktioniert's</a>
+<a href="#open" style="color: #A1A1AA; text-decoration: none">Open Source</a>
+<a href="https://github.com/gerrited/WODch" style="color: #F4F4F5; text-decoration: none; border: 1px solid #2E2E33; border-radius: 999px; padding: 9px 16px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 8px">GitHub
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9"></path></svg></a>
+</div>
+</nav>
+</header>
+
+<!-- HERO -->
+<section id="top" style="max-width: 1200px; margin: 0 auto; padding: 72px 24px 56px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 56px; align-items: center">
+<div>
+<p style="margin: 0 0 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: #A8D129">Timer · KI-Workouts · Fernsteuerung</p>
+<h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; font-size: clamp(56px, 8vw, 104px); line-height: 0.92; text-transform: uppercase; letter-spacing: -1px">Die Uhr<br>für dein <span style="color: #A8D129">WOD.</span></h1>
+<p style="margin: 28px 0 0; max-width: 500px; font-size: 19px; color: #C4C4CC">Intervall-Timer, Workout-Board und YouTube-Video auf einem Screen. Gesteuert vom Handy, synchron auf allen Geräten — ohne Account.</p>
+<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 36px">
+<a href="App.dc.html" style="display: inline-flex; align-items: center; gap: 10px; background: #A8D129; color: #0A0A0B; text-decoration: none; font-weight: 600; font-size: 17px; padding: 16px 28px; border-radius: 10px; min-height: 52px; box-sizing: border-box">Session starten
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+<a href="#ablauf" style="display: inline-flex; align-items: center; color: #F4F4F5; text-decoration: none; font-weight: 500; font-size: 17px; padding: 16px 24px; border-radius: 10px; border: 1px solid #2E2E33; min-height: 52px; box-sizing: border-box">So funktioniert's</a>
+</div>
+<p style="margin: 16px 0 0; font-size: 14px; color: #8B8B94">Erzeugt sofort einen Link für dein Handy oder deine Trainingspartner.</p>
+<ul style="list-style: none; margin: 32px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A1A1AA">
+<li style="display: flex; align-items: center; gap: 8px"><span style="width: 6px; height: 6px; background: #A8D129; border-radius: 50%"></span>Kein Account</li>
+<li style="display: flex; align-items: center; gap: 8px"><span style="width: 6px; height: 6px; background: #A8D129; border-radius: 50%"></span>Keine Datenbank</li>
+<li style="display: flex; align-items: center; gap: 8px"><span style="width: 6px; height: 6px; background: #A8D129; border-radius: 50%"></span>Open Source</li>
+<li style="display: flex; align-items: center; gap: 8px"><span style="width: 6px; height: 6px; background: #A8D129; border-radius: 50%"></span>Offline-fähig</li>
+</ul>
+</div>
+
+<!-- STAGE -->
+<div>
+<div style="background: #111113; border: 1px solid #26262B; border-radius: 18px; overflow: hidden; box-shadow: 0 40px 80px -30px rgba(0,0,0,.8)">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #222226; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8B8B94">
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #A8D129; animation: wpulse 2s infinite"></span>wodch.com/l/k3x9q</span>
+<span>2 Geräte verbunden</span>
+</div>
+
+<sc-if value="{{ isTimer }}" hint-placeholder-val="{{ true }}">
+<div style="padding: 28px 28px 24px; display: flex; flex-direction: column; gap: 18px; min-height: 340px; box-sizing: border-box">
+<div style="display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase">
+<span style="color: {{ phaseColor }}; font-weight: 700">{{ phaseLabel }}</span>
+<span style="color: #A1A1AA">Tabata · Runde {{ round }}/8</span>
+</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: clamp(88px, 13vw, 150px); line-height: 1; letter-spacing: -4px; text-align: center; color: {{ phaseColor }}">{{ clock }}</div>
+<div style="height: 8px; background: #222226; border-radius: 4px; overflow: hidden"><div style="height: 100%; width: {{ barW }}; background: {{ phaseColor }}; border-radius: 4px; transition: width 1s linear"></div></div>
+<div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{ rounds }}" as="r" hint-placeholder-count="8"><div style="height: 6px; border-radius: 3px; background: {{ r.bg }}"></div></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isKi }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; min-height: 340px; box-sizing: border-box">
+<div style="border: 1px solid #2E2E33; border-radius: 10px; padding: 14px 16px; font-size: 15px; color: #C4C4CC; display: flex; gap: 10px; align-items: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A8D129" stroke-width="2" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path></svg>
+20 Min AMRAP, Kettlebell und Klimmzugstange
+</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; line-height: 1.7; text-align: center; color: #F4F4F5; padding: 8px 0">AMRAP 20:00<br>10 Kettlebell Swings<br>8 Pull-ups<br>12 Goblet Squats</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #1A1F0C; border: 1px solid #3A4A12; border-radius: 10px; padding: 12px 16px; font-size: 14px">
+<span style="color: #C4C4CC">Timer erkannt: <strong style="color: #A8D129">Count-Down 20:00</strong></span>
+<span style="font-family: 'JetBrains Mono', monospace; color: #A8D129">bereit</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSync }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 28px; display: flex; align-items: center; justify-content: center; gap: 28px; min-height: 340px; box-sizing: border-box; flex-wrap: wrap">
+<div style="width: 250px; height: 160px; border: 2px solid #2E2E33; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8B8B94; letter-spacing: 0.14em">TV IN DER BOX</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 52px; color: #A8D129; line-height: 1">{{ clock }}</span>
+</div>
+<svg width="56" height="24" viewBox="0 0 56 24" fill="none" stroke="#A8D129" stroke-width="2" stroke-dasharray="4 4" aria-hidden="true"><path d="M2 12h52"></path></svg>
+<div style="width: 96px; height: 176px; border: 2px solid #2E2E33; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px">
+<span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 20px">{{ clock }}</span>
+<span style="width: 44px; height: 44px; border-radius: 50%; background: #A8D129; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="#0A0A0B" aria-hidden="true"><rect x="6" y="5" width="4" height="14"></rect><rect x="14" y="5" width="4" height="14"></rect></svg></span>
+</div>
+</div>
+</sc-if>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #222226" role="tablist" aria-label="Features">
+<sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="3">
+<button role="tab" aria-selected="{{ tab.on }}" onClick="{{ tab.pick }}" style="all: unset; cursor: pointer; padding: 16px 18px; min-height: 64px; box-sizing: border-box; border-top: 2px solid {{ tab.line }}; background: {{ tab.bg }}; display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 600; font-size: 14px; color: {{ tab.color }}">{{ tab.title }}</span>
+<span style="font-size: 12px; color: #8B8B94">{{ tab.short }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- TICKER -->
+<div style="border-top: 1px solid #1E1E22; border-bottom: 1px solid #1E1E22; background: #0E0E10">
+<div style="max-width: 1200px; margin: 0 auto; padding: 22px 24px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px 32px; font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 800; font-size: 26px; text-transform: uppercase; color: #5E5E66">
+<span>Tabata</span><span style="color: #A8D129">/</span><span>EMOM</span><span style="color: #A8D129">/</span><span>AMRAP</span><span style="color: #A8D129">/</span><span>For Time</span><span style="color: #A8D129">/</span><span>Fight Gone Bad</span><span style="color: #A8D129">/</span><span>Custom</span>
+</div>
+</div>
+
+<!-- ABLAUF -->
+<section id="ablauf" style="max-width: 1200px; margin: 0 auto; padding: 112px 24px 40px">
+<p style="margin: 0 0 14px; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: #A8D129">So funktioniert's</p>
+<h2 style="margin: 0 0 56px; font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; font-size: clamp(40px, 5vw, 64px); line-height: 0.95; text-transform: uppercase; max-width: 760px">In drei Schritten vom Whiteboard auf den grossen Screen.</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 20px">
+<div style="border-top: 2px solid #A8D129; padding-top: 24px">
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 44px; color: #A8D129; line-height: 1">01</div>
+<h3 style="margin: 18px 0 8px; font-size: 21px; font-weight: 600">Session starten</h3>
+<p style="margin: 0; color: #A1A1AA">Ein Klick öffnet die App auf dem Screen in der Box. Kein Login, keine Installation.</p>
+</div>
+<div style="border-top: 2px solid #2E2E33; padding-top: 24px">
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 44px; color: #F4F4F5; line-height: 1">02</div>
+<h3 style="margin: 18px 0 8px; font-size: 21px; font-weight: 600">Link teilen</h3>
+<p style="margin: 0; color: #A1A1AA">Öffne den Session-Link auf dem Handy. Alle Geräte mit dem Link sehen und steuern dasselbe.</p>
+</div>
+<div style="border-top: 2px solid #2E2E33; padding-top: 24px">
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 44px; color: #F4F4F5; line-height: 1">03</div>
+<h3 style="margin: 18px 0 8px; font-size: 21px; font-weight: 600">Trainieren</h3>
+<p style="margin: 0; color: #A1A1AA">Timer, Workout und Video laufen synchron. Starten, pausieren und Runden zählen direkt vom Handy.</p>
+</div>
+</div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" style="max-width: 1200px; margin: 0 auto; padding: 96px 24px">
+<div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; margin-bottom: 48px">
+<h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; font-size: clamp(40px, 5vw, 64px); line-height: 0.95; text-transform: uppercase">Alles, was die Box braucht.</h2>
+<p style="margin: 0; max-width: 380px; color: #A1A1AA">Gebaut für Coaches und Athleten, die mitten im WOD keine Zeit für Menüs haben.</p>
+</div>
+<article style="background: #0F0F11; padding: 32px; border: 1px solid #222226; border-radius: 16px; margin-bottom: 16px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A8D129" stroke-width="2" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2.5M9 2h6"></path></svg>
+<h3 style="margin: 18px 0 8px; font-size: 22px; font-weight: 600">Intervall-Timer mit 5 Modi</h3>
+<p style="margin: 0 0 22px; color: #A1A1AA; max-width: 560px">Uhrzeit, Stoppuhr auf die Hundertstel, Count-Down, Count-Up und Intervall — mit Presets und optionalem Warmup.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+<span style="border: 1px solid #3A4A12; background: #1A1F0C; color: #C6EB4F; padding: 7px 12px; border-radius: 999px">Tabata</span>
+<span style="border: 1px solid #3A4A12; background: #1A1F0C; color: #C6EB4F; padding: 7px 12px; border-radius: 999px">Fight Gone Bad 1</span>
+<span style="border: 1px solid #3A4A12; background: #1A1F0C; color: #C6EB4F; padding: 7px 12px; border-radius: 999px">Fight Gone Bad 2</span>
+<span style="border: 1px solid #3A4A12; background: #1A1F0C; color: #C6EB4F; padding: 7px 12px; border-radius: 999px">EMOM</span>
+<span style="border: 1px solid #3A4A12; background: #1A1F0C; color: #C6EB4F; padding: 7px 12px; border-radius: 999px">Custom</span>
+</div>
+</article>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 1px; background: #222226; border: 1px solid #222226; border-radius: 16px; overflow: hidden">
+
+<article style="background: #0F0F11; padding: 32px; min-width: 0">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A8D129" stroke-width="2" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"></path></svg>
+<h3 style="margin: 18px 0 8px; font-size: 22px; font-weight: 600">KI-Workouts</h3>
+<p style="margin: 0; color: #A1A1AA">Kurzen Prompt eingeben, das Workout landet direkt im Editor. Ein Klick stellt den passenden Timer ein.</p>
+</article>
+
+<article style="background: #0F0F11; padding: 32px; min-width: 0">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A8D129" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="14" height="10" rx="1.5"></rect><rect x="17" y="8" width="5" height="12" rx="1.5"></rect><path d="M6 18h6"></path></svg>
+<h3 style="margin: 18px 0 8px; font-size: 22px; font-weight: 600">Fernsteuerung per Link</h3>
+<p style="margin: 0; color: #A1A1AA">Handy steuert den Screen. Alle Geräte haben volle Kontrolle — kein Host, kein Pairing.</p>
+</article>
+
+<article style="background: #0F0F11; padding: 32px; min-width: 0">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A8D129" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h13"></path></svg>
+<h3 style="margin: 18px 0 8px; font-size: 22px; font-weight: 600">Workout-Board</h3>
+<p style="margin: 0; color: #A1A1AA">Mehrere Tabs für Warmup, WOD und Cooldown. Umbenennen per Doppelklick, sortieren per Drag &amp; Drop.</p>
+</article>
+
+<article style="background: #0F0F11; padding: 32px; min-width: 0">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A8D129" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3"></rect><path d="M10 9.5v5l4.5-2.5z"></path></svg>
+<h3 style="margin: 18px 0 8px; font-size: 22px; font-weight: 600">Video daneben</h3>
+<p style="margin: 0; color: #A1A1AA">YouTube-Link einfügen für Technik-Demos oder Musik. Endlos-Loop und ±10-Sekunden-Sprünge.</p>
+</article>
+
+<article style="background: #0F0F11; padding: 32px; min-width: 0">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A8D129" stroke-width="2" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4zM16 9a4 4 0 010 6M19 6a8 8 0 010 12"></path></svg>
+<h3 style="margin: 18px 0 8px; font-size: 22px; font-weight: 600">Ansagen &amp; Vibration</h3>
+<p style="margin: 0; color: #A1A1AA">„Los“, „Runde 3“, „Noch zehn Sekunden“ — pro Gerät zuschaltbar. Das Display bleibt an, solange der Timer läuft.</p>
+</article>
+
+<article style="background: #0F0F11; padding: 32px; min-width: 0">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A8D129" stroke-width="2" aria-hidden="true"><path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M2 9a14 14 0 0120 0"></path><circle cx="12" cy="19.5" r="1"></circle></svg>
+<h3 style="margin: 18px 0 8px; font-size: 22px; font-weight: 600">Läuft auch offline</h3>
+<p style="margin: 0; color: #A1A1AA">Als PWA installierbar. Timer und Editor starten auch ohne Netz — wenn das WLAN in der Box mal streikt.</p>
+</article>
+</div>
+</section>
+
+<!-- SHORTCUTS -->
+<section style="max-width: 1200px; margin: 0 auto; padding: 0 24px 96px">
+<div style="border: 1px solid #222226; border-radius: 16px; padding: 32px; display: flex; justify-content: space-between; align-items: center; gap: 24px 40px; flex-wrap: wrap">
+<div>
+<h3 style="margin: 0 0 6px; font-size: 22px; font-weight: 600">Hände voller Kreide?</h3>
+<p style="margin: 0; color: #A1A1AA">Klick auf die Timer-Leiste genügt. Oder per Tastatur:</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 14px 28px; font-size: 14px; color: #C4C4CC">
+<span style="display: flex; align-items: center; gap: 10px"><kbd style="font-family: 'JetBrains Mono', monospace; font-size: 13px; border: 1px solid #3A3A40; border-bottom-width: 3px; border-radius: 6px; padding: 5px 10px; color: #F4F4F5">Space</kbd>Start / Pause</span>
+<span style="display: flex; align-items: center; gap: 10px"><kbd style="font-family: 'JetBrains Mono', monospace; font-size: 13px; border: 1px solid #3A3A40; border-bottom-width: 3px; border-radius: 6px; padding: 5px 10px; color: #F4F4F5">R</kbd>Reset</span>
+<span style="display: flex; align-items: center; gap: 10px"><kbd style="font-family: 'JetBrains Mono', monospace; font-size: 13px; border: 1px solid #3A3A40; border-bottom-width: 3px; border-radius: 6px; padding: 5px 10px; color: #F4F4F5">M</kbd>Einstellungen</span>
+<span style="display: flex; align-items: center; gap: 10px"><kbd style="font-family: 'JetBrains Mono', monospace; font-size: 13px; border: 1px solid #3A3A40; border-bottom-width: 3px; border-radius: 6px; padding: 5px 10px; color: #F4F4F5">+ / −</kbd>Runden zählen</span>
+</div>
+</div>
+</section>
+
+<!-- OPEN SOURCE -->
+<section id="open" style="background: #0E0E10; border-top: 1px solid #1E1E22; border-bottom: 1px solid #1E1E22">
+<div style="max-width: 1200px; margin: 0 auto; padding: 96px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 48px; align-items: start">
+<div>
+<p style="margin: 0 0 14px; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: #A8D129">Privat by Design</p>
+<h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; font-size: clamp(40px, 5vw, 64px); line-height: 0.95; text-transform: uppercase">Kein Cloud-Konto.<br>Keine Datenbank.</h2>
+<p style="margin: 24px 0 0; color: #A1A1AA; max-width: 480px">Sessions leben nur im Arbeitsspeicher des Sync-Servers und verfallen 24 Stunden nach der letzten Änderung. Der Code ist offen — unter MIT-Lizenz.</p>
+<a href="https://github.com/gerrited/WODch" style="display: inline-flex; align-items: center; gap: 10px; margin-top: 28px; color: #F4F4F5; text-decoration: none; font-weight: 500; border: 1px solid #2E2E33; border-radius: 10px; padding: 14px 22px; min-height: 48px; box-sizing: border-box">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 00-1.3-3.2 4.2 4.2 0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 00-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 00-.1 3.2A4.6 4.6 0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"></path></svg>
+Code auf GitHub ansehen</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: #222226; border: 1px solid #222226; border-radius: 16px; overflow: hidden">
+<div style="background: #0A0A0B; padding: 28px"><div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 48px; color: #A8D129; line-height: 1">0</div><p style="margin: 10px 0 0; color: #A1A1AA; font-size: 15px">Accounts oder Logins</p></div>
+<div style="background: #0A0A0B; padding: 28px"><div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 48px; color: #F4F4F5; line-height: 1">24h</div><p style="margin: 10px 0 0; color: #A1A1AA; font-size: 15px">bis eine Session verfällt</p></div>
+<div style="background: #0A0A0B; padding: 28px"><div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 48px; color: #F4F4F5; line-height: 1">5</div><p style="margin: 10px 0 0; color: #A1A1AA; font-size: 15px">Timer-Modi</p></div>
+<div style="background: #0A0A0B; padding: 28px"><div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 48px; color: #F4F4F5; line-height: 1">MIT</div><p style="margin: 10px 0 0; color: #A1A1AA; font-size: 15px">Open-Source-Lizenz</p></div>
+</div>
+</div>
+</section>
+
+<!-- FINAL CTA -->
+<section style="max-width: 1200px; margin: 0 auto; padding: 120px 24px; text-align: center">
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: clamp(72px, 14vw, 180px); line-height: 1; letter-spacing: -4px; color: #1E1E22">3·2·1</div>
+<h2 style="margin: -12px 0 0; font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; font-size: clamp(44px, 6vw, 80px); line-height: 0.95; text-transform: uppercase">Bereit? <span style="color: #A8D129">Los.</span></h2>
+<p style="margin: 20px auto 0; max-width: 460px; color: #A1A1AA; font-size: 18px">Session starten, Link aufs Handy, Kreide an die Hände.</p>
+<a href="App.dc.html" style="display: inline-flex; align-items: center; gap: 10px; margin-top: 36px; background: #A8D129; color: #0A0A0B; text-decoration: none; font-weight: 600; font-size: 18px; padding: 18px 34px; border-radius: 10px; min-height: 56px; box-sizing: border-box">Jetzt starten
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+</section>
+
+<!-- FOOTER -->
+<footer style="border-top: 1px solid #1E1E22">
+<div style="max-width: 1200px; margin: 0 auto; padding: 28px 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; color: #8B8B94">
+<span style="display: flex; align-items: center; gap: 12px"><span style="font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; font-size: 24px; color: #F4F4F5">W<span style="color: #A8D129; font-size: 19px">ch</span></span>© 2026 WODch — MIT-Lizenz</span>
+<nav style="display: flex; gap: 24px" aria-label="Rechtliches">
+<a href="#datenschutz" style="color: #A1A1AA; text-decoration: none">Datenschutz</a>
+<a href="#impressum" style="color: #A1A1AA; text-decoration: none">Impressum</a>
+<a href="https://github.com/gerrited/WODch" style="color: #A1A1AA; text-decoration: none">GitHub</a>
+</nav>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":4200}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'timer', t: 33 };
+  }
+  componentDidMount() {
+    this.iv = setInterval(() => this.setState((s) => ({ t: (s.t + 1) % 240 })), 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.iv);
+  }
+  renderVals() {
+    const lime = '#A8D129';
+    const rest = '#FF9F43';
+    const st = this.state || { tab: 'timer', t: 0 };
+    const t = st.t;
+    const round = Math.floor(t / 30) + 1;
+    const inRound = t % 30;
+    const work = inRound < 20;
+    const left = work ? 20 - inRound : 30 - inRound;
+    const span = work ? 20 : 10;
+    const done = work ? inRound : inRound - 20;
+    const tabsDef = [
+      { id: 'timer', title: 'Intervall-Timer', short: 'Tabata, EMOM & Co.' },
+      { id: 'ki', title: 'KI-Workouts', short: 'Prompt rein, WOD raus' },
+      { id: 'sync', title: 'Fernsteuerung', short: 'Handy steuert den Screen' }
+    ];
+    const tabs = tabsDef.map((x) => {
+      const on = x.id === st.tab;
+      return {
+        ...x,
+        on: on ? 'true' : 'false',
+        line: on ? lime : 'transparent',
+        bg: on ? '#17171A' : 'transparent',
+        color: on ? '#F4F4F5' : '#A1A1AA',
+        pick: () => this.setState({ tab: x.id })
+      };
+    });
+    const rounds = Array.from({ length: 8 }, (_, i) => ({
+      bg: i + 1 < round ? lime : i + 1 === round ? '#5E6E1E' : '#222226'
+    }));
+    return {
+      tabs,
+      rounds,
+      round,
+      isTimer: st.tab === 'timer',
+      isKi: st.tab === 'ki',
+      isSync: st.tab === 'sync',
+      phaseLabel: work ? 'Arbeit' : 'Pause',
+      phaseColor: work ? lime : rest,
+      clock: '00:' + String(left).padStart(2, '0'),
+      barW: Math.round(((done + 1) / span) * 100) + '%'
+    };
+  }
+}
+</script>
+</body>
+</html>

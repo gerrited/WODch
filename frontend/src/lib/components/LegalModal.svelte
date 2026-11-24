@@ -178,8 +178,7 @@
   .legal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.82);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -189,15 +188,15 @@
   }
 
   .legal {
-    background: #0d0d0d;
-    border: 1px solid #333;
-    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
     width: min(720px, 100%);
     max-height: min(80vh, 900px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+    font-family: var(--font-ui);
   }
 
   header {
@@ -205,34 +204,38 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 18px 20px;
-    border-bottom: 1px solid #222;
+    padding: 12px 12px 12px 24px;
+    border-bottom: 1px solid var(--line);
     flex-shrink: 0;
   }
 
   header h2 {
-    font-size: 1rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #fff;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
   }
 
   .close-btn {
+    display: grid;
+    place-items: center;
+    width: var(--tap);
+    height: var(--tap);
     background: none;
     border: none;
-    color: #666;
-    font-family: monospace;
+    border-radius: var(--radius-sm);
+    color: var(--text-faint);
     font-size: 16px;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
   }
 
-  .close-btn:hover,
+  .close-btn:hover {
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+
   .close-btn:focus-visible {
-    color: #fff;
-    outline: none;
-    background: #1a1a1a;
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .body {
@@ -241,16 +244,18 @@
   }
 
   .stand {
-    color: #666;
-    font-size: 0.75rem;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 20px;
   }
 
   .body h3 {
-    font-size: 0.9rem;
-    color: #a8d129;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
     margin: 22px 0 8px;
   }
 
@@ -259,17 +264,17 @@
   }
 
   .body p {
-    color: #aaa;
-    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-size: 14px;
     line-height: 1.65;
   }
 
   .body a {
-    color: #2dc653;
+    color: var(--accent);
   }
 
   .body code {
-    font-family: monospace;
-    color: #ccc;
+    font-family: var(--font-mono);
+    color: var(--text-2);
   }
 </style>

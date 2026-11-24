@@ -1,6 +1,9 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
 import LandingPage from './LandingPage.svelte'
+
+const { create } = vi.hoisted(() => ({ create: vi.fn(async () => {}) }))
+vi.mock('../sync/session.svelte', () => ({ session: { create } }))
 
 let component: Record<string, unknown>
 
@@ -9,55 +12,160 @@ function render() {
   flushSync()
 }
 
-function stageIframe() {
-  return document.querySelector('.video iframe') as HTMLIFrameElement | null
+function iframes() {
+  return Array.from(document.querySelectorAll('iframe')) as HTMLIFrameElement[]
+}
+
+function tabs() {
+  return Array.from(document.querySelectorAll('.stage-tab')) as HTMLButtonElement[]
+}
+
+function demoToggle() {
+  return document.querySelector('.demo-toggle') as HTMLButtonElement
+}
+
+function mockReducedMotion(reduce: boolean) {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: reduce && query.includes('reduce'),
+    media: query,
+    addEventListener() {},
+    removeEventListener() {},
+  }))
 }
 
 describe('LandingPage', () => {
   afterEach(() => {
     unmount(component)
     document.body.innerHTML = ''
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    create.mockClear()
   })
 
-  it('zeigt den Produktnamen und den CTA-Button', () => {
+  it('zeigt die Headline und den Produktnamen im Logo-Link', () => {
     render()
-    expect(document.querySelector('h1')?.textContent).toBe('WODch')
-    expect(document.querySelector('.cta')?.textContent).toContain('Jetzt starten')
+    expect(document.querySelector('h1')?.textContent).toContain('Die Uhr')
+    expect(document.querySelector('a.brand')?.getAttribute('aria-label')).toBe('WODch Startseite')
   })
 
-  it('zeigt im Hero genau ein großes Video — das erste Feature', () => {
+  it('beide Primär-Buttons starten eine Session', async () => {
     render()
-    expect(document.querySelectorAll('.video iframe')).toHaveLength(1)
-    expect(stageIframe()?.src).toBe('https://www.youtube-nocookie.com/embed/oSdlbRmrgNw?rel=0')
-  })
+    const ctas = Array.from(document.querySelectorAll('button.cta')) as HTMLButtonElement[]
+    expect(ctas.map((b) => b.textContent?.trim())).toEqual(['Session starten', 'Jetzt starten'])
 
-  it('die Tabs wechseln das Video in der Bühne', () => {
-    render()
-    const tabs = Array.from(document.querySelectorAll('.stage-tab')) as HTMLButtonElement[]
-    expect(tabs).toHaveLength(3)
-
-    tabs[1].click()
+    ctas[0].click()
     flushSync()
-    expect(stageIframe()?.src).toBe('https://www.youtube-nocookie.com/embed/0CU6XrGlTbw?rel=0')
-    expect(tabs[1].getAttribute('aria-selected')).toBe('true')
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(ctas[0].disabled).toBe(true)
+    expect(ctas[0].textContent).toContain('Session wird erstellt…')
+    await vi.waitFor(() => expect(ctas[0].disabled).toBe(false))
 
-    tabs[2].click()
-    flushSync()
-    expect(stageIframe()?.src).toBe('https://www.youtube-nocookie.com/embed/zgr379mhAPQ?rel=0')
+    ctas[1].click()
+    expect(create).toHaveBeenCalledTimes(2)
   })
 
-  it('"Video ansehen" in einer Feature-Karte wählt das passende Video', () => {
+  it('lädt keine Videos (kein IFrame, auch nicht nach Tab-Wechsel)', () => {
     render()
-    const playButtons = Array.from(document.querySelectorAll('.play')) as HTMLButtonElement[]
-    playButtons[2].click()
-    flushSync()
-    expect(stageIframe()?.src).toBe('https://www.youtube-nocookie.com/embed/zgr379mhAPQ?rel=0')
+    expect(iframes()).toHaveLength(0)
+    for (const tab of tabs()) {
+      tab.click()
+      flushSync()
+      expect(iframes()).toHaveLength(0)
+    }
   })
 
-  it('zeigt die drei Feature-Überschriften', () => {
+  it('Pause hält die Demo an, Fortsetzen lässt sie weiterlaufen', () => {
+    vi.useFakeTimers()
+    mockReducedMotion(false)
     render()
-    const headings = Array.from(document.querySelectorAll('.feature h2')).map((h) => h.textContent)
-    expect(headings).toEqual(['Intervall-Timer', 'KI-generierte Workouts', 'Fernsteuerung per Link'])
+    const clock = () => document.querySelector('.demo-clock')?.textContent?.trim()
+
+    demoToggle().click()
+    flushSync()
+    expect(document.querySelector('.phase')?.textContent).toContain('Pausiert — tippen zum Fortsetzen')
+    expect(demoToggle().getAttribute('aria-pressed')).toBe('true')
+    vi.advanceTimersByTime(3000)
+    flushSync()
+    expect(clock()).toBe('00:15')
+
+    demoToggle().click()
+    flushSync()
+    vi.advanceTimersByTime(2000)
+    flushSync()
+    expect(clock()).toBe('00:13')
+  })
+
+  it('Klick auf die Zeit pausiert ebenfalls — wie die Timer-Leiste der App', () => {
+    vi.useFakeTimers()
+    mockReducedMotion(false)
+    render()
+    ;(document.querySelector('.demo-clock') as HTMLButtonElement).click()
+    flushSync()
+    vi.advanceTimersByTime(3000)
+    flushSync()
+    expect(document.querySelector('.demo-clock')?.textContent?.trim()).toBe('00:15')
+    expect(document.querySelector('.demo-timer.paused')).not.toBeNull()
+  })
+
+  it('der Handy-Button in der Fernsteuerungs-Demo pausiert dieselbe Zeit', () => {
+    vi.useFakeTimers()
+    mockReducedMotion(false)
+    render()
+    tabs()[2].click()
+    flushSync()
+    const phoneBtn = document.querySelector('.phone-btn') as HTMLButtonElement
+    expect(phoneBtn.getAttribute('aria-label')).toBe('Demo pausieren')
+    phoneBtn.click()
+    flushSync()
+    vi.advanceTimersByTime(3000)
+    flushSync()
+    expect(document.querySelector('.screen-clock')?.textContent).toBe('00:15')
+    expect(phoneBtn.getAttribute('aria-label')).toBe('Demo fortsetzen')
+  })
+
+  it('die Tabs wechseln die Live-Demo', () => {
+    render()
+    expect(document.querySelector('.demo-timer')).not.toBeNull()
+    tabs()[1].click()
+    flushSync()
+    expect(document.querySelector('.demo-ki')).not.toBeNull()
+    tabs()[2].click()
+    flushSync()
+    expect(document.querySelector('.demo-sync')).not.toBeNull()
+  })
+
+  it('die Timer-Demo tickt lokal', () => {
+    vi.useFakeTimers()
+    mockReducedMotion(false)
+    render()
+    const clock = () => document.querySelector('.demo-clock')?.textContent?.trim()
+    expect(clock()).toBe('00:15')
+    vi.advanceTimersByTime(3000)
+    flushSync()
+    expect(clock()).toBe('00:12')
+  })
+
+  it('bei reduzierter Bewegung startet die Demo pausiert', () => {
+    vi.useFakeTimers()
+    mockReducedMotion(true)
+    render()
+    vi.advanceTimersByTime(5000)
+    flushSync()
+    expect(document.querySelector('.demo-clock')?.textContent?.trim()).toBe('00:15')
+  })
+
+  it('zeigt die Feature-Überschriften', () => {
+    render()
+    const headings = Array.from(document.querySelectorAll('.feature h3')).map((h) => h.textContent)
+    expect(headings).toEqual([
+      'Intervall-Timer mit 5 Modi',
+      'KI-Workouts',
+      'Fernsteuerung per Link',
+      'Workout-Board',
+      'Video daneben',
+      'Ansagen & Vibration',
+      'Läuft auch offline',
+    ])
   })
 
   it('Datenschutz und Impressum öffnen je ein Modal und schließen wieder', () => {

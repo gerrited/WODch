@@ -65,7 +65,8 @@ export function defaultTimerDoc(): TimerDoc {
     workDuration: 20 * 1000,
     restDuration: 10 * 1000,
     warmupDuration: 10 * 1000,
-    warmupEnabled: false,
+    // Warmup standardmäßig an — gilt damit auch für Presets und Schnellstart, bis es jemand abschaltet
+    warmupEnabled: true,
     emomInterval: 60 * 1000,
     emomRounds: 10,
     totalRounds: 8,

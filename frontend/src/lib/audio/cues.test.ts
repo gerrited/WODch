@@ -6,7 +6,8 @@ import { defaultTimerDoc, type TimerDoc } from '../types'
 const SEC = 1000
 
 function doc(overrides: Partial<TimerDoc> = {}): TimerDoc {
-  return { ...defaultTimerDoc(), ...overrides }
+  // Ohne Warmup als Basis (Standard ist jetzt an) — Warmup-Tests schalten es explizit ein
+  return { ...defaultTimerDoc(), warmupEnabled: false, ...overrides }
 }
 
 // Schnappschuss für einen laufenden Countdown bei gegebener elapsed-Zeit

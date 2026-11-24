@@ -44,7 +44,7 @@ export const desktopSteps: TourStep[] = [
   {
     target: 'ai-generate',
     title: 'Workout per AI',
-    body: 'Der ✨-Button öffnet einen kleinen Dialog: Beschreibe kurz, was du willst — die AI erstellt daraus ein Workout und schreibt es in den aktiven Tab.',
+    body: '„Generieren“ öffnet einen kleinen Dialog: Beschreibe kurz, was du willst — die AI erstellt daraus ein Workout und schreibt es in den aktiven Tab.',
   },
   {
     target: 'estimate',
@@ -54,7 +54,7 @@ export const desktopSteps: TourStep[] = [
   {
     target: 'video',
     title: 'Video',
-    body: 'YouTube-URL einfügen und das Video läuft — mit ∞-Loop und ±10s-Buttons.',
+    body: 'YouTube-URL einfügen und das Video läuft — mit Endlos-Loop und −10s/+10s-Sprüngen.',
   },
   {
     target: 'share',
@@ -96,7 +96,7 @@ export const mobileSteps: TourStep[] = [
     target: 'ai-generate',
     tab: 0,
     title: 'Workout per AI',
-    body: 'Der ✨-Button öffnet einen kleinen Dialog: Beschreibe kurz, was du willst — die AI erstellt daraus ein Workout und schreibt es in den aktiven Tab.',
+    body: '„Generieren“ öffnet einen kleinen Dialog: Beschreibe kurz, was du willst — die AI erstellt daraus ein Workout und schreibt es in den aktiven Tab.',
   },
   {
     target: 'estimate',
@@ -108,7 +108,7 @@ export const mobileSteps: TourStep[] = [
     target: 'video',
     tab: 2,
     title: 'Video',
-    body: 'YouTube-URL einfügen und das Video läuft — mit ∞-Loop und ±10s-Buttons.',
+    body: 'YouTube-URL einfügen und das Video läuft — mit Endlos-Loop und −10s/+10s-Sprüngen.',
   },
   {
     target: 'share',
