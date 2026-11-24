@@ -16,9 +16,9 @@
   ]
 
   const presets: { value: IntervalPreset; label: string }[] = [
-    { value: 'tabata', label: 'Tabata (20s/10s × 8)' },
-    { value: 'fgb1', label: 'Fight Gone Bad (3 × 5min / 1min)' },
     { value: 'emom', label: 'EMOM' },
+    { value: 'fgb1', label: 'Fight Gone Bad (3 × 5min / 1min)' },
+    { value: 'tabata', label: 'Tabata (20s/10s × 8)' },
     { value: 'custom', label: 'Custom' },
   ]
 
