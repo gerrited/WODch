@@ -50,84 +50,109 @@
     {/if}
     <div class="actions">
       <button class="btn btn-cancel" onclick={onCancel}>{cancelLabel}</button>
-      <button class="btn btn-confirm" onclick={onConfirm}>{confirmLabel}</button>
+      <button class="btn btn-primary btn-confirm" onclick={onConfirm}>{confirmLabel}</button>
     </div>
   </div>
 </div>
 
 <style>
+  /* Dialog-Grundstil des Redesigns: Overlay 70 %, Panel --surface, Radius 16px */
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 16px;
     z-index: 100;
     overscroll-behavior: contain;
     touch-action: none;
   }
   .modal {
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 24px;
-    width: 320px;
     position: relative;
-    text-align: center;
+    width: 360px;
+    max-width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    color: var(--text);
+    font-family: var(--font-ui);
+    text-align: left;
   }
   .close-btn {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 10px;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    width: var(--tap);
+    height: var(--tap);
     background: none;
     border: none;
-    color: #666;
+    border-radius: var(--radius-sm);
+    color: var(--text-faint);
     font-size: 16px;
     cursor: pointer;
-    padding: 4px 8px;
   }
   .close-btn:hover {
-    color: #fff;
+    color: var(--text);
+    background: var(--surface-hover);
   }
   .title {
-    color: #fff;
-    font-size: 15px;
+    padding-right: 40px;
     margin-bottom: 8px;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+  }
+  .btn {
+    min-height: var(--tap);
+    padding: 0 18px;
+    font: 500 14px/1 var(--font-ui);
+    color: var(--text);
+    background: none;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+  .btn:hover:not(:disabled) {
+    border-color: var(--text-ghost);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  /* Primär = Lime mit dunkler Schrift */
+  .btn-primary {
+    font-weight: 600;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+  .btn:focus-visible,
+  .close-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   .message {
-    color: #999;
-    font-size: 13px;
-    margin-bottom: 20px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-muted);
     word-break: break-word;
   }
   .actions {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
-    margin-top: 16px;
-  }
-  .btn {
-    border: 1px solid #333;
-    border-radius: 4px;
-    background: none;
-    color: #ccc;
-    font-family: monospace;
-    font-size: 13px;
-    letter-spacing: 1px;
-    padding: 8px 16px;
-    cursor: pointer;
-  }
-  .btn-cancel:hover {
-    color: #fff;
-    border-color: #555;
-  }
-  .btn-confirm {
-    color: #e63946;
-    border-color: #e63946;
-  }
-  .btn-confirm:hover {
-    background: #e63946;
-    color: #fff;
+    margin-top: 20px;
   }
 </style>

@@ -20,9 +20,9 @@
   role="presentation"
 >
   <div class="modal">
-    <button class="close-btn" onclick={onClose}>✕</button>
+    <button class="close-btn" onclick={onClose} aria-label="Schließen">✕</button>
 
-    <div class="label">SESSION TEILEN</div>
+    <div class="title">Session teilen</div>
     <!-- eslint-disable-next-line svelte/no-at-html-tags — SVG stammt aus uqr, nicht aus Nutzereingaben -->
     <div class="qr">{@html qrSvg}</div>
     <div class="link">{url}</div>
@@ -31,54 +31,72 @@
 </div>
 
 <style>
+  /* Dialog-Grundstil des Redesigns: Overlay 70 %, Panel --surface, Radius 16px */
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 16px;
     z-index: 100;
     overscroll-behavior: contain;
     touch-action: none;
   }
   .modal {
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 24px;
-    width: 320px;
     position: relative;
-    text-align: center;
+    width: 340px;
+    max-width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    color: var(--text);
+    font-family: var(--font-ui);
+    text-align: left;
   }
   .close-btn {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 10px;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    width: var(--tap);
+    height: var(--tap);
     background: none;
     border: none;
-    color: #666;
+    border-radius: var(--radius-sm);
+    color: var(--text-faint);
     font-size: 16px;
     cursor: pointer;
-    padding: 4px 8px;
   }
   .close-btn:hover {
-    color: #fff;
+    color: var(--text);
+    background: var(--surface-hover);
   }
-  .label {
-    font-size: 10px;
-    letter-spacing: 3px;
-    color: #666;
+  .title {
+    padding-right: 40px;
+    margin-bottom: 8px;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+  }
+  .close-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .title {
     margin-bottom: 16px;
-    text-align: left;
   }
   .qr {
     background: #fff;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     padding: 8px;
     margin: 0 auto 16px;
-    width: 200px;
-    height: 200px;
+    width: 220px;
+    height: 220px;
   }
   .qr :global(svg) {
     width: 100%;
@@ -86,14 +104,17 @@
     display: block;
   }
   .link {
-    color: #ccc;
+    color: var(--text);
+    font-family: var(--font-mono);
     font-size: 13px;
+    text-align: center;
     word-break: break-all;
     margin-bottom: 8px;
     user-select: all;
   }
   .hint {
-    color: #666;
-    font-size: 11px;
+    color: var(--accent);
+    font-size: 13px;
+    text-align: center;
   }
 </style>

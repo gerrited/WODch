@@ -101,8 +101,9 @@
   ontouchstart={(e) => e.stopPropagation()}
   role="presentation"
 >
-  <div class="modal">
-    <button class="close-btn" onclick={onClose}>✕</button>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Timer-Einstellungen">
+    <button class="close-btn" onclick={onClose} aria-label="Schließen">✕</button>
+    <div class="title">Timer-Einstellungen</div>
 
     <section class="section">
       <div class="label">MODUS</div>
@@ -247,88 +248,190 @@
 </div>
 
 <style>
+  /* Dialog-Grundstil des Redesigns: Overlay 70 %, Panel --surface, Radius 16px */
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 16px;
     z-index: 100;
     overscroll-behavior: contain;
     touch-action: none;
   }
   .modal {
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 8px;
+    position: relative;
+    width: 440px;
+    max-width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
     padding: 24px;
-    width: 420px;
     max-height: 90vh;
     overflow-y: auto;
     overscroll-behavior: contain;
-    position: relative;
+    color: var(--text);
+    font-family: var(--font-ui);
+    text-align: left;
   }
   .close-btn {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 10px;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    width: var(--tap);
+    height: var(--tap);
     background: none;
     border: none;
-    color: #666;
+    border-radius: var(--radius-sm);
+    color: var(--text-faint);
     font-size: 16px;
     cursor: pointer;
-    padding: 4px 8px;
   }
   .close-btn:hover {
-    color: #fff;
+    color: var(--text);
+    background: var(--surface-hover);
   }
-  .section {
+  .title {
+    padding-right: 40px;
+    margin-bottom: 8px;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+  }
+  .btn {
+    min-height: var(--tap);
+    padding: 0 18px;
+    font: 500 14px/1 var(--font-ui);
+    color: var(--text);
+    background: none;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+  .btn:hover:not(:disabled) {
+    border-color: var(--text-ghost);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  /* Primär = Lime mit dunkler Schrift */
+  .btn-primary {
+    font-weight: 600;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+  .btn:focus-visible,
+  .close-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .title {
     margin-bottom: 20px;
   }
+  .section {
+    margin-bottom: 22px;
+  }
   .label {
-    font-size: 10px;
-    letter-spacing: 3px;
-    color: #666;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--text-faint);
   }
   .radio-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px 16px;
   }
   .radio-label {
     display: flex;
     align-items: center;
-    gap: 6px;
-    color: #ccc;
-    font-size: 13px;
+    gap: 8px;
+    min-height: 32px;
+    color: var(--text-2);
+    font-size: 14px;
     cursor: pointer;
+  }
+  .radio-label input[type='checkbox'] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+  }
+  /* Auswahl (Modus, Preset, Format) als Chips im Lime-Tint-Stil der Landing-Page */
+  .radio-group:has(input[type='radio']) {
+    gap: 8px;
+  }
+  .radio-label:has(input[type='radio']) {
+    position: relative;
+    min-height: 40px;
+    padding: 0 14px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+  }
+  .radio-label:has(input[type='radio']):hover {
+    color: var(--text);
+    border-color: var(--text-ghost);
+  }
+  .radio-label input[type='radio'] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .radio-label:has(input[type='radio']:checked) {
+    color: var(--accent-tint-text);
+    background: var(--accent-tint-bg);
+    border-color: var(--accent-tint-line);
+  }
+  .radio-label:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   .time-input-row {
     display: flex;
     align-items: center;
     gap: 6px;
-    color: #888;
+    color: var(--text-muted);
     font-size: 13px;
   }
   .time-input {
-    width: 52px;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 4px 8px;
-    color: #fff;
-    font-size: 14px;
+    width: 60px;
+    height: 40px;
+    background: var(--surface-2);
+    border: 1px solid #26262b;
+    border-radius: var(--radius-sm);
+    padding: 0 8px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 15px;
     text-align: center;
+    outline: none;
+  }
+  .time-input:focus-visible {
+    border-color: var(--accent);
   }
   .config-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
-    color: #888;
-    font-size: 13px;
-    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 10px;
   }
   .config-row span {
     min-width: 60px;
@@ -338,34 +441,9 @@
     gap: 10px;
     margin-top: 24px;
     padding-top: 16px;
-    border-top: 1px solid #222;
+    border-top: 1px solid var(--line);
   }
-  .btn {
+  .controls .btn {
     flex: 1;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 4px;
-    color: #ccc;
-    padding: 10px;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  .btn:hover:not(:disabled) {
-    background: #222;
-    color: #fff;
-  }
-  .btn:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-  .btn-primary {
-    background: #e63946;
-    border-color: #e63946;
-    color: #fff;
-    font-weight: 700;
-  }
-  .btn-primary:hover {
-    background: #c1121f;
-    border-color: #c1121f;
   }
 </style>
