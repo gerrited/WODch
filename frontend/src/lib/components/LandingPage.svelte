@@ -46,10 +46,14 @@
   const reducedMotion =
     typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   let running = $state(!reducedMotion)
+  // Solange die Demo nie lief, wäre „Fortsetzen“ irreführend — dann heißt die Aktion „Starten“.
+  let started = $state(!reducedMotion)
+  const resumeVerb = $derived(started ? 'fortsetzen' : 'starten')
 
   // Pausieren/Fortsetzen wie in der App: Klick auf die Zeit oder den Start/Pause-Button
   function toggleDemo() {
     running = !running
+    if (running) started = true
   }
 
   $effect(() => {
@@ -207,14 +211,14 @@
           <div class="demo-timer" class:rest={!demo.work} class:paused={!running}>
             <div class="demo-meta">
               <span class="phase">
-                {#if !running}Pausiert{:else}{demo.work ? 'Arbeit' : 'Pause'}{/if}
+                {#if !running}{started ? 'Pausiert' : 'Bereit'}{:else}{demo.work ? 'Arbeit' : 'Pause'}{/if}
               </span>
               <span>Tabata · Runde {demo.round}/{ROUNDS}</span>
             </div>
             <button
               class="demo-clock"
               onclick={toggleDemo}
-              aria-label={running ? `Demo-Timer ${demo.clock} — pausieren` : `Demo-Timer ${demo.clock} — fortsetzen`}
+              aria-label={running ? `Demo-Timer ${demo.clock} — pausieren` : `Demo-Timer ${demo.clock} — ${resumeVerb}`}
             >
               {demo.clock}
             </button>
@@ -231,7 +235,7 @@
             <div class="stage-actions">
               <button class="demo-toggle" class:paused={!running} onclick={toggleDemo} aria-pressed={!running}>
                 {@render playPause()}
-                {running ? 'Pause' : 'Fortsetzen'}
+                {running ? 'Pause' : started ? 'Fortsetzen' : 'Starten'}
               </button>
             </div>
           </div>
@@ -264,7 +268,7 @@
                 class="phone-btn"
                 class:paused={!running}
                 onclick={toggleDemo}
-                aria-label={running ? 'Demo pausieren' : 'Demo fortsetzen'}
+                aria-label={running ? 'Demo pausieren' : `Demo ${resumeVerb}`}
               >
                 {@render playPause()}
               </button>
