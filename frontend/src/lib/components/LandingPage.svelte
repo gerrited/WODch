@@ -26,9 +26,9 @@
   }
 
   const tabs: StageTab[] = [
-    { id: 'timer', title: 'Intervall-Timer', short: 'Tabata, EMOM & Co.' },
-    { id: 'ki', title: 'KI-Workouts', short: 'Prompt rein, WOD raus' },
-    { id: 'sync', title: 'Fernsteuerung', short: 'Handy steuert den Screen' },
+    { id: 'timer', title: 'Intervall-Timer', short: 'Tabata, EMOM und mehr' },
+    { id: 'ki', title: 'KI-Workouts', short: 'Workout aus einem Satz' },
+    { id: 'sync', title: 'Fernsteuerung', short: 'Vom Handy aus bedienen' },
   ]
 
   let activeId = $state<StageTab['id']>('timer')
@@ -79,12 +79,14 @@
     }
   })
 
-  // KI-Demo: Prompt tippen, abschicken, kurz „arbeiten“, dann Ergebnis zeigen.
-  // Läuft bei jedem Wechsel auf den Tab neu ab, damit der Ablauf sichtbar bleibt.
+  // KI-Demo: Der Prompt ist fast fertig, beim Tab-Wechsel wird nur das letzte Wort
+  // zu Ende getippt. Abschicken muss der Besucher selbst, erst danach „arbeitet“ die
+  // Demo kurz und zeigt das Ergebnis. Jeder Wechsel auf den Tab setzt sie zurück.
   const KI_PROMPT = '20 Min AMRAP, Kettlebell und Klimmzugstange'
-  const TYPE_MS = 35
+  const KI_TYPED_TAIL = 'stange'
+  const TYPE_MS = 70
   const THINK_MS = 1600
-  let kiStep = $state<'typing' | 'thinking' | 'done'>('typing')
+  let kiStep = $state<'typing' | 'ready' | 'thinking' | 'done'>('typing')
   let kiTyped = $state(0)
 
   $effect(() => {
@@ -93,19 +95,23 @@
     const ids: number[] = []
     const later = (ms: number, fn: () => void) => ids.push(window.setTimeout(() => alive && fn(), ms))
 
-    kiStep = 'typing'
-    // Bei reduzierter Bewegung kein Schreibmaschinen-Effekt — der Prompt steht sofort da
-    kiTyped = reducedMotion ? KI_PROMPT.length : 0
-    let at = 400
-    if (!reducedMotion) {
-      for (let i = 1; i <= KI_PROMPT.length; i++) {
+    // Bei reduzierter Bewegung kein Tipp-Effekt, der Prompt steht sofort komplett da
+    if (reducedMotion) {
+      kiTyped = KI_PROMPT.length
+      kiStep = 'ready'
+    } else {
+      kiStep = 'typing'
+      // Lokale Variable statt kiTyped lesen: sonst hängt der Effekt von kiTyped ab
+      // und startet sich bei jedem getippten Zeichen neu
+      const from = KI_PROMPT.length - KI_TYPED_TAIL.length
+      kiTyped = from
+      let at = 500
+      for (let i = from + 1; i <= KI_PROMPT.length; i++) {
         later(at, () => (kiTyped = i))
         at += TYPE_MS
       }
+      later(at, () => (kiStep = 'ready'))
     }
-    at += 500
-    later(at, () => (kiStep = 'thinking'))
-    later(at + THINK_MS, () => (kiStep = 'done'))
 
     return () => {
       alive = false
@@ -113,14 +119,25 @@
     }
   })
 
+  // Eigener Effekt, damit ein Tab-Wechsel während des „Arbeitens“ den Timer sauber abräumt
+  $effect(() => {
+    if (kiStep !== 'thinking') return
+    const id = window.setTimeout(() => (kiStep = 'done'), THINK_MS)
+    return () => clearTimeout(id)
+  })
+
+  function sendPrompt() {
+    if (kiStep === 'ready') kiStep = 'thinking'
+  }
+
   let legal: 'privacy' | 'imprint' | null = $state(null)
 
   const ticker = ['Tabata', 'EMOM', 'AMRAP', 'For Time', 'Fight Gone Bad', 'Custom']
 
   const steps = [
-    { title: 'Session starten', text: 'Ein Klick öffnet die App auf dem Screen in der Box. Kein Login, keine Installation.' },
-    { title: 'Link teilen', text: 'Öffne den Session-Link auf dem Handy. Alle Geräte mit dem Link sehen und steuern dasselbe.' },
-    { title: 'Trainieren', text: 'Timer, Workout und Video laufen synchron. Starten, pausieren und Runden zählen direkt vom Handy.' },
+    { title: 'Session starten', text: 'Öffne die App auf dem Screen in der Box. Du brauchst dafür weder Login noch Installation.' },
+    { title: 'Link teilen', text: 'Öffne den Session-Link auf deinem Handy. Jedes Gerät mit dem Link sieht und steuert dieselbe Session.' },
+    { title: 'Trainieren', text: 'Timer, Workout und Video sind auf allen Geräten gleich. Starten, pausieren und Runden zählen geht direkt vom Handy.' },
   ]
 
   const presets = ['EMOM', 'Fight Gone Bad', 'Tabata', 'Custom']
@@ -129,32 +146,32 @@
   const features = [
     {
       title: 'KI-Workouts',
-      text: 'Kurzen Prompt eingeben, das Workout landet direkt im Editor. Ein Klick stellt den passenden Timer ein.',
+      text: 'Beschreib in einem Satz, was du trainieren willst. Das Workout landet im Editor und der passende Timer ist mit einem Klick eingestellt.',
       icon: '<path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
     },
     {
       title: 'Fernsteuerung per Link',
-      text: 'Handy steuert den Screen. Alle Geräte haben volle Kontrolle — kein Host, kein Pairing.',
+      text: 'Mit dem Handy bedienst du den Screen. Jedes Gerät mit dem Link kann alles steuern, ein Pairing ist nicht nötig.',
       icon: '<rect x="2" y="4" width="14" height="10" rx="1.5"/><rect x="17" y="8" width="5" height="12" rx="1.5"/><path d="M6 18h6"/>',
     },
     {
       title: 'Workout-Board',
-      text: 'Mehrere Tabs für Warmup, WOD und Cooldown. Umbenennen per Doppelklick, sortieren per Drag & Drop.',
+      text: 'Lege eigene Tabs für Warmup, WOD und Cooldown an. Mit Doppelklick benennst du sie um, per Drag & Drop änderst du die Reihenfolge.',
       icon: '<path d="M4 6h16M4 12h10M4 18h13"/>',
     },
     {
       title: 'Video daneben',
-      text: 'YouTube-Link einfügen für Technik-Demos oder Musik. Endlos-Loop und ±10-Sekunden-Sprünge.',
+      text: 'Füge einen YouTube-Link ein, zum Beispiel für Technik-Demos oder Musik. Das Video läuft auf Wunsch in Schleife und springt 10 Sekunden vor oder zurück.',
       icon: '<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z"/>',
     },
     {
       title: 'Ansagen & Vibration',
-      text: '„Los“, „Runde 3“, „Noch zehn Sekunden“ — pro Gerät zuschaltbar. Das Display bleibt an, solange der Timer läuft.',
+      text: 'Ansagen wie „Los“, „Runde 3“ oder „Noch zehn Sekunden“ schaltest du pro Gerät ein. Solange der Timer läuft, bleibt das Display an.',
       icon: '<path d="M11 5L6 9H3v6h3l5 4zM16 9a4 4 0 010 6M19 6a8 8 0 010 12"/>',
     },
     {
       title: 'Läuft auch offline',
-      text: 'Als PWA installierbar. Timer und Editor starten auch ohne Netz — wenn das WLAN in der Box mal streikt.',
+      text: 'Du kannst WODch als App installieren. Timer und Editor funktionieren auch ohne Netz, falls das WLAN in der Box mal ausfällt.',
       icon: '<path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M2 9a14 14 0 0120 0"/><circle cx="12" cy="19.5" r="1"/>',
     },
   ]
@@ -216,8 +233,8 @@
       <p class="eyebrow">Timer · KI-Workouts · Fernsteuerung</p>
       <h1>Die Uhr<br />für dein <span class="lime">WOD.</span></h1>
       <p class="lead">
-        Intervall-Timer, Workout-Board und YouTube-Video auf einem Screen. Gesteuert vom Handy, synchron auf allen
-        Geräten — ohne Account.
+        Intervall-Timer, Workout-Board und YouTube-Video auf einem Screen. Du bedienst alles vom Handy aus und alle
+        Geräte zeigen dasselbe. Einen Account brauchst du nicht.
       </p>
       <div class="cta-row">
         <button class="cta" onclick={start} disabled={starting}>
@@ -225,7 +242,7 @@
         </button>
         <a class="btn-outline" href="#ablauf">So funktioniert's</a>
       </div>
-      <p class="hint">Erzeugt sofort einen Link für dein Handy oder deine Trainingspartner.</p>
+      <p class="hint">Du bekommst sofort einen Link, den du auf dem Handy öffnen oder an deine Trainingspartner schicken kannst.</p>
       <ul class="trust">
         <li>Kein Account</li>
         <li>Keine Datenbank</li>
@@ -252,7 +269,7 @@
             <button
               class="demo-clock"
               onclick={toggleDemo}
-              aria-label={running ? `Demo-Timer ${demo.clock} — pausieren` : `Demo-Timer ${demo.clock} — ${resumeVerb}`}
+              aria-label={running ? `Demo-Timer ${demo.clock} pausieren` : `Demo-Timer ${demo.clock} ${resumeVerb}`}
             >
               {demo.clock}
             </button>
@@ -275,21 +292,28 @@
           </div>
         {:else if activeId === 'ki'}
           <div class="demo-ki">
-            <div class="prompt" class:sent={kiStep !== 'typing'}>
+            <div class="prompt" class:sent={kiStep === 'thinking' || kiStep === 'done'}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
               </svg>
               <span class="prompt-text" aria-label={KI_PROMPT}>
                 {KI_PROMPT.slice(0, kiTyped)}{#if kiStep === 'typing'}<span class="caret" aria-hidden="true"></span>{/if}
               </span>
-              <span class="send" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+              <button
+                class="send"
+                class:ready={kiStep === 'ready'}
+                onclick={sendPrompt}
+                disabled={kiStep !== 'ready'}
+                aria-label="Prompt abschicken"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
                   <path d="M12 19V5M6 11l6-6 6 6" />
                 </svg>
-              </span>
+              </button>
             </div>
             <!-- Beide Zustände liegen übereinander im selben Grid-Feld: die Höhe steht von Anfang an fest -->
             <div class="ki-result" aria-live="polite">
+              <p class="ki-hint" class:shown={kiStep === 'ready'}>Tippe auf den Pfeil, um den Prompt abzuschicken.</p>
               <div class="ki-thinking" class:shown={kiStep === 'thinking'}>
                 <span class="dots" aria-hidden="true"><span></span><span></span><span></span></span>
                 Workout wird erstellt …
@@ -356,7 +380,7 @@
 
   <section id="ablauf" class="steps-section container">
     <p class="eyebrow">So funktioniert's</p>
-    <h2 class="steps-title">In drei Schritten vom Whiteboard auf den großen Screen.</h2>
+    <h2 class="steps-title">Vom Whiteboard auf den großen Screen in drei Schritten.</h2>
     <ol class="steps">
       {#each steps as step, i (step.title)}
         <li class="step" class:first={i === 0}>
@@ -370,15 +394,15 @@
 
   <section id="features" class="features-section container">
     <div class="features-head">
-      <h2>Alles, was die Box braucht.</h2>
-      <p>Gebaut für Coaches und Athleten, die mitten im WOD keine Zeit für Menüs haben.</p>
+      <h2>Was WODch kann</h2>
+      <p>Für Coaches und Athleten, die sich mitten im WOD nicht durch Menüs klicken wollen.</p>
     </div>
     <article class="feature feature-big">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5M9 2h6" />
       </svg>
       <h3>Intervall-Timer mit 5 Modi</h3>
-      <p>Uhrzeit, Stoppuhr auf die Hundertstel, Count-Down, Count-Up und Intervall — mit Presets und optionalem Warmup.</p>
+      <p>Uhrzeit, Stoppuhr auf die Hundertstel, Count-Down, Count-Up und Intervall. Dazu gibt es Presets und auf Wunsch ein Warmup vorweg.</p>
       <ul class="chips">
         {#each presets as preset (preset)}<li>{preset}</li>{/each}
       </ul>
@@ -400,7 +424,7 @@
     <div class="keys">
       <div>
         <h3>Hände voller Kreide?</h3>
-        <p>Klick auf die Timer-Leiste genügt. Oder per Tastatur:</p>
+        <p>Ein Klick auf die Timer-Leiste reicht. Am Rechner gehen auch diese Tasten:</p>
       </div>
       <ul class="key-list">
         {#each shortcuts as s (s.key)}
@@ -413,11 +437,11 @@
   <section id="open" class="open">
     <div class="open-inner container">
       <div>
-        <p class="eyebrow">Privat by Design</p>
-        <h2>Kein Cloud-Konto.<br />Keine Datenbank.</h2>
+        <p class="eyebrow">Datenschutz</p>
+        <h2>Ohne Konto und<br />ohne Datenbank</h2>
         <p class="open-text">
-          Sessions leben nur im Arbeitsspeicher des Sync-Servers und verfallen 24 Stunden nach der letzten Änderung.
-          Der Code ist offen — unter MIT-Lizenz.
+          Sessions liegen nur im Arbeitsspeicher des Sync-Servers und werden 24 Stunden nach der letzten Änderung
+          gelöscht. Der Quellcode steht unter MIT-Lizenz auf GitHub.
         </p>
         <a class="btn-outline gh" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -442,7 +466,7 @@
   <section class="final container">
     <div class="countdown" aria-hidden="true">3·2·1</div>
     <h2>Bereit? <span class="lime">Los.</span></h2>
-    <p>Session starten, Link aufs Handy, Kreide an die Hände.</p>
+    <p>Starte eine Session und öffne den Link auf dem Handy. Dann kann es losgehen.</p>
     <button class="cta cta-lg" onclick={start} disabled={starting}>
       {#if starting}Session wird erstellt…{:else}Jetzt starten {@render arrow()}{/if}
     </button>
@@ -450,7 +474,7 @@
 
   <footer class="footer">
     <div class="footer-inner container">
-      <span class="copy"><Logo size="52px" />© 2026 WODch — MIT-Lizenz</span>
+      <span class="copy"><Logo size="52px" />© 2026 WODch · MIT-Lizenz</span>
       <nav class="legal-links" aria-label="Rechtliches">
         <button onclick={() => (legal = 'privacy')}>Datenschutz</button>
         <button onclick={() => (legal = 'imprint')}>Impressum</button>
@@ -925,9 +949,11 @@
     flex-shrink: 0;
     display: grid;
     place-items: center;
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
     color: var(--text-2);
+    background: transparent;
     border: 1px solid var(--line-strong);
     border-radius: 50%;
     transition:
@@ -940,7 +966,34 @@
     color: inherit;
   }
 
-  /* Abgeschickt: Senden-Knopf leuchtet in Akzentfarbe wie die übrigen Aktiv-Zustände */
+  .send:disabled {
+    cursor: default;
+  }
+
+  /* Bereit zum Abschicken: der Knopf pulsiert, damit klar ist, dass hier geklickt werden soll */
+  .send.ready {
+    color: var(--accent-tint-text);
+    background: var(--accent-tint-bg);
+    border-color: var(--accent);
+    cursor: pointer;
+    animation: send-ring 1.6s infinite;
+  }
+
+  @keyframes send-ring {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 10px transparent;
+    }
+  }
+
+  .send.ready:hover {
+    animation: none;
+  }
+
+  /* Abgeschickt: Senden-Knopf bleibt in Akzentfarbe wie die übrigen Aktiv-Zustände */
   .prompt.sent .send {
     color: var(--accent-tint-text);
     background: var(--accent-tint-bg);
@@ -951,6 +1004,7 @@
     display: grid;
   }
 
+  .ki-hint,
   .ki-thinking,
   .ki-output {
     grid-area: 1 / 1;
@@ -961,6 +1015,7 @@
       visibility 0.3s;
   }
 
+  .ki-hint.shown,
   .ki-thinking.shown,
   .ki-output.shown {
     visibility: visible;
@@ -971,6 +1026,14 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .ki-hint {
+    align-self: center;
+    margin: 0;
+    font-size: 14px;
+    text-align: center;
+    color: var(--text-2);
   }
 
   .ki-thinking {
@@ -1583,9 +1646,11 @@
       transition: none;
     }
     .caret,
-    .dots span {
+    .dots span,
+    .send.ready {
       animation: none;
     }
+    .ki-hint,
     .ki-thinking,
     .ki-output,
     .send {

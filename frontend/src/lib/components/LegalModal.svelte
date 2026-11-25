@@ -66,7 +66,7 @@
           Für die Fernsteuerung per Link hält der Server den Zustand einer Session (Timer-Einstellungen,
           Workout-Texte, Video-Link) ausschließlich im Arbeitsspeicher. Diese Daten werden nicht auf
           Datenträger geschrieben und gehen beim Beenden der Session bzw. bei einem Neustart des Dienstes
-          verloren. Wer die Session-URL kennt, kann den Inhalt sehen und ändern — bitte gib dort keine
+          verloren. Wer die Session-URL kennt, kann den Inhalt sehen und ändern. Bitte gib dort deshalb keine
           personenbezogenen oder vertraulichen Daten ein. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO
           (Bereitstellung der angeforderten Funktion).
         </p>
@@ -81,8 +81,8 @@
 
         <h3>5. Speicherung im Browser</h3>
         <p>
-          WODch setzt keine Cookies. Einige Einstellungen — etwa der zuletzt aktive Tab, ein eigenes
-          Intervall-Programm und der Hinweis, dass die Tour bereits gesehen wurde — werden lokal im
+          WODch setzt keine Cookies. Einige Einstellungen wie der zuletzt aktive Tab, ein eigenes
+          Intervall-Programm und der Hinweis, dass die Tour bereits gesehen wurde, werden lokal im
           <code>localStorage</code> deines Browsers abgelegt. Diese Daten verlassen dein Gerät nicht und
           können jederzeit über die Browser-Einstellungen gelöscht werden.
         </p>
@@ -100,7 +100,7 @@
         <h3>7. YouTube-Videos</h3>
         <p>
           Die Videos auf dieser Seite und im Video-Tab werden über YouTube eingebettet (Google Ireland
-          Limited, Gordon House, Barrow Street, Dublin 4, Irland) — im erweiterten Datenschutzmodus über
+          Limited, Gordon House, Barrow Street, Dublin 4, Irland), und zwar im erweiterten Datenschutzmodus über
           die Domain <code>youtube-nocookie.com</code>. In diesem Modus setzt YouTube erst dann Cookies,
           wenn du ein Video tatsächlich abspielst. Beim Laden des Players baut dein Browser dennoch eine
           Verbindung zu Google-Servern auf; dabei werden IP-Adresse und Geräteinformationen an Google
@@ -159,7 +159,7 @@
           Gefahr; für Datenverluste im Rahmen der Nutzung wird keine Haftung übernommen.
         </p>
         <p>
-          WODch ist kein medizinischer Ratgeber: Trainingsinhalte — insbesondere KI-generierte Workouts —
+          WODch ist kein medizinischer Ratgeber: Trainingsinhalte, insbesondere KI-generierte Workouts,
           sind unverbindliche Vorschläge und ersetzen keine fachliche Beratung. Für die Inhalte verlinkter
           externer Seiten sind ausschließlich deren Betreiber verantwortlich.
         </p>
