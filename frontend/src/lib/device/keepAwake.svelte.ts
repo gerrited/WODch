@@ -6,13 +6,15 @@ export const KEEP_AWAKE_KEY = 'wodch-keep-awake'
 // in der Box nur das Workout-Board steht. Gerätelokal und nie synchronisiert,
 // denn ob ein Display anbleiben soll, entscheidet jedes Gerät für sich.
 export class KeepAwakeStore {
-  on = $state(false)
+  // Standard: an. In der Box soll das Display nicht ausgehen, ohne dass vorher
+  // jemand etwas einstellen muss. Nur ein ausdrückliches Ausschalten wird gemerkt.
+  on = $state(true)
 
   constructor(private nav: WakeLockNavigator = typeof navigator !== 'undefined' ? navigator : {}) {
     try {
-      this.on = localStorage.getItem(KEEP_AWAKE_KEY) === '1'
+      this.on = localStorage.getItem(KEEP_AWAKE_KEY) !== '0'
     } catch {
-      // localStorage nicht verfügbar, Standard: aus
+      // localStorage nicht verfügbar, Standard bleibt an
     }
   }
 
