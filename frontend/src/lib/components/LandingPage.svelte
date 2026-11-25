@@ -79,6 +79,40 @@
     }
   })
 
+  // KI-Demo: Prompt tippen, abschicken, kurz „arbeiten“, dann Ergebnis zeigen.
+  // Läuft bei jedem Wechsel auf den Tab neu ab, damit der Ablauf sichtbar bleibt.
+  const KI_PROMPT = '20 Min AMRAP, Kettlebell und Klimmzugstange'
+  const TYPE_MS = 35
+  const THINK_MS = 1600
+  let kiStep = $state<'typing' | 'thinking' | 'done'>('typing')
+  let kiTyped = $state(0)
+
+  $effect(() => {
+    if (activeId !== 'ki') return
+    let alive = true
+    const ids: number[] = []
+    const later = (ms: number, fn: () => void) => ids.push(window.setTimeout(() => alive && fn(), ms))
+
+    kiStep = 'typing'
+    // Bei reduzierter Bewegung kein Schreibmaschinen-Effekt — der Prompt steht sofort da
+    kiTyped = reducedMotion ? KI_PROMPT.length : 0
+    let at = 400
+    if (!reducedMotion) {
+      for (let i = 1; i <= KI_PROMPT.length; i++) {
+        later(at, () => (kiTyped = i))
+        at += TYPE_MS
+      }
+    }
+    at += 500
+    later(at, () => (kiStep = 'thinking'))
+    later(at + THINK_MS, () => (kiStep = 'done'))
+
+    return () => {
+      alive = false
+      ids.forEach(clearTimeout)
+    }
+  })
+
   let legal: 'privacy' | 'imprint' | null = $state(null)
 
   const ticker = ['Tabata', 'EMOM', 'AMRAP', 'For Time', 'Fight Gone Bad', 'Custom']
@@ -241,16 +275,32 @@
           </div>
         {:else if activeId === 'ki'}
           <div class="demo-ki">
-            <div class="prompt">
+            <div class="prompt" class:sent={kiStep !== 'typing'}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
               </svg>
-              20 Min AMRAP, Kettlebell und Klimmzugstange
+              <span class="prompt-text" aria-label={KI_PROMPT}>
+                {KI_PROMPT.slice(0, kiTyped)}{#if kiStep === 'typing'}<span class="caret" aria-hidden="true"></span>{/if}
+              </span>
+              <span class="send" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                  <path d="M12 19V5M6 11l6-6 6 6" />
+                </svg>
+              </span>
             </div>
-            <div class="wod">AMRAP 20:00<br />10 Kettlebell Swings<br />8 Pull-ups<br />12 Goblet Squats</div>
-            <div class="detected">
-              <span>Timer erkannt: <strong>Count-Down 20:00</strong></span>
-              <span class="mono">bereit</span>
+            <!-- Beide Zustände liegen übereinander im selben Grid-Feld: die Höhe steht von Anfang an fest -->
+            <div class="ki-result" aria-live="polite">
+              <div class="ki-thinking" class:shown={kiStep === 'thinking'}>
+                <span class="dots" aria-hidden="true"><span></span><span></span><span></span></span>
+                Workout wird erstellt …
+              </div>
+              <div class="ki-output" class:shown={kiStep === 'done'}>
+                <div class="wod">AMRAP 20:00<br />10 Kettlebell Swings<br />8 Pull-ups<br />12 Goblet Squats</div>
+                <div class="detected">
+                  <span>Timer erkannt: <strong>Count-Down 20:00</strong></span>
+                  <span class="mono">bereit</span>
+                </div>
+              </div>
             </div>
           </div>
         {:else}
@@ -850,6 +900,111 @@
     color: var(--accent);
   }
 
+  .prompt-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .caret {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    margin-left: 1px;
+    vertical-align: -0.2em;
+    background: var(--accent);
+    animation: blink 1s steps(1) infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .send {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    color: var(--text-2);
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    transition:
+      color 0.2s,
+      background 0.2s,
+      border-color 0.2s;
+  }
+
+  .send svg {
+    color: inherit;
+  }
+
+  /* Abgeschickt: Senden-Knopf leuchtet in Akzentfarbe wie die übrigen Aktiv-Zustände */
+  .prompt.sent .send {
+    color: var(--accent-tint-text);
+    background: var(--accent-tint-bg);
+    border-color: var(--accent-tint-line);
+  }
+
+  .ki-result {
+    display: grid;
+  }
+
+  .ki-thinking,
+  .ki-output {
+    grid-area: 1 / 1;
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      opacity 0.3s,
+      visibility 0.3s;
+  }
+
+  .ki-thinking.shown,
+  .ki-output.shown {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .ki-output {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .ki-thinking {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: var(--text-2);
+  }
+
+  .dots {
+    display: inline-flex;
+    gap: 4px;
+  }
+
+  .dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.2s infinite;
+  }
+
+  .dots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .dots span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
   .wod {
     padding: 8px 0;
     font-family: var(--font-mono);
@@ -970,6 +1125,9 @@
     .demo-ki {
       gap: 12px;
       padding: 16px 20px;
+    }
+    .ki-output {
+      gap: 12px;
     }
   }
 
@@ -1422,6 +1580,15 @@
       animation: none;
     }
     .bar-fill {
+      transition: none;
+    }
+    .caret,
+    .dots span {
+      animation: none;
+    }
+    .ki-thinking,
+    .ki-output,
+    .send {
       transition: none;
     }
   }
