@@ -95,23 +95,20 @@
     const ids: number[] = []
     const later = (ms: number, fn: () => void) => ids.push(window.setTimeout(() => alive && fn(), ms))
 
-    // Bei reduzierter Bewegung kein Tipp-Effekt, der Prompt steht sofort komplett da
-    if (reducedMotion) {
-      kiTyped = KI_PROMPT.length
-      kiStep = 'ready'
-    } else {
-      kiStep = 'typing'
-      // Lokale Variable statt kiTyped lesen: sonst hängt der Effekt von kiTyped ab
-      // und startet sich bei jedem getippten Zeichen neu
-      const from = KI_PROMPT.length - KI_TYPED_TAIL.length
-      kiTyped = from
-      let at = 500
-      for (let i = from + 1; i <= KI_PROMPT.length; i++) {
-        later(at, () => (kiTyped = i))
-        at += TYPE_MS
-      }
-      later(at, () => (kiStep = 'ready'))
+    // Tippt auch bei reduzierter Bewegung: sechs Zeichen sind kaum Bewegung, und ohne
+    // den Effekt sieht der Wechsel auf die Karte aus, als passiere nichts.
+    // Cursor-Blinken und Puls-Ring sind dort per CSS abgeschaltet.
+    kiStep = 'typing'
+    // Lokale Variable statt kiTyped lesen: sonst hängt der Effekt von kiTyped ab
+    // und startet sich bei jedem getippten Zeichen neu
+    const from = KI_PROMPT.length - KI_TYPED_TAIL.length
+    kiTyped = from
+    let at = 150
+    for (let i = from + 1; i <= KI_PROMPT.length; i++) {
+      later(at, () => (kiTyped = i))
+      at += TYPE_MS
     }
+    later(at, () => (kiStep = 'ready'))
 
     return () => {
       alive = false
