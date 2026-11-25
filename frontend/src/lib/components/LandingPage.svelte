@@ -83,8 +83,8 @@
   // zu Ende getippt. Abschicken muss der Besucher selbst, erst danach „arbeitet“ die
   // Demo kurz und zeigt das Ergebnis. Jeder Wechsel auf den Tab setzt sie zurück.
   const KI_PROMPT = '20 Min AMRAP, Kettlebell und Klimmzugstange'
-  const KI_TYPED_TAIL = 'stange'
-  const TYPE_MS = 70
+  const KI_TYPED_TAIL = 'Klimmzugstange'
+  const TYPE_MS = 110
   const THINK_MS = 1600
   let kiStep = $state<'typing' | 'ready' | 'thinking' | 'done'>('typing')
   let kiTyped = $state(0)
@@ -95,7 +95,7 @@
     const ids: number[] = []
     const later = (ms: number, fn: () => void) => ids.push(window.setTimeout(() => alive && fn(), ms))
 
-    // Tippt auch bei reduzierter Bewegung: sechs Zeichen sind kaum Bewegung, und ohne
+    // Tippt auch bei reduzierter Bewegung: ein Wort zu tippen ist kaum Bewegung, und ohne
     // den Effekt sieht der Wechsel auf die Karte aus, als passiere nichts.
     // Cursor-Blinken und Puls-Ring sind dort per CSS abgeschaltet.
     kiStep = 'typing'
