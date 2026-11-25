@@ -3,13 +3,14 @@ import { formatMs, formatClock } from './format'
 
 export type IntervalConfig = Pick<
   TimerDoc,
-  'warmupEnabled' | 'warmupDuration' | 'workDuration' | 'restDuration' | 'totalRounds'
+  'warmupEnabled' | 'warmupDuration' | 'workDuration' | 'restDuration' | 'totalRounds' | 'sets' | 'setRest'
 >
 
 export type Derived =
   | { phase: 'idle' }
   | { phase: 'running' }
-  | { phase: 'warmup' | 'work' | 'rest'; round: number; remaining: number }
+  // set (1-basiert) nur bei mehreren Blöcken; setBreak markiert die Pause zwischen zwei Blöcken
+  | { phase: 'warmup' | 'work' | 'rest'; round: number; remaining: number; set?: number; setBreak?: boolean }
   | { phase: 'done' }
 
 export function elapsedNow(
@@ -32,6 +33,29 @@ export function deriveInterval(
   const t = elapsed - warmup
   const cycle = cfg.workDuration + cfg.restDuration
   if (cycle <= 0 || cfg.totalRounds <= 0) return { phase: 'done' }
+  const sets = Math.max(1, Math.floor(cfg.sets ?? 1))
+  if (sets === 1) return deriveRounds(cfg, t, cycle)
+
+  // Mehrere Blöcke: zwischen zwei Blöcken ersetzt die Blockpause die letzte kurze
+  // Pause (ohne Blockpause bleibt die kurze). Der letzte Block endet wie ein einzelner.
+  const gap = cfg.setRest && cfg.setRest > 0 ? cfg.setRest : cfg.restDuration
+  const block = cfg.totalRounds * cycle - cfg.restDuration
+  const span = block + gap
+  const setIdx = Math.min(Math.floor(t / span), sets - 1)
+  const tSet = t - setIdx * span
+  const set = setIdx + 1
+  if (setIdx < sets - 1 && tSet >= block) {
+    return { phase: 'rest', round: cfg.totalRounds, remaining: span - tSet, set, setBreak: true }
+  }
+  const d = deriveRounds(cfg, tSet, cycle)
+  return d.phase === 'done' ? d : { ...d, set }
+}
+
+function deriveRounds(
+  cfg: IntervalConfig,
+  t: number,
+  cycle: number,
+): { phase: 'work' | 'rest'; round: number; remaining: number } | { phase: 'done' } {
   const idx = Math.floor(t / cycle)
   if (idx >= cfg.totalRounds) return { phase: 'done' }
   const tIn = t - idx * cycle

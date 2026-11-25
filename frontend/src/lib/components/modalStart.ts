@@ -10,6 +10,9 @@ export interface ModalForm {
   countupSec: number
   emomMin: number
   emomSec: number
+  tabataSets: number
+  tabataSetRestMin: number
+  tabataSetRestSec: number
   warmupMin: number
   warmupSec: number
   customRounds: number
@@ -32,6 +35,9 @@ export function applyModalStart(timer: TimerStore, form: ModalForm): void {
   } else if (form.mode === 'interval' && form.preset === 'emom') {
     timer.setConfig({ emomInterval: ms(form.emomMin, form.emomSec) })
     timer.applyPreset('emom')
+  } else if (form.mode === 'interval' && form.preset === 'tabata') {
+    timer.applyPreset('tabata')
+    timer.setConfig({ sets: form.tabataSets, setRest: ms(form.tabataSetRestMin, form.tabataSetRestSec) })
   } else if (form.mode === 'interval' && form.preset === 'custom') {
     timer.saveCustomInterval({
       rounds: form.customRounds,

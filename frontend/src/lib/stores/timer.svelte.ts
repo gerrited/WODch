@@ -57,7 +57,7 @@ export class TimerStore {
   }
 
   setMode(mode: TimerMode) {
-    this.commit({ mode, preset: null, isRunning: false, startedAt: null, accumulatedMs: 0 })
+    this.commit({ mode, preset: null, sets: 1, isRunning: false, startedAt: null, accumulatedMs: 0 })
   }
 
   setConfig(partial: Partial<TimerDoc>) {
@@ -68,6 +68,8 @@ export class TimerStore {
     const base: Partial<TimerDoc> = {
       mode: 'interval',
       preset,
+      // Blöcke setzt nur das Tabata-Modal (nach applyPreset) — jedes Preset startet mit einem
+      sets: 1,
       isRunning: false,
       startedAt: null,
       accumulatedMs: 0,

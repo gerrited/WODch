@@ -60,6 +60,9 @@ function isTimerDoc(v: unknown): v is TimerDoc {
     isFiniteNumber(v.emomInterval) &&
     isFiniteNumber(v.emomRounds) &&
     isFiniteNumber(v.totalRounds) &&
+    // optional (ältere Clients kennen keine Blöcke)
+    (v.sets === undefined || isFiniteNumber(v.sets)) &&
+    (v.setRest === undefined || isFiniteNumber(v.setRest)) &&
     typeof v.clock12h === 'boolean'
   )
 }

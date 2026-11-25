@@ -18,7 +18,7 @@
   const presets: { value: IntervalPreset; label: string }[] = [
     { value: 'emom', label: 'EMOM' },
     { value: 'fgb1', label: 'Fight Gone Bad (3 × 5min / 1min)' },
-    { value: 'tabata', label: 'Tabata (20s/10s × 8)' },
+    { value: 'tabata', label: 'Tabata (8 × 20s/10s)' },
     { value: 'custom', label: 'Custom' },
   ]
 
@@ -38,6 +38,11 @@
   let warmupMin = $state(splitMs(timer.doc.warmupDuration)[0])
   let warmupSec = $state(splitMs(timer.doc.warmupDuration)[1])
   let emomRounds = $state(timer.doc.emomRounds)
+  // Tabata-Blöcke (je 8 × 20s/10s): Werte eines eingestellten Tabatas übernehmen, sonst 1 Block / 1 Min Blockpause
+  const isTabata = timer.doc.preset === 'tabata'
+  let tabataSets = $state(isTabata ? (timer.doc.sets ?? 1) : 1)
+  let tabataSetRestMin = $state(splitMs(isTabata ? (timer.doc.setRest ?? 60_000) : 60_000)[0])
+  let tabataSetRestSec = $state(splitMs(isTabata ? (timer.doc.setRest ?? 60_000) : 60_000)[1])
   let clock12h = $state(timer.doc.clock12h)
   let warmupEnabled = $state(timer.doc.warmupEnabled)
 
@@ -66,6 +71,7 @@
       countdownMin, countdownSec,
       countupMin, countupSec,
       emomMin, emomSec,
+      tabataSets, tabataSetRestMin, tabataSetRestSec,
       warmupMin, warmupSec,
       customRounds,
       customWorkMin, customWorkSec,
@@ -174,6 +180,26 @@
           <span>Runden</span>
           <input type="number" bind:value={emomRounds} min="1" max="99" class="time-input" />
         </div>
+      </section>
+    {/if}
+
+    {#if selectedPreset === 'tabata'}
+      <section class="section">
+        <div class="label">TABATA EINSTELLUNGEN</div>
+        <div class="config-row">
+          <span>Blöcke</span>
+          <input type="number" bind:value={tabataSets} min="1" max="20" class="time-input" />
+        </div>
+        {#if tabataSets > 1}
+          <div class="config-row">
+            <span>Blockpause</span>
+            <div class="time-input-row">
+              <input type="number" bind:value={tabataSetRestMin} min="0" max="99" class="time-input" /> Min
+              <input type="number" bind:value={tabataSetRestSec} min="0" max="59" class="time-input" /> Sek
+            </div>
+          </div>
+        {/if}
+        <div class="hint">Ein Block = 8 Runden à 20 s Arbeit / 10 s Pause (4 Min).</div>
       </section>
     {/if}
 
@@ -422,6 +448,11 @@
   }
   .time-input:focus-visible {
     border-color: var(--accent);
+  }
+  .hint {
+    margin-top: 8px;
+    color: var(--text-faint);
+    font-size: 12px;
   }
   .config-row {
     display: flex;

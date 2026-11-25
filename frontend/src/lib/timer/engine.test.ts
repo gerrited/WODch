@@ -192,3 +192,48 @@ describe('displayRound', () => {
     expect(displayRound(d, 35000)).toBe('2 / 8')
   })
 })
+
+describe('deriveInterval mit Blöcken (Tabata 3 × 8 Runden, 1 Min Blockpause)', () => {
+  const cfg = {
+    warmupEnabled: false, warmupDuration: 10 * SEC,
+    workDuration: 20 * SEC, restDuration: 10 * SEC, totalRounds: 8,
+    sets: 3, setRest: MIN,
+  }
+  // Ein Block ohne die letzte 10-s-Pause dauert 8 × 30 s − 10 s = 230 s; danach 60 s Blockpause
+  const BLOCK = 230 * SEC
+  const SPAN = BLOCK + MIN
+
+  it('Block 1 läuft wie ein normales Tabata, mit Blocknummer', () => {
+    expect(deriveInterval(cfg, 0, true)).toEqual({ phase: 'work', round: 1, remaining: 20 * SEC, set: 1 })
+    expect(deriveInterval(cfg, 20 * SEC, true)).toEqual({ phase: 'rest', round: 1, remaining: 10 * SEC, set: 1 })
+    expect(deriveInterval(cfg, 210 * SEC, true)).toEqual({ phase: 'work', round: 8, remaining: 20 * SEC, set: 1 })
+  })
+
+  it('nach Runde 8 kommt die Blockpause statt der 10-s-Pause', () => {
+    expect(deriveInterval(cfg, BLOCK, true)).toEqual({ phase: 'rest', round: 8, remaining: MIN, set: 1, setBreak: true })
+    expect(deriveInterval(cfg, BLOCK + 59 * SEC, true)).toEqual({ phase: 'rest', round: 8, remaining: SEC, set: 1, setBreak: true })
+  })
+
+  it('Block 2 beginnt wieder bei Runde 1', () => {
+    expect(deriveInterval(cfg, SPAN, true)).toEqual({ phase: 'work', round: 1, remaining: 20 * SEC, set: 2 })
+    expect(deriveInterval(cfg, SPAN + 35 * SEC, true)).toEqual({ phase: 'work', round: 2, remaining: 15 * SEC, set: 2 })
+  })
+
+  it('letzter Block endet wie ein normales Tabata (mit letzter 10-s-Pause), dann done', () => {
+    const last = 2 * SPAN
+    expect(deriveInterval(cfg, last + BLOCK, true)).toEqual({ phase: 'rest', round: 8, remaining: 10 * SEC, set: 3 })
+    expect(deriveInterval(cfg, last + BLOCK + 10 * SEC, true)).toEqual({ phase: 'done' })
+  })
+
+  it('ohne Blockpause (0) bleibt die normale 10-s-Pause zwischen den Blöcken', () => {
+    const c = { ...cfg, setRest: 0 }
+    expect(deriveInterval(c, BLOCK, true)).toEqual({ phase: 'rest', round: 8, remaining: 10 * SEC, set: 1, setBreak: true })
+    expect(deriveInterval(c, BLOCK + 10 * SEC, true)).toEqual({ phase: 'work', round: 1, remaining: 20 * SEC, set: 2 })
+  })
+
+  it('sets fehlt oder 1: Verhalten unverändert, kein set-Feld', () => {
+    const { sets: _s, setRest: _r, ...plain } = cfg
+    expect(deriveInterval(plain, 0, true)).toEqual({ phase: 'work', round: 1, remaining: 20 * SEC })
+    expect(deriveInterval({ ...cfg, sets: 1 }, 230 * SEC, true)).toEqual({ phase: 'rest', round: 8, remaining: 10 * SEC })
+  })
+})

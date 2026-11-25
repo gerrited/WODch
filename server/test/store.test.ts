@@ -111,6 +111,17 @@ describe('applyPatch', () => {
     expect(s.doc.updatedAt).toBe(99999)
   })
 
+  it('Tabata-Blöcke: sets/setRest optional, aber wenn gesetzt numerisch', () => {
+    const store = createStore()
+    store.create('s1', makeDoc())
+    expect(store.applyPatch('s1', 'timer', makeTimer({ mode: 'interval', preset: 'tabata', sets: 5, setRest: 60_000 }), 2)).toBe(true)
+    expect(store.get('s1')!.doc.timer).toMatchObject({ sets: 5, setRest: 60_000 })
+    // Timer älterer Clients ohne die Felder bleiben gültig
+    expect(store.applyPatch('s1', 'timer', makeTimer(), 3)).toBe(true)
+    expect(store.applyPatch('s1', 'timer', makeTimer({ sets: '5' as never }), 4)).toBe(false)
+    expect(store.applyPatch('s1', 'timer', makeTimer({ setRest: Infinity }), 5)).toBe(false)
+  })
+
   it('patcht video, videoUrl und videoLoop', () => {
     const store = createStore()
     store.create('s1', makeDoc())

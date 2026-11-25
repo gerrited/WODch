@@ -8,6 +8,8 @@ export interface CueSnapshot {
   phase: 'countdown' | 'warmup' | 'work' | 'rest' | 'done'
   round: number
   secondsLeft: number
+  set?: number // Block (nur bei mehreren Blöcken)
+  setBreak?: boolean // Pause zwischen zwei Blöcken
 }
 
 // Reduziert den Timer-Zustand auf das, was für Ton-Cues relevant ist.
@@ -27,12 +29,15 @@ export function snapshot(doc: TimerDoc, derived: Derived, elapsed: number): CueS
     // 'running' kommt im Intervall-Modus nicht vor (deriveInterval liefert es nie)
     if (derived.phase === 'idle' || derived.phase === 'running') return null
     if (derived.phase === 'done') return { isRunning: doc.isRunning, phase: 'done', round: 0, secondsLeft: 0 }
-    return {
+    const snap: CueSnapshot = {
       isRunning: doc.isRunning,
       phase: derived.phase,
       round: derived.round,
       secondsLeft: Math.ceil(derived.remaining / 1000),
     }
+    if (derived.set !== undefined) snap.set = derived.set
+    if (derived.setBreak) snap.setBreak = true
+    return snap
   }
   return null
 }
@@ -43,7 +48,7 @@ export function snapshot(doc: TimerDoc, derived: Derived, elapsed: number): CueS
 export function detectCue(prev: CueSnapshot | null, next: CueSnapshot | null): Cue {
   if (!prev || !next) return null
   if (!prev.isRunning || !next.isRunning) return null
-  if (prev.phase !== next.phase || prev.round !== next.round) {
+  if (prev.phase !== next.phase || prev.round !== next.round || prev.set !== next.set) {
     return prev.secondsLeft === 1 ? 'long' : null
   }
   if (prev.secondsLeft - next.secondsLeft !== 1) return null
@@ -58,14 +63,14 @@ export function detectCue(prev: CueSnapshot | null, next: CueSnapshot | null): C
 export function announcement(prev: CueSnapshot | null, next: CueSnapshot | null, totalRounds: number): string | null {
   if (!prev || !next) return null
   if (!prev.isRunning || !next.isRunning) return null
-  if (prev.phase !== next.phase || prev.round !== next.round) {
+  if (prev.phase !== next.phase || prev.round !== next.round || prev.set !== next.set) {
     if (prev.secondsLeft !== 1) return null
     if (next.phase === 'work') {
-      if (next.round <= 1) return 'Los'
+      if (next.round <= 1) return next.set !== undefined && next.set > 1 ? `Block ${next.set}` : 'Los'
       return next.round === totalRounds ? 'Letzte Runde' : `Runde ${next.round}`
     }
     if (next.phase === 'countdown') return 'Los' // Warmup → Countdown
-    if (next.phase === 'rest') return 'Pause'
+    if (next.phase === 'rest') return next.setBreak ? 'Blockpause' : 'Pause'
     if (next.phase === 'done') return 'Fertig'
     return null
   }

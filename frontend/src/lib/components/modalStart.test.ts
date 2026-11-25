@@ -12,6 +12,9 @@ function form(overrides: Partial<ModalForm> = {}): ModalForm {
     countupSec: 0,
     emomMin: 1,
     emomSec: 0,
+    tabataSets: 1,
+    tabataSetRestMin: 1,
+    tabataSetRestSec: 0,
     warmupMin: 0,
     warmupSec: 10,
     customRounds: 5,
@@ -48,6 +51,22 @@ describe('applyModalStart', () => {
     timer.setConfig({ emomRounds: 12 })
     applyModalStart(timer, form({ mode: 'interval', preset: 'emom', emomMin: 0, emomSec: 45 }))
     expect(timer.doc).toMatchObject({ preset: 'emom', workDuration: 45_000, restDuration: 0, totalRounds: 12, isRunning: true })
+  })
+
+  it('tabata: übernimmt Blöcke und Blockpause, 8 × 20s/10s bleiben', () => {
+    timer.setMode('interval')
+    applyModalStart(timer, form({ mode: 'interval', preset: 'tabata', tabataSets: 5, tabataSetRestMin: 1, tabataSetRestSec: 30 }))
+    expect(timer.doc).toMatchObject({
+      preset: 'tabata', workDuration: 20_000, restDuration: 10_000, totalRounds: 8,
+      sets: 5, setRest: 90_000, isRunning: true,
+    })
+  })
+
+  it('anderes Preset nach Tabata-Blöcken: wieder ein Block', () => {
+    timer.setMode('interval')
+    applyModalStart(timer, form({ mode: 'interval', preset: 'tabata', tabataSets: 5 }))
+    applyModalStart(timer, form({ mode: 'interval', preset: 'emom' }))
+    expect(timer.doc.sets).toBe(1)
   })
 
   it('custom: speichert Werte und startet', () => {

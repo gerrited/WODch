@@ -40,10 +40,20 @@ function clamp01(n: number): number {
   return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0
 }
 
-function roundLabel(doc: TimerDoc, round: number): string {
+function setCount(doc: TimerDoc): number {
+  return Math.max(1, Math.floor(doc.sets ?? 1))
+}
+
+// „Block 2/5 · Runde 3/8" bei mehreren Blöcken, sonst „Runde 3/8"
+function roundPart(doc: TimerDoc, round: number, set: number | undefined): string {
+  const r = `Runde ${round}/${doc.totalRounds}`
+  return set !== undefined ? `Block ${set}/${setCount(doc)} · ${r}` : r
+}
+
+function roundLabel(doc: TimerDoc, round: number, set: number | undefined): string {
   // EMOM mit 1-Minuten-Takt liest sich als Minute; alles andere als Runde n/N
   if (doc.preset === 'emom' && doc.workDuration === MINUTE) return `EMOM · Minute ${round}`
-  return `${modeName(doc)} · Runde ${round}/${doc.totalRounds}`
+  return `${modeName(doc)} · ${roundPart(doc, round, set)}`
 }
 
 export function phaseInfo(doc: TimerDoc, derived: Derived, elapsed: number, now: Date): PhaseInfo {
@@ -57,7 +67,9 @@ export function phaseInfo(doc: TimerDoc, derived: Derived, elapsed: number, now:
   const progress = phaseProgress(doc, derived, elapsed)
 
   if (derived.phase === 'idle') {
-    const label = doc.mode === 'interval' ? `${name} · ${doc.totalRounds} Runden` : name
+    const sets = setCount(doc)
+    const rounds = sets > 1 ? `${sets} × ${doc.totalRounds} Runden` : `${doc.totalRounds} Runden`
+    const label = doc.mode === 'interval' ? `${name} · ${rounds}` : name
     return { label, tone: 'idle', progress: 0 }
   }
   if (derived.phase === 'done') return { label: `${name} · Fertig`, tone: 'done', progress: 1 }
@@ -66,9 +78,12 @@ export function phaseInfo(doc: TimerDoc, derived: Derived, elapsed: number, now:
   if (!doc.isRunning) return { label: PAUSED_LABEL, tone: 'paused', progress }
 
   if (derived.phase === 'warmup') return { label: 'Warmup', tone: 'warmup', progress }
-  if (derived.phase === 'work') return { label: roundLabel(doc, derived.round), tone: 'work', progress }
+  if (derived.phase === 'work') return { label: roundLabel(doc, derived.round, derived.set), tone: 'work', progress }
+  if (derived.phase === 'rest' && derived.setBreak && derived.set !== undefined) {
+    return { label: `Blockpause · gleich Block ${derived.set + 1}/${setCount(doc)}`, tone: 'rest', progress }
+  }
   if (derived.phase === 'rest') {
-    return { label: `Pause · Runde ${derived.round}/${doc.totalRounds}`, tone: 'rest', progress }
+    return { label: `Pause · ${roundPart(doc, derived.round, derived.set)}`, tone: 'rest', progress }
   }
   return { label: name, tone: 'work', progress }
 }
@@ -83,8 +98,10 @@ function phaseProgress(doc: TimerDoc, derived: Derived, elapsed: number): number
       return clamp01(1 - derived.remaining / doc.warmupDuration)
     case 'work':
       return clamp01(1 - derived.remaining / doc.workDuration)
-    case 'rest':
-      return clamp01(1 - derived.remaining / doc.restDuration)
+    case 'rest': {
+      const gap = derived.setBreak && doc.setRest && doc.setRest > 0 ? doc.setRest : doc.restDuration
+      return clamp01(1 - derived.remaining / gap)
+    }
     case 'running': {
       const t = elapsed - (doc.warmupEnabled ? doc.warmupDuration : 0)
       if (doc.mode === 'countdown') return clamp01(t / doc.countdownTarget)

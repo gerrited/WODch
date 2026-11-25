@@ -25,7 +25,8 @@ export function planTimer(s: TimerSuggestion): TimerPlan {
   }
   const workDuration = s.workSeconds * 1000
   const restDuration = s.restSeconds * 1000
-  const base = { ...reset, mode: 'interval' as const, workDuration, restDuration, totalRounds: s.rounds }
+  // sets: 1 — sonst liefen Blöcke eines vorherigen Tabatas im neuen Intervall weiter
+  const base = { ...reset, mode: 'interval' as const, workDuration, restDuration, totalRounds: s.rounds, sets: 1 }
   if (s.workSeconds === 20 && s.restSeconds === 10 && s.rounds === 8) {
     return { config: { ...base, preset: 'tabata' } }
   }

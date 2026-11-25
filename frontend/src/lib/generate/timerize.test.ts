@@ -20,6 +20,11 @@ describe('planTimer', () => {
     expect(plan.custom).toBeUndefined()
   })
 
+  it('Intervalle setzen Blöcke zurück — alte Tabata-Blöcke wirken sonst weiter', () => {
+    expect(planTimer({ mode: 'interval', workSeconds: 20, restSeconds: 10, rounds: 8, label: '' }).config.sets).toBe(1)
+    expect(planTimer({ mode: 'interval', workSeconds: 60, restSeconds: 0, rounds: 10, label: '' }).config.sets).toBe(1)
+  })
+
   it('ohne Rest wird es EMOM inkl. EMOM-Feldern fürs Modal', () => {
     const plan = planTimer({ mode: 'interval', workSeconds: 120, restSeconds: 0, rounds: 6, label: 'E2MOM' })
     expect(plan.config).toMatchObject({

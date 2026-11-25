@@ -168,3 +168,22 @@ describe('Countdown mit Warmup', () => {
     expect(announcement(s(9_900), s(10_100), 8)).toBe('Los')
   })
 })
+
+describe('Tabata-Blöcke: Ansagen', () => {
+  const d = doc({ mode: 'interval', preset: 'tabata', workDuration: 20 * SEC, restDuration: 10 * SEC, totalRounds: 8, sets: 3, setRest: 60 * SEC, isRunning: true, startedAt: 0 })
+  const at = (ms: number) => snapshot(d, derivePhase(d, ms, true), ms)
+  const SPAN = 290 * SEC
+
+  it('Blockpause wird als „Blockpause" angesagt', () => {
+    expect(announcement(at(229.5 * SEC), at(230.5 * SEC), 8)).toBe('Blockpause')
+  })
+
+  it('Start eines neuen Blocks sagt „Block 2"', () => {
+    expect(announcement(at(SPAN - 0.5 * SEC), at(SPAN + 0.5 * SEC), 8)).toBe('Block 2')
+  })
+
+  it('3-2-1 vor dem nächsten Block', () => {
+    expect(detectCue(at(SPAN - 4 * SEC), at(SPAN - 3 * SEC))).toBe('short')
+    expect(detectCue(at(SPAN - 1 * SEC), at(SPAN))).toBe('long')
+  })
+})

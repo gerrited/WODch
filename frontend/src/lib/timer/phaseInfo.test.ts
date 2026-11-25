@@ -89,3 +89,23 @@ describe('phaseInfo', () => {
     expect(info(doc({ mode: 'clock' }), 0)).toEqual({ label: 'Uhrzeit', tone: 'idle', progress: 0.5 })
   })
 })
+
+describe('phaseInfo mit Tabata-Blöcken', () => {
+  const blocks = (o: Partial<TimerDoc> = {}) => tabata({ sets: 5, setRest: MIN, isRunning: true, startedAt: 0, ...o })
+
+  it('idle zeigt Blöcke × Runden', () => {
+    expect(info(tabata({ sets: 5, setRest: MIN }), 0).label).toBe('Tabata · 5 × 8 Runden')
+  })
+
+  it('Arbeit und Pause nennen Block und Runde', () => {
+    expect(info(blocks(), 0).label).toBe('Tabata · Block 1/5 · Runde 1/8')
+    expect(info(blocks(), 20 * SEC).label).toBe('Pause · Block 1/5 · Runde 1/8')
+  })
+
+  it('Blockpause kündigt den nächsten Block an, Fortschritt über die Blockpause', () => {
+    const i = info(blocks(), 230 * SEC + 30 * SEC)
+    expect(i.label).toBe('Blockpause · gleich Block 2/5')
+    expect(i.tone).toBe('rest')
+    expect(i.progress).toBeCloseTo(0.5)
+  })
+})

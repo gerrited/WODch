@@ -22,6 +22,10 @@ export interface TimerDoc {
   emomInterval: number // ms
   emomRounds: number
   totalRounds: number
+  // Intervall in Blöcken (z. B. 5 × Tabata): Anzahl Blöcke und Pause dazwischen (ms).
+  // Optional, damit TimerDocs älterer Clients gültig bleiben; fehlt = 1 Block.
+  sets?: number
+  setRest?: number
   clock12h: boolean
 }
 
