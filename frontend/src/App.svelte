@@ -15,6 +15,7 @@
   import { sound } from './lib/audio/beeps.svelte'
   import { counter } from './lib/stores/counter.svelte'
   import { WakeLockController } from './lib/device/wakeLock'
+  import { keepAwake } from './lib/device/keepAwake.svelte'
 
   let showModal = $state(false)
   let showTour = $state(false)
@@ -52,9 +53,10 @@
   })
 
   // Bildschirm wach halten, solange ein Timer läuft (auf allen Geräten der Session)
+  // oder dieses Gerät „Display immer wach halten“ eingeschaltet hat
   const wakeLock = new WakeLockController(navigator, document)
   $effect(() => {
-    wakeLock.setWanted(timer.doc.isRunning)
+    wakeLock.setWanted(timer.doc.isRunning || keepAwake.on)
   })
 
   function resetAll() {

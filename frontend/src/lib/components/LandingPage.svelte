@@ -163,7 +163,7 @@
     },
     {
       title: 'Ansagen & Vibration',
-      text: 'Ansagen wie „Los“, „Runde 3“ oder „Noch zehn Sekunden“ schaltest du pro Gerät ein. Solange der Timer läuft, bleibt das Display an.',
+      text: 'Ansagen wie „Los“, „Runde 3“ oder „Noch zehn Sekunden“ schaltest du pro Gerät ein. Solange der Timer läuft, bleibt das Display an, auf Wunsch auch dauerhaft.',
       icon: '<path d="M11 5L6 9H3v6h3l5 4zM16 9a4 4 0 010 6M19 6a8 8 0 010 12"/>',
     },
     {

@@ -2,6 +2,7 @@
   import { timer } from '../stores/timer.svelte'
   import { counter } from '../stores/counter.svelte'
   import { sound } from '../audio/beeps.svelte'
+  import { keepAwake } from '../device/keepAwake.svelte'
   import { applyModalStart, type ModalForm } from './modalStart'
   import type { IntervalPreset, TimerMode } from '../types'
 
@@ -244,7 +245,7 @@
       </section>
     {/if}
 
-    {#if sound.canSpeak || sound.canVibrate}
+    {#if sound.canSpeak || sound.canVibrate || keepAwake.supported}
       <section class="section">
         <div class="label">DIESES GERÄT</div>
         <div class="radio-group">
@@ -258,6 +259,12 @@
             <label class="radio-label">
               <input type="checkbox" checked={sound.vibrate} onchange={(e) => sound.setVibrate(e.currentTarget.checked)} />
               Vibration
+            </label>
+          {/if}
+          {#if keepAwake.supported}
+            <label class="radio-label">
+              <input type="checkbox" checked={keepAwake.on} onchange={(e) => keepAwake.set(e.currentTarget.checked)} />
+              Display immer wach halten
             </label>
           {/if}
         </div>
