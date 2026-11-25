@@ -215,12 +215,9 @@
         <a class="anchor" href="#features">Features</a>
         <a class="anchor" href="#ablauf">So funktioniert's</a>
         <a class="anchor" href="#open">Open Source</a>
-        <a class="pill" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-          GitHub
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M7 17L17 7M8 7h9v9" />
-          </svg>
-        </a>
+        <button class="cta cta-nav" onclick={start} disabled={starting}>
+          {#if starting}Session wird erstellt…{:else}Session starten {@render arrow()}{/if}
+        </button>
       </div>
     </nav>
   </header>
@@ -655,24 +652,15 @@
     color: var(--text);
   }
 
-  .pill {
-    display: inline-flex;
-    align-items: center;
+  /* Kompakte Variante des Haupt-CTA für die Navigation */
+  .cta-nav {
     gap: 8px;
     min-height: var(--tap);
-    padding: 9px 16px;
-    color: var(--text);
-    text-decoration: none;
-    border: 1px solid var(--line-strong);
-    border-radius: 999px;
-    transition: border-color 0.15s;
+    padding: 10px 18px;
+    font-size: 15px;
   }
 
-  .pill:hover {
-    border-color: var(--text-ghost);
-  }
-
-  /* Mobil nur Logo + GitHub — die Anker-Links würden sonst umbrechen */
+  /* Mobil nur Logo und CTA, die Anker-Links würden sonst umbrechen */
   @media (max-width: 639px) {
     .anchor {
       display: none;

@@ -48,10 +48,11 @@ describe('LandingPage', () => {
     expect(document.querySelector('a.brand')?.getAttribute('aria-label')).toBe('WODch Startseite')
   })
 
-  it('beide Primär-Buttons starten eine Session', async () => {
+  it('alle Primär-Buttons (Navigation, Hero, Schluss) starten eine Session', async () => {
     render()
     const ctas = Array.from(document.querySelectorAll('button.cta')) as HTMLButtonElement[]
-    expect(ctas.map((b) => b.textContent?.trim())).toEqual(['Session starten', 'Jetzt starten'])
+    expect(ctas.map((b) => b.textContent?.trim())).toEqual(['Session starten', 'Session starten', 'Jetzt starten'])
+    expect(ctas[0].closest('nav')).not.toBeNull()
 
     ctas[0].click()
     flushSync()
@@ -61,7 +62,12 @@ describe('LandingPage', () => {
     await vi.waitFor(() => expect(ctas[0].disabled).toBe(false))
 
     ctas[1].click()
+    flushSync()
     expect(create).toHaveBeenCalledTimes(2)
+    await vi.waitFor(() => expect(ctas[1].disabled).toBe(false))
+
+    ctas[2].click()
+    expect(create).toHaveBeenCalledTimes(3)
   })
 
   it('lädt keine Videos (kein IFrame, auch nicht nach Tab-Wechsel)', () => {
