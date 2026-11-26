@@ -155,10 +155,13 @@ export class SessionState {
     }
   }
 
-  async create(): Promise<void> {
+  // prepare läuft direkt nach dem Join, bevor die Verbindung steht: Store-Änderungen
+  // darin gehen nicht als Patch an eine alte Session, sondern landen im Seed der neuen.
+  async create(prepare?: () => void): Promise<void> {
     // 16 Zeichen: Session-IDs sind Bearer-Tokens; 6 wären per WS enumerierbar (Befund 3)
     const id = nanoid(16)
     this.joinSession(id)
+    prepare?.()
     history.replaceState(null, '', `/l/${id}`)
     try {
       await navigator.clipboard.writeText(window.location.href)

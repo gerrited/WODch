@@ -3,21 +3,137 @@
   import { router } from '../router.svelte'
   import Logo from './Logo.svelte'
   import LegalModal from './LegalModal.svelte'
+  import { timer } from '../stores/timer.svelte'
+  import { formatMs } from '../timer/format'
+  import {
+    WOD_SPECS,
+    clampField,
+    defaultValues,
+    formatField,
+    specFor,
+    wodFirstClock,
+    wodSegments,
+    wodSummary,
+    wodTimerConfig,
+    wodTotalMs,
+    type FieldSpec,
+    type WodKind,
+  } from './wodBuilder'
 
   const GITHUB_URL = 'https://github.com/gerrited/WODch'
 
   let starting = $state(false)
 
+  // ---------- WOD-Baukasten ----------
+  // Wer hier sein Workout einstellt, landet in einer Session, deren Timer schon fertig
+  // eingerichtet ist — die Arbeit auf der Landing Page geht nicht verloren.
+  let wodKind = $state<WodKind>('tabata')
+  let wodValues = $state(defaultValues())
+  const wodSpec = $derived(specFor(wodKind))
+  const wodVals = $derived(wodValues[wodKind])
+  const wodSegs = $derived(wodSegments(wodKind, wodVals))
+  const wodTotal = $derived(wodTotalMs(wodKind, wodVals))
+  const wodClock = $derived(wodFirstClock(wodKind, wodVals))
+  const wodLabel = $derived(wodSummary(wodKind, wodVals))
+
+  function stepField(field: FieldSpec, dir: 1 | -1) {
+    wodValues[wodKind][field.key] = clampField(field, wodVals[field.key] + dir * field.step)
+  }
+
+  // Gedrückt halten zählt schnell weiter (99 EMOM-Runden will niemand einzeln klicken).
+  // Hat das Halten gezählt, wird der folgende click verschluckt, sonst zählte er doppelt.
+  let holdDelay: ReturnType<typeof setTimeout> | undefined
+  let holdRepeat: ReturnType<typeof setInterval> | undefined
+  let heldOnce = false
+
+  function holdStart(field: FieldSpec, dir: 1 | -1) {
+    holdStop()
+    heldOnce = false
+    holdDelay = setTimeout(() => {
+      holdRepeat = setInterval(() => {
+        heldOnce = true
+        stepField(field, dir)
+      }, 80)
+    }, 400)
+  }
+
+  function holdStop() {
+    clearTimeout(holdDelay)
+    clearInterval(holdRepeat)
+  }
+
+  function clickStep(field: FieldSpec, dir: 1 | -1) {
+    if (heldOnce) {
+      heldOnce = false
+      return
+    }
+    stepField(field, dir)
+  }
+
+  $effect(() => holdStop)
+
+  // Radiogroup-Muster: Pfeiltasten wechseln Auswahl und Fokus gemeinsam
+  function onKindKey(e: KeyboardEvent) {
+    const dir = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+    if (!dir) return
+    e.preventDefault()
+    const i = WOD_SPECS.findIndex((s) => s.kind === wodKind)
+    const next = WOD_SPECS[(i + dir + WOD_SPECS.length) % WOD_SPECS.length]
+    wodKind = next.kind
+    const group = (e.currentTarget as HTMLElement).closest('[role="radiogroup"]')
+    ;(group?.querySelector(`[data-kind="${next.kind}"]`) as HTMLElement | null)?.focus()
+  }
+
+  function applyWod() {
+    const kind = wodKind
+    const v = { ...wodVals }
+    timer.setConfig(wodTimerConfig(kind, v))
+    if (kind === 'interval') {
+      // Damit das Timer-Modal in der App dieselben Custom-Werte zeigt
+      try {
+        timer.saveCustomInterval({ rounds: v.rounds, workDuration: v.workSeconds * 1000, restDuration: v.restSeconds * 1000 })
+      } catch {
+        // localStorage gesperrt — der Timer selbst ist trotzdem gesetzt
+      }
+    }
+  }
+
   async function start() {
     if (starting) return
     starting = true
     try {
-      await session.create()
+      await session.create(applyWod)
       router.sync()
     } finally {
       starting = false
     }
   }
+
+  // ---------- Sticky-Start-Leiste ----------
+  // Sobald der Haupt-Button aus dem Bild ist, bleibt der Start mit dem gewählten WOD
+  // unten erreichbar — außer der Schluss-CTA ist ohnehin sichtbar.
+  let landingEl = $state<HTMLElement>()
+  let heroCtaEl = $state<HTMLElement>()
+  let finalEl = $state<HTMLElement>()
+  let heroCtaVisible = $state(true)
+  let finalVisible = $state(false)
+  const showSticky = $derived(!heroCtaVisible && !finalVisible)
+
+  $effect(() => {
+    if (typeof IntersectionObserver !== 'function' || !landingEl || !heroCtaEl || !finalEl) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.target === heroCtaEl) heroCtaVisible = e.isIntersecting
+          else if (e.target === finalEl) finalVisible = e.isIntersecting
+        }
+      },
+      { root: landingEl },
+    )
+    io.observe(heroCtaEl)
+    io.observe(finalEl)
+    return () => io.disconnect()
+  })
 
   interface StageTab {
     id: 'timer' | 'ki' | 'sync'
@@ -132,9 +248,9 @@
   const ticker = ['Tabata', 'EMOM', 'AMRAP', 'For Time', 'Fight Gone Bad', 'Custom']
 
   const steps = [
-    { title: 'Session starten', text: 'Öffne die App auf dem Screen in der Box. Du brauchst dafür weder Login noch Installation.' },
-    { title: 'Link teilen', text: 'Öffne den Session-Link auf deinem Handy. Jedes Gerät mit dem Link sieht und steuert dieselbe Session.' },
-    { title: 'Trainieren', text: 'Timer, Workout und Video sind auf allen Geräten gleich. Starten, pausieren und Runden zählen geht direkt vom Handy.' },
+    { title: 'WOD einstellen', text: 'Wähle oben Tabata, EMOM, AMRAP, For Time oder Intervall. Der Timer ist damit schon fertig eingerichtet.' },
+    { title: 'Session starten', text: 'Die Session öffnet sich auf dem Screen in der Box. Du brauchst dafür weder Login noch Installation.' },
+    { title: 'Link aufs Handy', text: 'Der Link liegt schon in deiner Zwischenablage. Jedes Gerät damit startet, pausiert und zählt Runden.' },
   ]
 
   const presets = ['EMOM', 'Fight Gone Bad', 'Tabata', 'Custom']
@@ -204,7 +320,7 @@
   </svg>
 {/snippet}
 
-<div class="landing" id="top">
+<div class="landing" id="top" bind:this={landingEl}>
   <header class="nav-wrap">
     <nav class="nav container" aria-label="Hauptnavigation">
       <a class="brand" href="#top" aria-label="WODch Startseite">
@@ -212,8 +328,9 @@
         <span class="brand-name" aria-hidden="true">WODch</span>
       </a>
       <div class="nav-links">
-        <a class="anchor" href="#features">Features</a>
+        <a class="anchor" href="#demo">Demo</a>
         <a class="anchor" href="#ablauf">So funktioniert's</a>
+        <a class="anchor" href="#features">Features</a>
         <a class="anchor" href="#open">Open Source</a>
         <button class="cta cta-nav" onclick={start} disabled={starting}>
           {#if starting}Session wird erstellt…{:else}Session starten {@render arrow()}{/if}
@@ -224,25 +341,126 @@
 
   <section class="hero container">
     <div class="hero-copy">
-      <p class="eyebrow">Timer · KI-Workouts · Fernsteuerung</p>
+      <p class="eyebrow">Timer · Fernsteuerung · Kein Account</p>
       <h1>Die Uhr<br />für dein <span class="lime">WOD.</span></h1>
       <p class="lead">
-        Intervall-Timer, Workout-Board und YouTube-Video auf einem Screen. Du bedienst alles vom Handy aus und alle
-        Geräte zeigen dasselbe. Einen Account brauchst du nicht.
+        Stell dein Workout direkt hier ein. Ein Klick, und es läuft auf dem großen Screen in der Box. Bedient wird
+        vom Handy, alle Geräte zeigen dasselbe.
       </p>
-      <div class="cta-row">
-        <button class="cta" onclick={start} disabled={starting}>
-          {#if starting}Session wird erstellt…{:else}Session starten {@render arrow()}{/if}
-        </button>
-        <a class="btn-outline" href="#ablauf">So funktioniert's</a>
-      </div>
-      <p class="hint">Du bekommst sofort einen Link, den du auf dem Handy öffnen oder an deine Trainingspartner schicken kannst.</p>
       <ul class="trust">
         <li>Kein Account</li>
-        <li>Keine Datenbank</li>
+        <li>Keine Installation</li>
         <li>Open Source</li>
         <li>Offline-fähig</li>
       </ul>
+    </div>
+
+    <div class="builder" id="wod" aria-labelledby="builder-title">
+      <div class="builder-head">
+        <h2 id="builder-title" class="builder-title">Dein WOD</h2>
+        <span class="builder-note">in 10 Sekunden startklar</span>
+      </div>
+
+      <div class="kinds" role="radiogroup" aria-label="Workout-Art">
+        {#each WOD_SPECS as spec (spec.kind)}
+          <button
+            class="kind"
+            class:active={spec.kind === wodKind}
+            role="radio"
+            aria-checked={spec.kind === wodKind}
+            tabindex={spec.kind === wodKind ? 0 : -1}
+            data-kind={spec.kind}
+            onclick={() => (wodKind = spec.kind)}
+            onkeydown={onKindKey}
+          >
+            {spec.label}
+          </button>
+        {/each}
+      </div>
+      <p class="builder-tagline">{wodSpec.tagline}</p>
+
+      <div class="fields">
+        {#each wodSpec.fields as field (wodKind + field.key)}
+          <div class="field">
+            <span class="field-label" id="f-{field.key}">{field.label}</span>
+            <div class="stepper" role="group" aria-labelledby="f-{field.key}">
+              <button
+                class="step-btn"
+                aria-label="{field.label} verringern"
+                disabled={wodVals[field.key] <= field.min}
+                onclick={() => clickStep(field, -1)}
+                onpointerdown={() => holdStart(field, -1)}
+                onpointerup={holdStop}
+                onpointerleave={holdStop}
+                onpointercancel={holdStop}
+              >−</button>
+              <output class="field-value" aria-live="polite">{formatField(field, wodVals[field.key])}</output>
+              <button
+                class="step-btn"
+                aria-label="{field.label} erhöhen"
+                disabled={wodVals[field.key] >= field.max}
+                onclick={() => clickStep(field, 1)}
+                onpointerdown={() => holdStart(field, 1)}
+                onpointerup={holdStop}
+                onpointerleave={holdStop}
+                onpointercancel={holdStop}
+              >+</button>
+            </div>
+          </div>
+        {:else}
+          <p class="field-empty">Nichts einzustellen. Start drücken, losrennen, am Ende stoppen.</p>
+        {/each}
+      </div>
+
+      <div class="preview" aria-label="Vorschau: {wodLabel}">
+        <div class="preview-top">
+          <span class="preview-label">So sieht's auf dem Screen aus</span>
+          <span class="preview-total">
+            {#if wodTotal !== null}Gesamt <strong>{formatMs(wodTotal)}</strong>{:else}<strong>ohne Zeitlimit</strong>{/if}
+          </span>
+        </div>
+        <div class="preview-clock" class:up={wodKind === 'fortime'}>{wodClock}</div>
+        {#if wodSegs}
+          <div class="timeline" aria-hidden="true">
+            {#each wodSegs as seg, i (i)}
+              <span class="tl-seg {seg.kind}" style="flex-grow: {seg.ms}"></span>
+            {/each}
+          </div>
+        {:else}
+          <div class="timeline open-end" aria-hidden="true"></div>
+        {/if}
+        <div class="legend" aria-hidden="true">
+          <span><i class="dot work"></i>Arbeit</span>
+          {#if wodSegs?.some((s) => s.kind === 'rest')}<span><i class="dot rest"></i>Pause</span>{/if}
+        </div>
+      </div>
+
+      <div bind:this={heroCtaEl}>
+        <button class="cta cta-block" onclick={start} disabled={starting}>
+          {#if starting}Session wird erstellt…{:else}{wodSpec.label} starten {@render arrow()}{/if}
+        </button>
+      </div>
+      <p class="hint">Der Session-Link landet direkt in deiner Zwischenablage. Öffne ihn auf dem Handy, und es kann losgehen.</p>
+    </div>
+  </section>
+
+  <div class="ticker">
+    <div class="ticker-inner container">
+      {#each ticker as item, i (item)}
+        {#if i > 0}<span class="slash" aria-hidden="true">/</span>{/if}
+        <span>{item}</span>
+      {/each}
+    </div>
+  </div>
+
+  <section id="demo" class="demo-section container">
+    <div class="demo-copy">
+      <p class="eyebrow">Live-Demo</p>
+      <h2>Ein Screen.<br />Jedes Handy <span class="lime">steuert.</span></h2>
+      <p class="demo-text">
+        Timer, Workout-Board und YouTube-Video laufen auf dem großen Screen. Wer den Link hat, startet und pausiert
+        vom Handy aus. Probier es hier direkt aus.
+      </p>
     </div>
 
     <div class="stage">
@@ -363,15 +581,6 @@
     </div>
   </section>
 
-  <div class="ticker">
-    <div class="ticker-inner container">
-      {#each ticker as item, i (item)}
-        {#if i > 0}<span class="slash" aria-hidden="true">/</span>{/if}
-        <span>{item}</span>
-      {/each}
-    </div>
-  </div>
-
   <section id="ablauf" class="steps-section container">
     <p class="eyebrow">So funktioniert's</p>
     <h2 class="steps-title">Vom Whiteboard auf den großen Screen in drei Schritten.</h2>
@@ -457,13 +666,14 @@
     </div>
   </section>
 
-  <section class="final container">
+  <section class="final container" bind:this={finalEl}>
     <div class="countdown" aria-hidden="true">3·2·1</div>
     <h2>Bereit? <span class="lime">Los.</span></h2>
     <p>Starte eine Session und öffne den Link auf dem Handy. Dann kann es losgehen.</p>
     <button class="cta cta-lg" onclick={start} disabled={starting}>
       {#if starting}Session wird erstellt…{:else}Jetzt starten {@render arrow()}{/if}
     </button>
+    <p class="final-wod">Mit deinem WOD: <strong>{wodLabel}</strong> · <a href="#wod">ändern</a></p>
   </section>
 
   <footer class="footer">
@@ -476,6 +686,20 @@
       </nav>
     </div>
   </footer>
+
+  {#if showSticky}
+    <div class="sticky-start" role="region" aria-label="Schnellstart">
+      <div class="sticky-inner container">
+        <a class="sticky-wod" href="#wod" aria-label="WOD ändern: {wodLabel}">
+          <span class="sticky-kicker">Dein WOD</span>
+          <span class="sticky-label">{wodLabel}</span>
+        </a>
+        <button class="cta cta-sticky" onclick={start} disabled={starting}>
+          {#if starting}Wird erstellt…{:else}Starten {@render arrow()}{/if}
+        </button>
+      </div>
+    </div>
+  {/if}
 </div>
 
 {#if legal}
@@ -677,6 +901,20 @@
     padding-bottom: 56px;
   }
 
+  /* Handy: Baukasten so weit nach oben wie möglich, er ist der eigentliche Einstieg */
+  @media (max-width: 639px) {
+    .hero {
+      gap: 32px;
+      padding-top: 40px;
+    }
+    .lead {
+      margin-top: 20px;
+    }
+    .trust {
+      margin-top: 20px;
+    }
+  }
+
   .hero-copy .eyebrow {
     margin-bottom: 20px;
   }
@@ -692,13 +930,6 @@
     margin-top: 28px;
     font-size: var(--fs-lead);
     color: var(--text-2);
-  }
-
-  .cta-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 36px;
   }
 
   .hint {
@@ -730,6 +961,327 @@
     height: 6px;
     border-radius: 50%;
     background: var(--accent);
+  }
+
+  /* ---------- WOD-Baukasten ---------- */
+  .builder {
+    position: relative;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 28px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-xl);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent),
+      0 40px 90px -30px rgba(0, 0, 0, 0.85),
+      0 0 120px -40px color-mix(in srgb, var(--accent) 30%, transparent);
+    scroll-margin-top: 24px;
+  }
+
+  /* Lime-Kante oben: der Baukasten ist das Element, mit dem es losgeht */
+  .builder::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 28px;
+    right: 28px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .builder-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .builder-title {
+    font-size: 34px;
+    line-height: 1;
+  }
+
+  .builder-note {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .kinds {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  .kind {
+    min-width: 0;
+    min-height: var(--tap);
+    padding: 0 6px;
+    font: 600 14px/1.1 var(--font-ui);
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .kind:hover {
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+
+  .kind.active {
+    color: var(--accent-ink);
+    background: var(--accent);
+  }
+
+  /* Fünf Arten passen auf schmalen Handys nicht in eine Zeile: 3 + 2 */
+  @media (max-width: 479px) {
+    .kinds {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .kind {
+      grid-column: span 2;
+    }
+    .kind:nth-child(4),
+    .kind:nth-child(5) {
+      grid-column: span 3;
+    }
+  }
+
+  .builder-tagline {
+    margin-top: -6px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    min-height: 76px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .field-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+  }
+
+  .step-btn {
+    flex-shrink: 0;
+    width: var(--tap);
+    height: var(--tap);
+    padding: 0;
+    font: 500 22px/1 var(--font-mono);
+    color: var(--text);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: color 0.15s;
+  }
+
+  .step-btn:hover:not(:disabled) {
+    color: var(--accent);
+  }
+
+  .step-btn:disabled {
+    color: var(--text-ghost);
+    cursor: default;
+  }
+
+  .field-value {
+    min-width: 0;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .field-empty {
+    align-self: center;
+    font-size: 15px;
+    color: var(--text-2);
+  }
+
+  .preview {
+    padding: 18px 18px 14px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+
+  .preview-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .preview-total strong {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .preview-clock {
+    margin: 6px 0 12px;
+    font-family: var(--font-mono);
+    font-weight: 800;
+    font-size: clamp(64px, 9vw, 96px);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: -3px;
+    text-align: center;
+    color: var(--accent);
+  }
+
+  .preview-clock.up {
+    color: var(--text);
+  }
+
+  .timeline {
+    display: flex;
+    height: 14px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--line);
+  }
+
+  /* Fugen per Inset-Schatten statt gap: bei 170 Segmenten würde gap die Leiste sprengen */
+  .tl-seg {
+    flex-basis: 0;
+    min-width: 0;
+    box-shadow: inset -1px 0 0 var(--bg);
+    transition: flex-grow 0.25s ease;
+  }
+
+  .tl-seg.work {
+    background: var(--accent);
+  }
+
+  .tl-seg.rest {
+    background: var(--rest);
+  }
+
+  /* For Time: offenes Ende als auslaufender Streifen */
+  .timeline.open-end {
+    background: repeating-linear-gradient(
+        -45deg,
+        var(--accent) 0 8px,
+        color-mix(in srgb, var(--accent) 55%, transparent) 8px 16px
+      ),
+      var(--line);
+    mask-image: linear-gradient(90deg, #000 55%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 55%, transparent);
+  }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  .dot.work {
+    background: var(--accent);
+  }
+
+  .dot.rest {
+    background: var(--rest);
+  }
+
+  .cta-block {
+    justify-content: center;
+    width: 100%;
+    min-height: 60px;
+    font-size: 19px;
+    box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+
+  .builder .hint {
+    margin-top: -6px;
+    text-align: center;
+  }
+
+  @media (max-width: 479px) {
+    .builder {
+      padding: 20px 16px;
+    }
+    .builder::before {
+      left: 16px;
+      right: 16px;
+    }
+  }
+
+  /* ---------- Live-Demo ---------- */
+  .demo-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+    gap: 56px;
+    align-items: center;
+    padding-top: var(--section-y);
+  }
+
+  .demo-text {
+    max-width: 460px;
+    margin-top: 24px;
+    font-size: 18px;
+    color: var(--text-muted);
   }
 
   /* ---------- Bühne ---------- */
@@ -1570,6 +2122,101 @@
     margin-top: 36px;
   }
 
+  .final .final-wod {
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--text-faint);
+  }
+
+  .final-wod strong {
+    color: var(--text-2);
+    font-weight: 600;
+  }
+
+  .final-wod a {
+    color: var(--accent);
+  }
+
+  /* ---------- Sticky-Start ---------- */
+  .sticky-start {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--bg-band) 92%, transparent);
+    border-top: 1px solid var(--line-strong);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: sticky-in 0.25s ease-out;
+  }
+
+  .sticky-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .sticky-wod {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: var(--tap);
+    justify-content: center;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .sticky-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .sticky-label {
+    overflow: hidden;
+    font-weight: 600;
+    font-size: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cta-sticky {
+    flex-shrink: 0;
+    min-height: var(--tap);
+    padding: 10px 20px;
+    font-size: 16px;
+  }
+
+  /* Breite Screens: schwebende Karte rechts unten statt Leiste über die volle Breite */
+  @media (min-width: 768px) {
+    .sticky-start {
+      left: auto;
+      right: 24px;
+      bottom: 24px;
+      padding-bottom: 0;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.8);
+    }
+    .sticky-inner {
+      padding: 10px 10px 10px 20px;
+    }
+  }
+
+  @keyframes sticky-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+
   /* ---------- Footer ---------- */
   .footer {
     border-top: 1px solid var(--line-soft);
@@ -1632,8 +2279,12 @@
     }
     .caret,
     .dots span,
-    .send.ready {
+    .send.ready,
+    .sticky-start {
       animation: none;
+    }
+    .tl-seg {
+      transition: none;
     }
     .ki-hint,
     .ki-thinking,

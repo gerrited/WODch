@@ -82,6 +82,18 @@ describe('SessionState', () => {
     expect(doc.updatedAt).toBeGreaterThan(0)
   })
 
+  it('create mit prepare: Änderungen laufen nach dem Join und landen im Seed der neuen Session', async () => {
+    let joinedBeforePrepare: string | null = null
+    await session.create(() => {
+      joinedBeforePrepare = client.connected
+      timer.setConfig({ mode: 'countdown', countdownTarget: 12 * 60_000 })
+    })
+    expect(joinedBeforePrepare).toBe(client.connected)
+    const doc = client.localDoc!()
+    expect(doc.timer.mode).toBe('countdown')
+    expect(doc.timer.countdownTarget).toBe(12 * 60_000)
+  })
+
   it('joinFromLocation joint anhand des Pfads', () => {
     history.replaceState(null, '', '/l/Xk9mQp')
     session.joinFromLocation()

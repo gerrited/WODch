@@ -1,8 +1,10 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
 import LandingPage from './LandingPage.svelte'
+import { timer } from '../stores/timer.svelte'
+import { defaultTimerDoc } from '../types'
 
-const { create } = vi.hoisted(() => ({ create: vi.fn(async () => {}) }))
+const { create } = vi.hoisted(() => ({ create: vi.fn(async (_prepare?: () => void) => {}) }))
 vi.mock('../sync/session.svelte', () => ({ session: { create } }))
 
 let component: Record<string, unknown>
@@ -40,6 +42,82 @@ describe('LandingPage', () => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
     create.mockClear()
+    timer.doc = defaultTimerDoc()
+  })
+
+  function kinds() {
+    return Array.from(document.querySelectorAll('.kind')) as HTMLButtonElement[]
+  }
+
+  function stepButton(label: string) {
+    return document.querySelector(`.step-btn[aria-label="${label}"]`) as HTMLButtonElement
+  }
+
+  // Ruft den prepare-Callback auf, den die Landing Page an session.create übergibt
+  async function startAndPrepare(cta: HTMLButtonElement) {
+    cta.click()
+    flushSync()
+    const prepare = create.mock.calls.at(-1)?.[0]
+    expect(prepare).toBeTypeOf('function')
+    prepare!()
+    await vi.waitFor(() => expect(cta.disabled).toBe(false))
+  }
+
+  it('WOD-Baukasten: fünf Arten, Tabata vorausgewählt, Start übernimmt den Timer in die Session', async () => {
+    render()
+    expect(kinds().map((k) => k.textContent?.trim())).toEqual(['Tabata', 'EMOM', 'AMRAP', 'For Time', 'Intervall'])
+    expect(kinds()[0].getAttribute('aria-checked')).toBe('true')
+    expect(document.querySelector('.preview-clock')?.textContent).toBe('00:20')
+    expect(document.querySelector('.preview-total')?.textContent).toContain('04:00')
+
+    await startAndPrepare(document.querySelector('button.cta-block') as HTMLButtonElement)
+    expect(timer.doc).toMatchObject({ mode: 'interval', preset: 'tabata', totalRounds: 8, isRunning: false })
+  })
+
+  it('AMRAP einstellen: Stepper ändert Dauer, Vorschau und CTA folgen', async () => {
+    render()
+    kinds()[2].click()
+    flushSync()
+    expect(document.querySelector('button.cta-block')?.textContent?.trim()).toBe('AMRAP starten')
+    stepButton('Dauer verringern').click()
+    stepButton('Dauer verringern').click()
+    flushSync()
+    expect(document.querySelector('.field-value')?.textContent).toBe('18 min')
+    expect(document.querySelector('.preview-clock')?.textContent).toBe('18:00')
+    expect(document.querySelector('.final-wod')?.textContent).toContain('AMRAP · 18 min')
+
+    // Auch der Schluss-CTA startet mit dem eingestellten WOD
+    const ctas = Array.from(document.querySelectorAll('button.cta')) as HTMLButtonElement[]
+    await startAndPrepare(ctas[2])
+    expect(timer.doc).toMatchObject({ mode: 'countdown', countdownTarget: 18 * 60_000 })
+  })
+
+  it('Stepper respektiert Grenzen und sperrt den Button am Rand', () => {
+    render()
+    const minus = stepButton('Blöcke verringern')
+    expect(minus.disabled).toBe(true)
+    minus.click()
+    flushSync()
+    expect(document.querySelector('.field-value')?.textContent).toBe('1')
+  })
+
+  it('Pfeiltasten wechseln die Workout-Art wie in einer Radiogroup', () => {
+    render()
+    kinds()[0].focus()
+    kinds()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }))
+    flushSync()
+    expect(kinds()[4].getAttribute('aria-checked')).toBe('true')
+    expect(document.activeElement).toBe(kinds()[4])
+    expect(document.querySelectorAll('.field')).toHaveLength(3)
+  })
+
+  it('For Time hat nichts einzustellen und kein Zeitlimit', () => {
+    render()
+    kinds()[3].click()
+    flushSync()
+    expect(document.querySelector('.field-empty')).not.toBeNull()
+    expect(document.querySelector('.timeline.open-end')).not.toBeNull()
+    expect(document.querySelector('.preview-total')?.textContent).toContain('ohne Zeitlimit')
   })
 
   it('zeigt die Headline und den Produktnamen im Logo-Link', () => {
@@ -51,7 +129,7 @@ describe('LandingPage', () => {
   it('alle Primär-Buttons (Navigation, Hero, Schluss) starten eine Session', async () => {
     render()
     const ctas = Array.from(document.querySelectorAll('button.cta')) as HTMLButtonElement[]
-    expect(ctas.map((b) => b.textContent?.trim())).toEqual(['Session starten', 'Session starten', 'Jetzt starten'])
+    expect(ctas.map((b) => b.textContent?.trim())).toEqual(['Session starten', 'Tabata starten', 'Jetzt starten'])
     expect(ctas[0].closest('nav')).not.toBeNull()
 
     ctas[0].click()
